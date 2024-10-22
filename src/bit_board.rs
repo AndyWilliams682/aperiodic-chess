@@ -14,7 +14,7 @@ impl BitBoard {
         return BitBoard(result)
     }
 
-    pub fn attack_table(node_table: Vec<HashSet<NodeIndex>>) -> Vec<BitBoard> {
+    pub fn new_table(node_table: Vec<HashSet<NodeIndex>>) -> Vec<BitBoard> {
         let mut result: Vec<BitBoard> = vec![];
         for node_indices in node_table {
             result.push(BitBoard::from_node_indices(node_indices))
@@ -39,7 +39,7 @@ mod tests {
     #[test]
     fn test_attack_table() {
         assert_eq!(
-            BitBoard::attack_table(vec![
+            BitBoard::new_table(vec![
                 HashSet::from_iter([
                     NodeIndex::new(0),
                     NodeIndex::new(1)
