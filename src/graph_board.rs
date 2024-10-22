@@ -2,6 +2,7 @@
 use petgraph::graph::{Graph, NodeIndex};
 use petgraph::visit::EdgeRef;
 use std::collections::HashSet;
+use std::hash::Hash;
 
 use crate::piece::Piece;
 
@@ -106,6 +107,22 @@ impl GraphBoard {
         return result
     }
 
+    pub fn diagonal_slides_from(&self, source_node: NodeIndex) -> HashSet<NodeIndex> {
+        let mut result: HashSet<NodeIndex> = HashSet::new();
+        for odd_direction in (1..self.num_directions).step_by(2) {
+            result.extend(self.slide_move_from(source_node, odd_direction, 0))
+        }
+        return result
+    }
+
+    pub fn orthogonal_slides_from(&self, source_node: NodeIndex) -> HashSet<NodeIndex> {
+        let mut result: HashSet<NodeIndex> = HashSet::new();
+        for odd_direction in (0..self.num_directions).step_by(2) {
+            result.extend(self.slide_move_from(source_node, odd_direction, 0))
+        }
+        return result
+    }
+
     // pub fn new_traditional() -> Board {
     //     let result = Board::new();
     //     *result.board_graph.node_weight_mut(0.into()).unwrap() = Some(Piece::Rook);
@@ -149,18 +166,16 @@ mod tests {
         let source_node = 27;
         assert_eq!(
             board.knight_move_from(NodeIndex::new(source_node)),
-            HashSet::from_iter(
-                [
-                    NodeIndex::new(source_node + 10),
-                    NodeIndex::new(source_node - 10),
-                    NodeIndex::new(source_node + 6),
-                    NodeIndex::new(source_node - 6),
-                    NodeIndex::new(source_node + 17),
-                    NodeIndex::new(source_node - 17),
-                    NodeIndex::new(source_node + 15),
-                    NodeIndex::new(source_node - 15)
-                ]
-            )
+            HashSet::from_iter([
+                NodeIndex::new(source_node + 10),
+                NodeIndex::new(source_node - 10),
+                NodeIndex::new(source_node + 6),
+                NodeIndex::new(source_node - 6),
+                NodeIndex::new(source_node + 17),
+                NodeIndex::new(source_node - 17),
+                NodeIndex::new(source_node + 15),
+                NodeIndex::new(source_node - 15)
+            ])
         )
     }
 
@@ -170,16 +185,14 @@ mod tests {
         let source_node = 1;
         assert_eq!(
             board.slide_move_from(NodeIndex::new(source_node), 0, 0),
-            HashSet::from_iter(
-                [
-                    NodeIndex::new(2),
-                    NodeIndex::new(3),
-                    NodeIndex::new(4),
-                    NodeIndex::new(5),
-                    NodeIndex::new(6),
-                    NodeIndex::new(7),
-                ]
-            )
+            HashSet::from_iter([
+                NodeIndex::new(2),
+                NodeIndex::new(3),
+                NodeIndex::new(4),
+                NodeIndex::new(5),
+                NodeIndex::new(6),
+                NodeIndex::new(7),
+            ])
         )
     }
 
@@ -190,6 +203,55 @@ mod tests {
         assert_eq!(
             board.slide_move_from(NodeIndex::new(source_node), 0, 1),
             HashSet::from_iter([NodeIndex::new(2)])
+        )
+    }
+
+    #[test]
+    fn test_diagonal_slides() {
+        let board = test_board();
+        let source_node = 27;
+        assert_eq!(
+            board.diagonal_slides_from(NodeIndex::new(source_node)),
+            HashSet::from_iter([    
+                NodeIndex::new(0),
+                NodeIndex::new(9),
+                NodeIndex::new(18),
+                NodeIndex::new(36),
+                NodeIndex::new(45),
+                NodeIndex::new(54),
+                NodeIndex::new(63),
+                NodeIndex::new(34),
+                NodeIndex::new(41),
+                NodeIndex::new(48),
+                NodeIndex::new(20),
+                NodeIndex::new(13),
+                NodeIndex::new(6)
+            ])
+        )
+    }
+
+    #[test]
+    fn test_orthogonal_slides() {
+        let board = test_board();
+        let source_node = 27;
+        assert_eq!(
+            board.orthogonal_slides_from(NodeIndex::new(source_node)),
+            HashSet::from_iter([    
+                NodeIndex::new(24),
+                NodeIndex::new(25),
+                NodeIndex::new(26),
+                NodeIndex::new(28),
+                NodeIndex::new(29),
+                NodeIndex::new(30),
+                NodeIndex::new(31),
+                NodeIndex::new(3),
+                NodeIndex::new(19),
+                NodeIndex::new(11),
+                NodeIndex::new(35),
+                NodeIndex::new(43),
+                NodeIndex::new(51),
+                NodeIndex::new(59)
+            ])
         )
     }
 }
