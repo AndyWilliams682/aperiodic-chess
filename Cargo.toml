@@ -1,6 +1,10 @@
 [package]
 name = "aperiodic-chess"
 version = "0.1.0"
+authors = ["Andy Williams <andywilliams682@gmail.com>"]
 edition = "2021"
 
+
 [dependencies]
+petgraph = "0.6.5"
+itertools = "0.13.0"
