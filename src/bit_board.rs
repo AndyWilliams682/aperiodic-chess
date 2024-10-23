@@ -1,8 +1,9 @@
 use petgraph::graph::NodeIndex;
 use std::collections::HashSet;
+use std::ops::{Sub, BitAnd};
 
 
-#[derive(Debug, PartialEq, Eq)]
+#[derive(Debug, PartialEq, Eq, Clone, Copy)]
 pub struct BitBoard(u64);
 
 impl BitBoard {
@@ -13,13 +14,42 @@ impl BitBoard {
         }
         return BitBoard(result)
     }
+}
 
-    pub fn new_table(node_table: Vec<HashSet<NodeIndex>>) -> Vec<BitBoard> {
-        let mut result: Vec<BitBoard> = vec![];
-        for node_indices in node_table {
-            result.push(BitBoard::from_node_indices(node_indices))
+impl Sub for BitBoard {
+    type Output = Self;
+
+    fn sub(self, other: Self) -> Self::Output {
+        BitBoard(
+            (self.0 | !other.0) + 1
+        )
+    }
+}
+
+impl BitAnd for BitBoard {
+    type Output = Self;
+
+    fn bitand(self, rhs: Self) -> Self::Output {
+        BitBoard(
+            self.0 & rhs.0
+        )
+    }
+}
+
+pub struct CarryRipple {
+    mask: BitBoard,
+    current_subset: BitBoard,
+}
+
+impl Iterator for CarryRipple {
+    type Item = BitBoard;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        if self.current_subset == self.mask {
+            return None
         }
-        return result
+        self.current_subset = (self.current_subset - self.mask) & self.mask;
+        Some(self.current_subset)
     }
 }
 
@@ -37,19 +67,25 @@ mod tests {
     }
 
     #[test]
-    fn test_attack_table() {
+    fn test_carry_ripple() {
+        let mut test = CarryRipple { 
+            mask: BitBoard(3), current_subset: BitBoard(0)
+        };
         assert_eq!(
-            BitBoard::new_table(vec![
-                HashSet::from_iter([
-                    NodeIndex::new(0),
-                    NodeIndex::new(1)
-                ]),
-                HashSet::from_iter([
-                    NodeIndex::new(10),
-                    NodeIndex::new(20)
-                ])
-            ]),
-            vec![BitBoard(3), BitBoard(1049600)]
+            test.next().unwrap(),
+            BitBoard(1)
+        );
+        assert_eq!(
+            test.next().unwrap(),
+            BitBoard(2)
+        );
+        assert_eq!(
+            test.next().unwrap(),
+            BitBoard(3)
+        );
+        assert_eq!(
+            test.next(),
+            None
         )
     }
 }
