@@ -5,6 +5,7 @@ use std::collections::HashSet;
 use std::hash::Hash;
 
 use crate::piece::Piece;
+use crate::bit_board::BitBoard;
 
 fn get_valid_directions(source: NodeIndex) -> Vec<i32> {
     let mut result = vec![0, 1, 2, 3, 4, 5, 6, 7];
@@ -119,6 +120,30 @@ impl GraphBoard {
         let mut result: HashSet<NodeIndex> = HashSet::new();
         for odd_direction in (0..self.num_directions).step_by(2) {
             result.extend(self.slide_move_from(source_node, odd_direction, 0))
+        }
+        return result
+    }
+
+    pub fn knight_moves_table(&self) -> Vec<BitBoard> {
+        let mut result: Vec<BitBoard> = vec![];
+        for source_node in self.board_graph.node_indices() {
+            result.push(BitBoard::from_node_indices(self.knight_move_from(source_node)))
+        }
+        return result
+    }
+
+    pub fn diagonal_slides_table(&self) -> Vec<BitBoard> {
+        let mut result: Vec<BitBoard> = vec![];
+        for source_node in self.board_graph.node_indices() {
+            result.push(BitBoard::from_node_indices(self.diagonal_slides_from(source_node)))
+        }
+        return result
+    }
+
+    pub fn orthogonal_slides_table(&self) -> Vec<BitBoard> {
+        let mut result: Vec<BitBoard> = vec![];
+        for source_node in self.board_graph.node_indices() {
+            result.push(BitBoard::from_node_indices(self.orthogonal_slides_from(source_node)))
         }
         return result
     }
@@ -252,6 +277,59 @@ mod tests {
                 NodeIndex::new(51),
                 NodeIndex::new(59)
             ])
+        )
+    }
+
+    #[test]
+    fn test_knight_table() {
+        let board = test_board();
+        assert_eq!(
+            board.knight_moves_table()[63], // Only testing last node
+            BitBoard::from_node_indices(HashSet::from_iter([
+                NodeIndex::new(53),
+                NodeIndex::new(46)
+            ]))
+        )
+    }
+
+    #[test]
+    fn test_diagonal_table() {
+        let board = test_board();
+        assert_eq!(
+            board.diagonal_slides_table()[63], // Only testing last node
+            BitBoard::from_node_indices(HashSet::from_iter([
+                NodeIndex::new(54),
+                NodeIndex::new(45),
+                NodeIndex::new(36),
+                NodeIndex::new(27),
+                NodeIndex::new(18),
+                NodeIndex::new(9),
+                NodeIndex::new(0),
+            ]))
+        )
+    }
+
+    #[test]
+    fn test_orthogonal_table() {
+        let board = test_board();
+        assert_eq!(
+            board.orthogonal_slides_table()[63], // Only testing last node
+            BitBoard::from_node_indices(HashSet::from_iter([
+                NodeIndex::new(62),
+                NodeIndex::new(61),
+                NodeIndex::new(60),
+                NodeIndex::new(59),
+                NodeIndex::new(58),
+                NodeIndex::new(57),
+                NodeIndex::new(56),
+                NodeIndex::new(55),
+                NodeIndex::new(47),
+                NodeIndex::new(39),
+                NodeIndex::new(31),
+                NodeIndex::new(23),
+                NodeIndex::new(15),
+                NodeIndex::new(7),
+            ]))
         )
     }
 }
