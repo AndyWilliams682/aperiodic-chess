@@ -3,7 +3,7 @@ use std::collections::HashSet;
 use std::ops::{Sub, BitAnd};
 
 
-#[derive(Debug, PartialEq, Eq, Clone, Copy)]
+#[derive(Debug, PartialEq, Eq, Clone, Copy, Hash)]
 pub struct BitBoard(u64);
 
 impl BitBoard {
@@ -14,6 +14,16 @@ impl BitBoard {
         }
         return BitBoard(result)
     }
+
+    pub fn new(n: u64) -> BitBoard {
+        return BitBoard(n)
+    }
+
+    pub fn empty() -> BitBoard {
+        return BitBoard(0)
+    }
+
+    // pub fn new(n: u64) 
 }
 
 impl Sub for BitBoard {
@@ -36,12 +46,21 @@ impl BitAnd for BitBoard {
     }
 }
 
-pub struct CarryRipple {
+pub struct CarryRippler {
     mask: BitBoard,
     current_subset: BitBoard,
 }
 
-impl Iterator for CarryRipple {
+impl CarryRippler {
+    pub fn new(mask: BitBoard) -> CarryRippler {
+        return CarryRippler {
+            mask,
+            current_subset: BitBoard(0)
+        }
+    }
+}
+
+impl Iterator for CarryRippler {
     type Item = BitBoard;
 
     fn next(&mut self) -> Option<Self::Item> {
@@ -68,9 +87,7 @@ mod tests {
 
     #[test]
     fn test_carry_ripple() {
-        let mut test = CarryRipple { 
-            mask: BitBoard(3), current_subset: BitBoard(0)
-        };
+        let mut test = CarryRippler::new(BitBoard(3));
         assert_eq!(
             test.next().unwrap(),
             BitBoard(1)
