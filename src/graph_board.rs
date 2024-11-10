@@ -219,8 +219,6 @@ impl GraphBoard {
 
 #[cfg(test)]
 mod tests {
-    use petgraph::graph::Node;
-
     use super::*;
 
     fn test_board() -> GraphBoard {
