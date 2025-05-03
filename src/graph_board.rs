@@ -1,87 +1,34 @@
 use petgraph::graph::{Graph, NodeIndex};
 use petgraph::visit::EdgeRef;
 use std::collections::{HashSet, HashMap};
+use std::ops::{Deref, DerefMut};
 
-use crate::piece::Piece;
 use crate::bit_board::{BitBoard, CarryRippler};
+use crate::create_limited_int;
+use crate::limited_int::LimitedIntTrait;
 
-fn get_valid_directions(source: NodeIndex) -> Vec<i32> {
-    let mut result = vec![0, 1, 2, 3, 4, 5, 6, 7];
-    let mut invalid = HashSet::new();
-    if source.index() % 8 == 0 {
-        invalid.insert(3);
-        invalid.insert(4);
-        invalid.insert(5);
-    } else if source.index() % 8 == 7 {
-        invalid.insert(0);
-        invalid.insert(1);
-        invalid.insert(7);
-    }
-    if source.index() <= 7 {
-        invalid.insert(5);
-        invalid.insert(6);
-        invalid.insert(7);
-    } else if source.index() >= 56 {
-        invalid.insert(1);
-        invalid.insert(2);
-        invalid.insert(3);
-    }
-    for direction in invalid {
-        result.retain(|element| element != &direction);
-    }
-    return result
-}
 
-fn get_node_index_shift(direction: i32) -> i32 {
-    let sign = match &direction {
-        0..=3 => 1,
-        4..=7 => -1,
-        _ => 0
-    };
-    let shift = match direction % 4 {
-        0 => 1,
-        1 => 9,
-        2 => 8,
-        3 => 7,
-        _ => 0
-    };
-    return shift * sign
-}
-
+// Generic graph that uses LimitedIntTrait for the edges
 #[derive(Debug)]
-pub struct GraphBoard {
-    pub board_graph: Graph::<Option<Piece>, i32>,
-    pub num_directions: i32
-}
+pub struct BoardGraph<E: LimitedIntTrait>(Graph<i32, E>);
 
-impl GraphBoard {
-    pub fn empty_traditional() -> GraphBoard {
-        let mut board_graph = Graph::<Option<Piece>, i32>::new();
-        let num_directions = 8;
-        for _node in 0..64 {
-            board_graph.add_node(None);
-        }
-        for node_idx in board_graph.node_indices() {
-            for direction in get_valid_directions(node_idx) {
-                let other_idx = NodeIndex::from((node_idx.index() as i32 + get_node_index_shift(direction)) as u32);
-                board_graph.add_edge(node_idx, other_idx, direction);
-            }
-        }
-        return GraphBoard { board_graph, num_directions }
+impl<E: LimitedIntTrait + std::cmp::PartialEq + std::fmt::Debug + std::cmp::PartialOrd> BoardGraph<E> {
+    pub fn new() -> Self {
+        BoardGraph(Graph::new())
     }
-
-    fn get_next_node_in_direction(&self, source_node: NodeIndex, direction: i32) -> Option<NodeIndex> {
-        self.board_graph.edges_directed(source_node, petgraph::Direction::Outgoing)
-            .find(|edge| edge.weight() == &direction)
+   
+    fn get_next_node_in_direction(&self, source_node: NodeIndex, direction: &E) -> Option<NodeIndex> {
+        self.edges_directed(source_node, petgraph::Direction::Outgoing)
+            .find(|edge| &edge.weight() == &direction)
             .map(|edge| edge.target())
     }
-
-    pub fn knight_jump_from(&self, source_node: NodeIndex) -> HashSet<NodeIndex> {
+   
+    pub fn knight_jumps_from(&self, source_node: NodeIndex) -> HashSet<NodeIndex> {
         let mut result: HashSet<NodeIndex> = HashSet::new();
-        for direction in 0..self.num_directions {
-            if let Some(next_node) = self.get_next_node_in_direction(source_node, direction) {
-                for next_direction in [(direction - 1) % self.num_directions, (direction + 1) % self.num_directions] {
-                    if let Some(final_node) = self.get_next_node_in_direction(next_node, next_direction) {
+        for direction in E::all_values() {
+            if let Some(next_node) = self.get_next_node_in_direction(source_node, &direction) {
+                for next_direction in E::adjacent_values(&direction) {
+                    if let Some(final_node) = self.get_next_node_in_direction(next_node, &next_direction) {
                         result.insert(final_node);
                     }
                 }
@@ -90,7 +37,7 @@ impl GraphBoard {
         return result
     }
 
-    pub fn slide_from_in_direction(&self, source_node: NodeIndex, direction: i32, limit: u32, obstructions: BitBoard) -> HashSet<NodeIndex> {
+    pub fn slides_from_in_direction(&self, source_node: NodeIndex, direction: &E, limit: u32, obstructions: BitBoard) -> HashSet<NodeIndex> {
         let mut result: HashSet<NodeIndex> = HashSet::new();
         let mut current_node = source_node;
         let mut distance_traveled = 0;
@@ -117,7 +64,7 @@ impl GraphBoard {
         diagonals: bool,
         orthogonals: bool
     ) -> HashSet<NodeIndex> {
-        
+       
         let initital_direction = match orthogonals {
             true => 0,
             false => 1
@@ -128,10 +75,13 @@ impl GraphBoard {
         };
 
         let mut result: HashSet<NodeIndex> = HashSet::new();
-        for even_direction in (initital_direction..self.num_directions).step_by(direction_step) {
-            result.extend(self.slide_from_in_direction(
+        for even_direction in E::all_values()
+                                    .into_iter()
+                                    .skip(initital_direction)
+                                    .step_by(direction_step) { // TODO: Better iterator usage
+            result.extend(self.slides_from_in_direction(
                 source_node,
-                even_direction,
+                &even_direction,
                 limit,
                 obstructions
             ))
@@ -141,8 +91,8 @@ impl GraphBoard {
 
     pub fn knight_jumps_table(&self) -> Vec<BitBoard> {
         let mut result: Vec<BitBoard> = vec![];
-        for source_node in self.board_graph.node_indices() {
-            result.push(BitBoard::from_node_indices(self.knight_jump_from(source_node)))
+        for source_node in self.0.node_indices() {
+            result.push(BitBoard::from_node_indices(self.knight_jumps_from(source_node)))
         }
         return result
     }
@@ -154,7 +104,7 @@ impl GraphBoard {
     ) -> (Vec<BitBoard>, Vec<HashMap<BitBoard, BitBoard>>) {
         let mut mask_table: Vec<BitBoard> = vec![];
         let mut attack_table: Vec<HashMap<BitBoard, BitBoard>> = vec![];
-        for source_node in self.board_graph.node_indices() {
+        for source_node in self.0.node_indices() {
             let mask = BitBoard::from_node_indices(
                 self.cast_slides_from(
                     source_node,
@@ -194,7 +144,7 @@ impl GraphBoard {
 
     pub fn king_move_table(&self) -> Vec<BitBoard> {
         let mut result: Vec<BitBoard> = vec![];
-        for source_node in self.board_graph.node_indices() {
+        for source_node in self.0.node_indices() {
             result.push(BitBoard::from_node_indices(self.cast_slides_from(
                 source_node,
                 BitBoard::empty(),
@@ -205,15 +155,90 @@ impl GraphBoard {
         }
         return result
     }
+}
 
-    // pub fn new_traditional() -> Board {
-    //     let result = Board::new();
-    //     *result.board_graph.node_weight_mut(0.into()).unwrap() = Some(Piece::Rook);
-    //     *result.board_graph.node_weight_mut(0.into()).unwrap() = Some(Piece::Rook);
-    //     *result.board_graph.node_weight_mut(0.into()).unwrap() = Some(Piece::Rook);
-    //     *result.board_graph.node_weight_mut(0.into()).unwrap() = Some(Piece::Rook);
-    //     return result
-    // }
+impl<E: LimitedIntTrait> Deref for BoardGraph<E> {
+    type Target = Graph<i32, E>;
+   
+    fn deref(&self) -> &Self::Target {
+        &self.0
+    }
+}
+
+impl<E: LimitedIntTrait> DerefMut for BoardGraph<E> {
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        &mut self.0
+    }
+}
+
+
+create_limited_int!(TraditionalDirection, 8);
+// Convention: 
+//    0 is the forward direction for White
+//    1 is the forward-left direction, continuing counter-clockwise until 7, which is forward-right
+create_limited_int!(TraditionalTileOrientation, 1);
+
+#[derive(Debug)]
+pub struct TraditionalBoardGraph(BoardGraph<TraditionalDirection>);
+
+impl TraditionalBoardGraph {
+    pub fn empty() -> Self {
+        let mut board_graph = BoardGraph::new();
+        for _node in 0..64 {
+            board_graph.add_node(0); // Only one TileOrientation
+        }
+        for node_idx in board_graph.node_indices() {
+            for direction in Self::get_valid_directions(node_idx) {
+                let other_idx = NodeIndex::from((node_idx.index() as i32 + Self::get_node_index_shift(&direction)) as u32);
+                board_graph.add_edge(node_idx, other_idx, direction);
+            }
+        }
+        return TraditionalBoardGraph(board_graph)
+    }
+   
+    // This function is used for making the empty traditional board
+    fn get_valid_directions(source: NodeIndex) -> Vec<TraditionalDirection> {
+        let mut result = TraditionalDirection::all_values();
+        let mut invalid = HashSet::new();
+        if source.index() % 8 == 0 {
+            invalid.insert(1);
+            invalid.insert(2);
+            invalid.insert(3);
+        } else if source.index() % 8 == 7 {
+            invalid.insert(5);
+            invalid.insert(6);
+            invalid.insert(7);
+        }
+        if source.index() <= 7 {
+            invalid.insert(3);
+            invalid.insert(4);
+            invalid.insert(5);
+        } else if source.index() >= 56 {
+            invalid.insert(1);
+            invalid.insert(0);
+            invalid.insert(7);
+        }
+        for direction in invalid {
+            result.retain(|element| element.0 != direction);
+        }
+        return result
+    }
+   
+    // This function is used for making the empty traditional board
+    fn get_node_index_shift(direction: &TraditionalDirection) -> i32 {
+        let sign = match &direction.0 {
+            2..=5 => -1,
+            _ => 1,
+        };
+        let shift = match direction.0 % 4 {
+            0 => 8,
+            1 => 7,
+            2 => 1,
+            3 => 9,
+            _ => 0
+        };
+        return shift * sign
+    }
 }
 
 
@@ -221,16 +246,16 @@ impl GraphBoard {
 mod tests {
     use super::*;
 
-    fn test_board() -> GraphBoard {
-        return GraphBoard::empty_traditional()
+    fn test_board() -> TraditionalBoardGraph {
+        return TraditionalBoardGraph::empty();
     }
 
     #[test]
     fn test_get_next_node_in_direction_returns_node() {
         let board = test_board();
         assert_eq!(
-            board.get_next_node_in_direction(NodeIndex::new(0), 0).unwrap(),
-            NodeIndex::new(1)
+            board.0.get_next_node_in_direction(NodeIndex::new(0), &TraditionalDirection(0)).unwrap(),
+            NodeIndex::new(8)
         );
     }
 
@@ -238,7 +263,7 @@ mod tests {
     fn test_get_next_node_in_direction_returns_none() {
         let board = test_board();
         assert_eq!(
-            board.get_next_node_in_direction(NodeIndex::new(0), 6),
+            board.0.get_next_node_in_direction(NodeIndex::new(0), &TraditionalDirection(2)),
             None
         )
     }
@@ -248,7 +273,7 @@ mod tests {
         let board = test_board();
         let source_node = NodeIndex::new(27);
         assert_eq!(
-            board.knight_jump_from(source_node),
+            board.0.knight_jumps_from(source_node),
             HashSet::from_iter([
                 NodeIndex::new(27 + 10),
                 NodeIndex::new(27 - 10),
@@ -267,7 +292,7 @@ mod tests {
         let board = test_board();
         let source_node = NodeIndex::new(1);
         assert_eq!(
-            board.slide_from_in_direction(source_node, 0, 0, BitBoard::empty()),
+            board.0.slides_from_in_direction(source_node, &TraditionalDirection(6), 0, BitBoard::empty()),
             HashSet::from_iter([
                 NodeIndex::new(2),
                 NodeIndex::new(3),
@@ -278,13 +303,12 @@ mod tests {
             ])
         )
     }
-
     #[test]
     fn test_slide_move_with_limit() {
         let board = test_board();
         let source_node = NodeIndex::new(1);
         assert_eq!(
-            board.slide_from_in_direction(source_node, 0, 1, BitBoard::empty()),
+            board.0.slides_from_in_direction(source_node, &TraditionalDirection(6), 1, BitBoard::empty()),
             HashSet::from_iter([NodeIndex::new(2)])
         )
     }
@@ -295,7 +319,7 @@ mod tests {
         let source_node = NodeIndex::new(1);
         let obstructions = BitBoard::new(32);
         assert_eq!(
-            board.slide_from_in_direction(source_node, 0, 0, obstructions),
+            board.0.slides_from_in_direction(source_node, &TraditionalDirection(6), 0, obstructions),
             HashSet::from_iter([
                 NodeIndex::new(2),
                 NodeIndex::new(3),
@@ -309,7 +333,7 @@ mod tests {
         let board = test_board();
         let source_node = NodeIndex::new(27);
         assert_eq!(
-            board.cast_slides_from(source_node, BitBoard::empty(), 0, true, false),
+            board.0.cast_slides_from(source_node, BitBoard::empty(), 0, true, false),
             HashSet::from_iter([    
                 NodeIndex::new(0),
                 NodeIndex::new(9),
@@ -338,7 +362,7 @@ mod tests {
             NodeIndex::new(20)
         ]));
         assert_eq!(
-            board.cast_slides_from(source_node, blockers, 0, true, false),
+            board.0.cast_slides_from(source_node, blockers, 0, true, false),
             HashSet::from_iter([    
                 NodeIndex::new(0),
                 NodeIndex::new(9),
@@ -352,7 +376,7 @@ mod tests {
         let board = test_board();
         let source_node = NodeIndex::new(27);
         assert_eq!(
-            board.cast_slides_from(source_node, BitBoard::empty(), 0, false, true),
+            board.0.cast_slides_from(source_node, BitBoard::empty(), 0, false, true),
             HashSet::from_iter([    
                 NodeIndex::new(24),
                 NodeIndex::new(25),
@@ -373,11 +397,11 @@ mod tests {
     }
 
     #[test]
-    fn test_both_orthogonal_slides_unobstructed() {
+    fn test_both_slides_unobstructed() {
         let board = test_board();
         let source_node = NodeIndex::new(27);
         assert_eq!(
-            board.cast_slides_from(source_node, BitBoard::empty(), 0, true, true),
+            board.0.cast_slides_from(source_node, BitBoard::empty(), 0, true, true),
             HashSet::from_iter([    
                 NodeIndex::new(24),
                 NodeIndex::new(25),
@@ -415,7 +439,7 @@ mod tests {
         let board = test_board();
         let source_node = NodeIndex::new(27);
         assert_eq!(
-            board.cast_slides_from(source_node, BitBoard::empty(), 1, true, true),
+            board.0.cast_slides_from(source_node, BitBoard::empty(), 1, true, true),
             HashSet::from_iter([
                 NodeIndex::new(36),
                 NodeIndex::new(35),
@@ -433,7 +457,7 @@ mod tests {
     fn test_knight_table() {
         let board = test_board();
         assert_eq!(
-            board.knight_jumps_table()[63], // Only testing last node
+            board.0.knight_jumps_table()[63], // Only testing last node
             BitBoard::from_node_indices(HashSet::from_iter([
                 NodeIndex::new(53),
                 NodeIndex::new(46)
@@ -444,7 +468,7 @@ mod tests {
     #[test]
     fn test_diagonal_table() {
         let board = test_board();
-        let diag_slides_table = board.diagonal_slides_table();
+        let diag_slides_table = board.0.diagonal_slides_table();
         let mask = diag_slides_table.0;
         assert_eq!(
             mask[63], // Only testing last node
@@ -472,7 +496,7 @@ mod tests {
     #[test]
     fn test_orthogonal_table() {
         let board = test_board();
-        let orthog_slides_table = board.orthogonal_slides_table();
+        let orthog_slides_table = board.0.orthogonal_slides_table();
         let mask = orthog_slides_table.0;
         assert_eq!(
             mask[63], // Only testing last node
@@ -514,7 +538,7 @@ mod tests {
     fn test_king_table() {
         let board = test_board();
         assert_eq!(
-            board.king_move_table()[63], // Only testing last node
+            board.0.king_move_table()[63], // Only testing last node
             BitBoard::from_node_indices(HashSet::from_iter([
                 NodeIndex::new(62),
                 NodeIndex::new(55),

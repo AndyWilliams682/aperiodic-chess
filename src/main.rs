@@ -7,8 +7,14 @@ use std::collections::HashSet;
 mod graph_board;
 mod piece;
 mod bit_board;
+mod limited_int;
+// mod limited_int {
+//     macro_rules! create_limited_int {
+//         () => ()
+//     }
 
-use graph_board::GraphBoard;
+//     pub(crate) use create_limited_int;
+// }
 
 const RANKS: [char; 8] = ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h'];
 const FILES: [i32; 8] = [1, 2, 3, 4, 5, 6, 7, 8];
@@ -57,8 +63,8 @@ impl Space {
 
 
 fn main() {
-    let test = GraphBoard::empty_traditional();
-    println!("{:?}", Dot::new(&test.board_graph));
+    // let test = GraphBoard::empty_traditional();
+    // println!("{:?}", Dot::new(&test.board_graph));
     // let mut board = Graph::<Space, i32>::new();
     
     // for cell in RANKS.iter().cartesian_product(FILES.iter()) {
