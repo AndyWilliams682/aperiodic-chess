@@ -8,11 +8,27 @@ use crate::create_limited_int;
 use crate::limited_int::LimitedIntTrait;
 
 
+#[derive(Debug)]
+enum Color {
+    White,
+    Black
+}
+
+#[derive(Debug)]
+pub struct Tile<T: LimitedIntTrait> {
+    orientation: T,
+    pawn_start: Option<Color>
+}
+
+
 // Generic graph that uses LimitedIntTrait for the edges
 #[derive(Debug)]
-pub struct BoardGraph<E: LimitedIntTrait>(Graph<i32, E>);
+pub struct BoardGraph<N: LimitedIntTrait, E: LimitedIntTrait>(Graph<Tile<N>, E>);
 
-impl<E: LimitedIntTrait + std::cmp::PartialEq + std::fmt::Debug + std::cmp::PartialOrd> BoardGraph<E> {
+impl<
+    N: LimitedIntTrait,
+    E: LimitedIntTrait + std::cmp::PartialEq + std::fmt::Debug + std::cmp::PartialOrd
+> BoardGraph<N, E> {
     pub fn new() -> Self {
         BoardGraph(Graph::new())
     }
@@ -157,15 +173,15 @@ impl<E: LimitedIntTrait + std::cmp::PartialEq + std::fmt::Debug + std::cmp::Part
     }
 }
 
-impl<E: LimitedIntTrait> Deref for BoardGraph<E> {
-    type Target = Graph<i32, E>;
+impl<N: LimitedIntTrait, E: LimitedIntTrait> Deref for BoardGraph<N, E> {
+    type Target = Graph<Tile<N>, E>;
    
     fn deref(&self) -> &Self::Target {
         &self.0
     }
 }
 
-impl<E: LimitedIntTrait> DerefMut for BoardGraph<E> {
+impl<N: LimitedIntTrait, E: LimitedIntTrait> DerefMut for BoardGraph<N, E> {
     fn deref_mut(&mut self) -> &mut Self::Target {
         &mut self.0
     }
@@ -179,13 +195,13 @@ create_limited_int!(TraditionalDirection, 8);
 create_limited_int!(TraditionalTileOrientation, 1);
 
 #[derive(Debug)]
-pub struct TraditionalBoardGraph(BoardGraph<TraditionalDirection>);
+pub struct TraditionalBoardGraph(BoardGraph<TraditionalTileOrientation, TraditionalDirection>);
 
 impl TraditionalBoardGraph {
     pub fn empty() -> Self {
         let mut board_graph = BoardGraph::new();
-        for _node in 0..64 {
-            board_graph.add_node(0); // Only one TileOrientation
+        for node in 0..64 {
+            board_graph.add_node(Self::new_tile(node)); // Only one TileOrientation
         }
         for node_idx in board_graph.node_indices() {
             for direction in Self::get_valid_directions(node_idx) {
@@ -194,6 +210,16 @@ impl TraditionalBoardGraph {
             }
         }
         return TraditionalBoardGraph(board_graph)
+    }
+
+    fn new_tile(source: i32) -> Tile<TraditionalTileOrientation> {
+        if source % 8 == 1 {
+            return Tile { orientation: TraditionalTileOrientation(0), pawn_start: Some(Color::White) }
+        } else if source % 8 == 7 {
+            return Tile { orientation: TraditionalTileOrientation(0), pawn_start: Some(Color::Black) }
+        } else {
+            return Tile { orientation: TraditionalTileOrientation(0), pawn_start: None }
+        }
     }
    
     // This function is used for making the empty traditional board
@@ -246,13 +272,13 @@ impl TraditionalBoardGraph {
 mod tests {
     use super::*;
 
-    fn test_board() -> TraditionalBoardGraph {
+    fn test_traditional_board() -> TraditionalBoardGraph {
         return TraditionalBoardGraph::empty();
     }
 
     #[test]
     fn test_get_next_node_in_direction_returns_node() {
-        let board = test_board();
+        let board = test_traditional_board();
         assert_eq!(
             board.0.get_next_node_in_direction(NodeIndex::new(0), &TraditionalDirection(0)).unwrap(),
             NodeIndex::new(8)
@@ -261,7 +287,7 @@ mod tests {
 
     #[test]
     fn test_get_next_node_in_direction_returns_none() {
-        let board = test_board();
+        let board = test_traditional_board();
         assert_eq!(
             board.0.get_next_node_in_direction(NodeIndex::new(0), &TraditionalDirection(2)),
             None
@@ -270,7 +296,7 @@ mod tests {
 
     #[test]
     fn test_knight_move_from() {
-        let board = test_board();
+        let board = test_traditional_board();
         let source_node = NodeIndex::new(27);
         assert_eq!(
             board.0.knight_jumps_from(source_node),
@@ -289,7 +315,7 @@ mod tests {
 
     #[test]
     fn test_slide_move_from_no_limit_no_obstructions() {
-        let board = test_board();
+        let board = test_traditional_board();
         let source_node = NodeIndex::new(1);
         assert_eq!(
             board.0.slides_from_in_direction(source_node, &TraditionalDirection(6), 0, BitBoard::empty()),
@@ -305,7 +331,7 @@ mod tests {
     }
     #[test]
     fn test_slide_move_with_limit() {
-        let board = test_board();
+        let board = test_traditional_board();
         let source_node = NodeIndex::new(1);
         assert_eq!(
             board.0.slides_from_in_direction(source_node, &TraditionalDirection(6), 1, BitBoard::empty()),
@@ -315,7 +341,7 @@ mod tests {
 
     #[test]
     fn test_slide_move_with_obstructions() {
-        let board = test_board();
+        let board = test_traditional_board();
         let source_node = NodeIndex::new(1);
         let obstructions = BitBoard::new(32);
         assert_eq!(
@@ -330,7 +356,7 @@ mod tests {
 
     #[test]
     fn test_diagonal_slides_unobstructed() {
-        let board = test_board();
+        let board = test_traditional_board();
         let source_node = NodeIndex::new(27);
         assert_eq!(
             board.0.cast_slides_from(source_node, BitBoard::empty(), 0, true, false),
@@ -354,7 +380,7 @@ mod tests {
 
     #[test]
     fn test_diagonal_slides_obstructed() {
-        let board = test_board();
+        let board = test_traditional_board();
         let source_node = NodeIndex::new(27);
         let blockers = BitBoard::from_node_indices(HashSet::from_iter([
             NodeIndex::new(36),
@@ -373,7 +399,7 @@ mod tests {
 
     #[test]
     fn test_orthogonal_slides_unobstructed() {
-        let board = test_board();
+        let board = test_traditional_board();
         let source_node = NodeIndex::new(27);
         assert_eq!(
             board.0.cast_slides_from(source_node, BitBoard::empty(), 0, false, true),
@@ -398,7 +424,7 @@ mod tests {
 
     #[test]
     fn test_both_slides_unobstructed() {
-        let board = test_board();
+        let board = test_traditional_board();
         let source_node = NodeIndex::new(27);
         assert_eq!(
             board.0.cast_slides_from(source_node, BitBoard::empty(), 0, true, true),
@@ -436,7 +462,7 @@ mod tests {
 
     #[test]
     fn test_cast_slides_with_limit() {
-        let board = test_board();
+        let board = test_traditional_board();
         let source_node = NodeIndex::new(27);
         assert_eq!(
             board.0.cast_slides_from(source_node, BitBoard::empty(), 1, true, true),
@@ -455,7 +481,7 @@ mod tests {
 
     #[test]
     fn test_knight_table() {
-        let board = test_board();
+        let board = test_traditional_board();
         assert_eq!(
             board.0.knight_jumps_table()[63], // Only testing last node
             BitBoard::from_node_indices(HashSet::from_iter([
@@ -467,7 +493,7 @@ mod tests {
 
     #[test]
     fn test_diagonal_table() {
-        let board = test_board();
+        let board = test_traditional_board();
         let diag_slides_table = board.0.diagonal_slides_table();
         let mask = diag_slides_table.0;
         assert_eq!(
@@ -495,7 +521,7 @@ mod tests {
 
     #[test]
     fn test_orthogonal_table() {
-        let board = test_board();
+        let board = test_traditional_board();
         let orthog_slides_table = board.0.orthogonal_slides_table();
         let mask = orthog_slides_table.0;
         assert_eq!(
@@ -536,7 +562,7 @@ mod tests {
 
     #[test]
     fn test_king_table() {
-        let board = test_board();
+        let board = test_traditional_board();
         assert_eq!(
             board.0.king_move_table()[63], // Only testing last node
             BitBoard::from_node_indices(HashSet::from_iter([
