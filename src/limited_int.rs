@@ -3,6 +3,7 @@ pub trait LimitedIntTrait {
     fn max_value() -> u8;
     fn all_values() -> Vec<Self> where Self: Sized;
     fn adjacent_values(&self) -> Vec<Self> where Self: Sized;
+    fn map_to_other<T: LimitedIntTrait>() -> Vec<T>;
 }
 
 #[macro_export]
@@ -15,25 +16,6 @@ macro_rules! create_limited_int {
             fn new_internal(value: u8) -> Self {
                 Self(value)
             }
-           
-            pub fn get_map_to_other<T: LimitedIntTrait>() -> Vec<u8> {
-                let mut output = vec![];
-                let t_max = T::max_value();
-                let self_max = Self::max_value();
-               
-                for n in 0..self_max {
-                    let new_value = (
-                        t_max as f64 * (
-                            1.0 - (
-                                n as f64 / self_max as f64
-                            )
-                        )
-                    ).round() as u8 % t_max;
-                    output.push(new_value) // TODO: This should return the other type T
-                }
-                return output
-            } // Replace 1 with 0.5 to get the backwards mapping, same as shifting by the mid value?
-            // Might be able to use the exact same mapping to encode forwards and backwards
         }
        
         impl LimitedIntTrait for $name {
@@ -64,6 +46,25 @@ macro_rules! create_limited_int {
                 let next = Self::new_internal((value + 1) % max_value);
                 vec![prev, next]
             }
+
+            fn map_to_other<T: LimitedIntTrait>() -> Vec<T> {
+                let mut output = vec![];
+                let t_max = T::max_value();
+                let self_max = Self::max_value();
+               
+                for n in 0..self_max {
+                    let new_value = (
+                        t_max as f64 * (
+                            1.0 - (
+                                n as f64 / self_max as f64
+                            )
+                        )
+                    ).round() as u8 % t_max;
+                    output.push(T::new(new_value).unwrap()) // TODO: This should return the other type T
+                }
+                return output
+            } // Replace 1 with 0.5 to get the backwards mapping, same as shifting by the mid value?
+            // Might be able to use the exact same mapping to encode forwards and backwards
         }
     };
 }
@@ -124,10 +125,17 @@ mod tests {
     }
 
     #[test]
-    fn test_get_map_to_other() {
+    fn test_map_to_other() {
         assert_eq!(
-            LimitedInt6::get_map_to_other::<LimitedInt10>(),
-            vec![0, 8, 7, 5, 3, 2]
+            LimitedInt6::map_to_other::<LimitedInt10>(),
+            vec![
+                LimitedInt10::new(0).unwrap(),
+                LimitedInt10::new(8).unwrap(),
+                LimitedInt10::new(7).unwrap(),
+                LimitedInt10::new(5).unwrap(),
+                LimitedInt10::new(3).unwrap(),
+                LimitedInt10::new(2).unwrap()
+            ]
         )
     }
 }
