@@ -8,15 +8,15 @@ use crate::create_limited_int;
 use crate::limited_int::LimitedIntTrait;
 
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 enum Color {
     White,
     Black
 }
 
 #[derive(Debug)]
-pub struct Tile<T: LimitedIntTrait> {
-    orientation: T,
+pub struct Tile<N: LimitedIntTrait> {
+    orientation: N,
     pawn_start: Option<Color>
 }
 
@@ -26,7 +26,7 @@ pub struct Tile<T: LimitedIntTrait> {
 pub struct BoardGraph<N: LimitedIntTrait, E: LimitedIntTrait>(Graph<Tile<N>, E>);
 
 impl<
-    N: LimitedIntTrait,
+    N: LimitedIntTrait + std::cmp::Eq + std::hash::Hash + std::fmt::Debug,
     E: LimitedIntTrait + std::cmp::PartialEq + std::fmt::Debug + std::cmp::PartialOrd
 > BoardGraph<N, E> {
     pub fn new() -> Self {
@@ -171,6 +171,37 @@ impl<
         }
         return result
     }
+
+    pub fn pawn_move_table(&self, color: Color) -> Vec<BitBoard> {
+        let mut result: Vec<BitBoard> = vec![];
+
+        let forward_or_backward = match color {
+            Color::White => 0,
+            _ => E::max_value() / 2 // This assumes max_value is even
+        };
+
+        let map = N::map_to_other::<E>();
+
+        for source_node in self.0.node_indices() {
+            let tile = &self.0[source_node];
+            println!("{:?}, {:?}", source_node, tile);
+
+            let move_limit = match &tile.pawn_start {
+                Some(pawn_start_color) if pawn_start_color == &color => 2,
+                _ => 1
+            };
+
+            let direction = map.get(&tile.orientation).unwrap().shift_by(forward_or_backward);
+
+            result.push(BitBoard::from_node_indices(self.slides_from_in_direction(
+                source_node,
+                &direction,
+                move_limit,
+                BitBoard::empty(),
+            )));
+        }
+        return result
+    }
 }
 
 impl<N: LimitedIntTrait, E: LimitedIntTrait> Deref for BoardGraph<N, E> {
@@ -189,19 +220,20 @@ impl<N: LimitedIntTrait, E: LimitedIntTrait> DerefMut for BoardGraph<N, E> {
 
 
 create_limited_int!(TraditionalDirection, 8);
-// Convention: 
+// Convention:
 //    0 is the forward direction for White
 //    1 is the forward-left direction, continuing counter-clockwise until 7, which is forward-right
-create_limited_int!(TraditionalTileOrientation, 1);
+//    Even directions are orthogonal, odd directions are diagonal
+create_limited_int!(UniformTileOrientation, 1);
 
 #[derive(Debug)]
-pub struct TraditionalBoardGraph(BoardGraph<TraditionalTileOrientation, TraditionalDirection>);
+pub struct TraditionalBoardGraph(BoardGraph<UniformTileOrientation, TraditionalDirection>);
 
 impl TraditionalBoardGraph {
     pub fn empty() -> Self {
         let mut board_graph = BoardGraph::new();
         for node in 0..64 {
-            board_graph.add_node(Self::new_tile(node)); // Only one TileOrientation
+            board_graph.add_node(Self::new_tile(node));
         }
         for node_idx in board_graph.node_indices() {
             for direction in Self::get_valid_directions(node_idx) {
@@ -212,13 +244,13 @@ impl TraditionalBoardGraph {
         return TraditionalBoardGraph(board_graph)
     }
 
-    fn new_tile(source: i32) -> Tile<TraditionalTileOrientation> {
-        if source % 8 == 1 {
-            return Tile { orientation: TraditionalTileOrientation(0), pawn_start: Some(Color::White) }
-        } else if source % 8 == 7 {
-            return Tile { orientation: TraditionalTileOrientation(0), pawn_start: Some(Color::Black) }
+    fn new_tile(source: i32) -> Tile<UniformTileOrientation> {
+        if source / 8 == 1 {
+            return Tile { orientation: UniformTileOrientation(0), pawn_start: Some(Color::White) }
+        } else if source / 8 == 6 {
+            return Tile { orientation: UniformTileOrientation(0), pawn_start: Some(Color::Black) }
         } else {
-            return Tile { orientation: TraditionalTileOrientation(0), pawn_start: None }
+            return Tile { orientation: UniformTileOrientation(0), pawn_start: None }
         }
     }
    
@@ -252,6 +284,80 @@ impl TraditionalBoardGraph {
    
     // This function is used for making the empty traditional board
     fn get_node_index_shift(direction: &TraditionalDirection) -> i32 {
+        let sign = match &direction.0 {
+            2..=5 => -1,
+            _ => 1,
+        };
+        let shift = match direction.0 % 4 {
+            0 => 8,
+            1 => 7,
+            2 => 1,
+            3 => 9,
+            _ => 0
+        };
+        return shift * sign
+    }
+}
+
+
+create_limited_int!(HexagonalDirection, 12);
+
+#[derive(Debug)]
+pub struct HexagonalBoardGraph(BoardGraph<UniformTileOrientation, HexagonalDirection>);
+
+impl HexagonalBoardGraph {
+    pub fn empty() -> Self {
+        let mut board_graph = BoardGraph::new();
+        for node in 0..91 {
+            board_graph.add_node(Self::new_tile(node));
+        }
+        for node_idx in board_graph.node_indices() {
+            for direction in Self::get_valid_directions(node_idx) {
+                let other_idx = NodeIndex::from((node_idx.index() as i32 + Self::get_node_index_shift(&direction)) as u32);
+                board_graph.add_edge(node_idx, other_idx, direction);
+            }
+        }
+        return HexagonalBoardGraph(board_graph)
+    }
+
+    fn new_tile(source: i32) -> Tile<UniformTileOrientation> {
+        if source % 8 == 1 {
+            return Tile { orientation: UniformTileOrientation(0), pawn_start: Some(Color::White) }
+        } else if source % 8 == 7 {
+            return Tile { orientation: UniformTileOrientation(0), pawn_start: Some(Color::Black) }
+        } else {
+            return Tile { orientation: UniformTileOrientation(0), pawn_start: None }
+        }
+    }
+   
+    fn get_valid_directions(source: NodeIndex) -> Vec<HexagonalDirection> {
+        let mut result = HexagonalDirection::all_values();
+        let mut invalid = HashSet::new();
+        if source.index() % 8 == 0 {
+            invalid.insert(1);
+            invalid.insert(2);
+            invalid.insert(3);
+        } else if source.index() % 8 == 7 {
+            invalid.insert(5);
+            invalid.insert(6);
+            invalid.insert(7);
+        }
+        if source.index() <= 7 {
+            invalid.insert(3);
+            invalid.insert(4);
+            invalid.insert(5);
+        } else if source.index() >= 56 {
+            invalid.insert(1);
+            invalid.insert(0);
+            invalid.insert(7);
+        }
+        for direction in invalid {
+            result.retain(|element| element.0 != direction);
+        }
+        return result
+    }
+   
+    fn get_node_index_shift(direction: &HexagonalDirection) -> i32 {
         let sign = match &direction.0 {
             2..=5 => -1,
             _ => 1,
@@ -569,6 +675,41 @@ mod tests {
                 NodeIndex::new(62),
                 NodeIndex::new(55),
                 NodeIndex::new(54)
+            ]))
+        )
+    }
+
+    #[test]
+    fn test_pawn_move_table_forward() {
+        let board = test_traditional_board();
+        assert_eq!(
+            board.0.pawn_move_table(Color::White)[8],
+            BitBoard::from_node_indices(HashSet::from_iter([
+                NodeIndex::new(16),
+                NodeIndex::new(24)
+            ]))
+        )
+    }
+
+    #[test]
+    fn test_pawn_move_table_backward() {
+        let board = test_traditional_board();
+        assert_eq!(
+            board.0.pawn_move_table(Color::Black)[48],
+            BitBoard::from_node_indices(HashSet::from_iter([
+                NodeIndex::new(40),
+                NodeIndex::new(32)
+            ]))
+        )
+    }
+
+    #[test]
+    fn test_pawn_move_table_one_space() {
+        let board = test_traditional_board();
+        assert_eq!(
+            board.0.pawn_move_table(Color::White)[48],
+            BitBoard::from_node_indices(HashSet::from_iter([
+                NodeIndex::new(56)
             ]))
         )
     }
