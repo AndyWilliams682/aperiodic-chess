@@ -1,15 +1,17 @@
+use std::collections::HashMap;
+
 pub trait LimitedIntTrait {
     fn new(value: u8) -> Option<Self> where Self: Sized;
     fn max_value() -> u8;
     fn all_values() -> Vec<Self> where Self: Sized;
     fn adjacent_values(&self) -> Vec<Self> where Self: Sized;
-    fn map_to_other<T: LimitedIntTrait>() -> Vec<T>;
+    fn map_to_other<T: LimitedIntTrait>() -> HashMap<Self, T> where Self: Sized;
 }
 
 #[macro_export]
 macro_rules! create_limited_int {
     ($name:ident, $max_value:expr) => {
-        #[derive(Debug, PartialEq, PartialOrd)]
+        #[derive(Debug, PartialEq, PartialOrd, Eq, Hash)]
         struct $name(u8); // May need to modify u8 in the future?
 
         impl $name {
@@ -47,8 +49,8 @@ macro_rules! create_limited_int {
                 vec![prev, next]
             }
 
-            fn map_to_other<T: LimitedIntTrait>() -> Vec<T> {
-                let mut output = vec![];
+            fn map_to_other<T: LimitedIntTrait>() -> HashMap<Self, T> {
+                let mut output = HashMap::new();
                 let t_max = T::max_value();
                 let self_max = Self::max_value();
                
@@ -60,7 +62,7 @@ macro_rules! create_limited_int {
                             )
                         )
                     ).round() as u8 % t_max;
-                    output.push(T::new(new_value).unwrap()) // TODO: This should return the other type T
+                    output.insert(Self::new(n).unwrap(), T::new(new_value).unwrap());
                 }
                 return output
             } // Replace 1 with 0.5 to get the backwards mapping, same as shifting by the mid value?
@@ -126,16 +128,16 @@ mod tests {
 
     #[test]
     fn test_map_to_other() {
+        let mut result = HashMap::new();
+        result.insert(LimitedInt6(0), LimitedInt10(0));
+        result.insert(LimitedInt6(1), LimitedInt10(8));
+        result.insert(LimitedInt6(2), LimitedInt10(7));
+        result.insert(LimitedInt6(3), LimitedInt10(5));
+        result.insert(LimitedInt6(4), LimitedInt10(3));
+        result.insert(LimitedInt6(5), LimitedInt10(2)); 
         assert_eq!(
             LimitedInt6::map_to_other::<LimitedInt10>(),
-            vec![
-                LimitedInt10::new(0).unwrap(),
-                LimitedInt10::new(8).unwrap(),
-                LimitedInt10::new(7).unwrap(),
-                LimitedInt10::new(5).unwrap(),
-                LimitedInt10::new(3).unwrap(),
-                LimitedInt10::new(2).unwrap()
-            ]
+            result
         )
     }
 }
