@@ -6,6 +6,7 @@ pub trait LimitedIntTrait {
     fn all_values() -> Vec<Self> where Self: Sized;
     fn adjacent_values(&self) -> Vec<Self> where Self: Sized;
     fn map_to_other<T: LimitedIntTrait>() -> HashMap<Self, T> where Self: Sized;
+    fn shift_by(&self, shift: u8) -> Self where Self: Sized;
 }
 
 #[macro_export]
@@ -67,6 +68,10 @@ macro_rules! create_limited_int {
                 return output
             } // Replace 1 with 0.5 to get the backwards mapping, same as shifting by the mid value?
             // Might be able to use the exact same mapping to encode forwards and backwards
+
+            fn shift_by(&self, shift: u8) -> Self {
+                Self((self.0 + shift) % Self::max_value())
+            }
         }
     };
 }
@@ -138,6 +143,14 @@ mod tests {
         assert_eq!(
             LimitedInt6::map_to_other::<LimitedInt10>(),
             result
+        )
+    }
+
+    #[test]
+    fn test_shift_by() {
+        assert_eq!(
+            LimitedInt6(3).shift_by(4),
+            LimitedInt6(1)
         )
     }
 }
