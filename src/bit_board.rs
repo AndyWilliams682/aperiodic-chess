@@ -1,29 +1,27 @@
 use petgraph::graph::NodeIndex;
 use std::collections::HashSet;
-use std::ops::{Sub, BitAnd};
+use std::ops::{Sub, BitAnd, BitOr};
 
 
 #[derive(Debug, PartialEq, Eq, Clone, Copy, Hash)]
-pub struct BitBoard(u64);
+pub struct BitBoard(u128);
 
 impl BitBoard {
     pub fn from_node_indices(node_indices: HashSet<NodeIndex>) -> BitBoard {
-        let mut result: u64 = 0;
+        let mut result: u128 = 0;
         for node in node_indices {
             result += 1 << node.index();
         }
         return BitBoard(result)
     }
 
-    pub fn new(n: u64) -> BitBoard {
+    pub fn new(n: u128) -> BitBoard {
         return BitBoard(n)
     }
 
     pub fn empty() -> BitBoard {
         return BitBoard(0)
     }
-
-    // pub fn new(n: u64) 
 }
 
 impl Sub for BitBoard {
@@ -42,6 +40,16 @@ impl BitAnd for BitBoard {
     fn bitand(self, rhs: Self) -> Self::Output {
         BitBoard(
             self.0 & rhs.0
+        )
+    }
+}
+
+impl BitOr for BitBoard {
+    type Output = Self;
+   
+    fn bitor(self, rhs: Self) -> Self::Output {
+        BitBoard(
+            self.0 | rhs.0
         )
     }
 }
