@@ -195,6 +195,36 @@ impl<
         }
         return result
     }
+
+    pub fn pawn_attack_table(&self, color: Color) -> Vec<BitBoard> {
+        let mut result: Vec<BitBoard> = vec![];
+
+        let forward_or_backward = match color {
+            Color::White => 0,
+            _ => E::max_value() / 2 // This assumes max_value is even
+        };
+
+        let map = N::map_to_other::<E>();
+
+        for source_node in self.0.node_indices() {
+            let tile = &self.0[source_node];
+
+            let move_direction = map.get(&tile.orientation).unwrap().shift_by(forward_or_backward);
+            let attack_directions = E::adjacent_values(&move_direction);
+            let mut attacks = BitBoard::empty();
+
+            for direction in attack_directions {
+                attacks = attacks | BitBoard::from_node_indices(self.slides_from_in_direction(
+                    source_node,
+                    &direction,
+                    1, 
+                    BitBoard::empty()
+                ))
+            }
+            result.push(attacks);
+        }
+        return result
+    }
 }
 
 impl<N: LimitedIntTrait, E: LimitedIntTrait> Deref for BoardGraph<N, E> {
@@ -825,6 +855,29 @@ mod tests {
             board.0.pawn_move_table(Color::White)[48],
             BitBoard::from_node_indices(HashSet::from_iter([
                 NodeIndex::new(56)
+            ]))
+        )
+    }
+
+    #[test]
+    fn test_pawn_attack_table() {
+        let board = test_traditional_board();
+        assert_eq!(
+            board.0.pawn_attack_table(Color::White)[49],
+            BitBoard::from_node_indices(HashSet::from_iter([
+                NodeIndex::new(56),
+                NodeIndex::new(58)
+            ]))
+        )
+    }
+
+    #[test]
+    fn test_pawn_attack_table_at_edge() {
+        let board = test_traditional_board();
+        assert_eq!(
+            board.0.pawn_attack_table(Color::Black)[48],
+            BitBoard::from_node_indices(HashSet::from_iter([
+                NodeIndex::new(41),
             ]))
         )
     }
