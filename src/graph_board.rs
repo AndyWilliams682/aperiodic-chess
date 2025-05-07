@@ -121,6 +121,7 @@ impl<
         let mut mask_table: Vec<BitBoard> = vec![];
         let mut attack_table: Vec<HashMap<BitBoard, BitBoard>> = vec![];
         for source_node in self.0.node_indices() {
+            println!("{:?}", source_node);
             let mask = BitBoard::from_node_indices(
                 self.cast_slides_from(
                     source_node,
@@ -184,7 +185,6 @@ impl<
 
         for source_node in self.0.node_indices() {
             let tile = &self.0[source_node];
-            println!("{:?}, {:?}", source_node, tile);
 
             let move_limit = match &tile.pawn_start {
                 Some(pawn_start_color) if pawn_start_color == &color => 2,
@@ -303,7 +303,7 @@ impl TraditionalBoardGraph {
 create_limited_int!(HexagonalDirection, 12);
 
 #[derive(Debug)]
-pub struct HexagonalBoardGraph(BoardGraph<UniformTileOrientation, HexagonalDirection>);
+pub struct HexagonalBoardGraph(pub BoardGraph<UniformTileOrientation, HexagonalDirection>);
 
 impl HexagonalBoardGraph {
     pub fn empty() -> Self {
@@ -313,63 +313,161 @@ impl HexagonalBoardGraph {
         }
         for node_idx in board_graph.node_indices() {
             for direction in Self::get_valid_directions(node_idx) {
-                let other_idx = NodeIndex::from((node_idx.index() as i32 + Self::get_node_index_shift(&direction)) as u32);
+                let other_idx = NodeIndex::from((node_idx.index() as i32 + Self::get_node_index_shift(node_idx, &direction)) as u32);
                 board_graph.add_edge(node_idx, other_idx, direction);
             }
         }
         return HexagonalBoardGraph(board_graph)
     }
 
-    fn new_tile(source: i32) -> Tile<UniformTileOrientation> {
-        if source % 8 == 1 {
-            return Tile { orientation: UniformTileOrientation(0), pawn_start: Some(Color::White) }
-        } else if source % 8 == 7 {
-            return Tile { orientation: UniformTileOrientation(0), pawn_start: Some(Color::Black) }
-        } else {
-            return Tile { orientation: UniformTileOrientation(0), pawn_start: None }
+    fn row_length(n: NodeIndex) -> i32 {
+        return match n.index() as i32 {
+            0..=5 | 85..=90 => 6,
+        6..=12 | 78..=84 => 7,
+        13..=20 | 70..=77 => 8,
+        21..=29 | 61..=69 => 9,
+        30..=39 | 51..=60 => 10,
+        40..=50 => 11,
+        _ => 0
         }
+    }
+
+    fn new_tile(source: i32) -> Tile<UniformTileOrientation> {
+        let pawn_start = match source {
+            4 | 10 | 17 | 25 | 30..=34 => Some(Color::White),
+            56..=60 | 65 | 73 | 80 | 86 => Some(Color::Black),
+            _ => None
+        };
+        return Tile { orientation: UniformTileOrientation(0), pawn_start }
     }
    
     fn get_valid_directions(source: NodeIndex) -> Vec<HexagonalDirection> {
         let mut result = HexagonalDirection::all_values();
         let mut invalid = HashSet::new();
-        if source.index() % 8 == 0 {
-            invalid.insert(1);
-            invalid.insert(2);
-            invalid.insert(3);
-        } else if source.index() % 8 == 7 {
-            invalid.insert(5);
-            invalid.insert(6);
-            invalid.insert(7);
-        }
-        if source.index() <= 7 {
-            invalid.insert(3);
-            invalid.insert(4);
-            invalid.insert(5);
-        } else if source.index() >= 56 {
-            invalid.insert(1);
-            invalid.insert(0);
-            invalid.insert(7);
-        }
+       
+        match source.index() {
+            0..=5 => {
+                invalid.insert(5);
+                invalid.insert(6);
+                invalid.insert(7);
+                invalid.insert(8);
+                invalid.insert(9);
+            },
+            50 | 60 | 69 | 77 | 84 | 90 => {
+                invalid.insert(9);
+                invalid.insert(10);
+                invalid.insert(11);
+                invalid.insert(0);
+                invalid.insert(1);
+            },
+            40 | 51 | 61 | 70 | 78 | 85 => {
+                invalid.insert(1);
+                invalid.insert(2);
+                invalid.insert(3);
+                invalid.insert(4);
+                invalid.insert(5);
+            },
+            7..=11 => {
+                invalid.insert(7);
+            },
+            49 | 59 | 68 | 76 | 83 => {
+                invalid.insert(11);
+            },
+            41 | 52 | 62 | 71 | 79 => {
+                invalid.insert(3);
+            },
+            _ => {}
+        };
+       
+        match source.index() {
+            5 | 12 | 20 | 29 | 39 | 50 => {
+                invalid.insert(7);
+                invalid.insert(8);
+                invalid.insert(9);
+                invalid.insert(10);
+                invalid.insert(11);
+            },
+            85..=90 => {
+                invalid.insert(11);
+                invalid.insert(0);
+                invalid.insert(1);
+                invalid.insert(2);
+                invalid.insert(3);
+            },
+            0 | 6 | 13 | 21 | 30 | 40 => {
+                invalid.insert(3);
+                invalid.insert(4);
+                invalid.insert(5);
+                invalid.insert(6);
+                invalid.insert(7);
+            },
+            79..=83 => {
+                invalid.insert(1);
+            },
+            7 | 14 | 22 | 31 | 41 => {
+                invalid.insert(5);
+            },
+            11 | 19 | 28 | 38 | 49 => {
+                invalid.insert(9);
+            },
+            _ => {}
+        };
+       
         for direction in invalid {
             result.retain(|element| element.0 != direction);
         }
         return result
     }
    
-    fn get_node_index_shift(direction: &HexagonalDirection) -> i32 {
-        let sign = match &direction.0 {
-            2..=5 => -1,
-            _ => 1,
-        };
-        let shift = match direction.0 % 4 {
-            0 => 8,
-            1 => 7,
-            2 => 1,
-            3 => 9,
+    fn get_node_index_shift(source: NodeIndex, direction: &HexagonalDirection) -> i32 {
+        let row = Self::row_length(source);
+        return match direction.0 {
+            0 => {
+                if source.index() <= 40 { row + 1 }
+                else { row }
+            },
+            1 => {
+                if source.index() <= 30 { 2 * row + 2 }
+                else if source.index() >= 41 { 2 * row - 2 }
+                else { 2 * row + 1 }
+            },
+            2 => {
+                if source.index() <= 40 { row }
+                else { row - 1}
+            },
+            3 => {
+                if source.index() <= 40 { row - 1 }
+                else { row - 2 }
+            },
+            4 => -1,
+            5 => {
+                if source.index() <= 51 { -row - 1 }
+                else { -row - 2 }
+            },
+            6 => {
+                if source.index() <= 51 { -row }
+                else { -row - 1}
+            },
+            7 => {
+                if source.index() >= 62 { -2 * row - 2 }
+                else if source.index() <= 41 { -2 * row + 2 }
+                else { -2 * row - 1 }
+            },
+            8 => {
+                if source.index() <= 51 { -row + 1 }
+                else { -row }
+            },
+            9 => {
+                if source.index() <= 51 { -row + 2 }
+                else { -row + 1 }
+            },
+            10 => 1,
+            11 => {
+                if source.index() <= 40 { row + 2 }
+                else { row + 1 }
+            },
             _ => 0
-        };
-        return shift * sign
+        }
     }
 }
 
@@ -380,6 +478,10 @@ mod tests {
 
     fn test_traditional_board() -> TraditionalBoardGraph {
         return TraditionalBoardGraph::empty();
+    }
+
+    fn test_hexagonal_board() -> HexagonalBoardGraph {
+        return HexagonalBoardGraph::empty();
     }
 
     #[test]
@@ -710,6 +812,89 @@ mod tests {
             board.0.pawn_move_table(Color::White)[48],
             BitBoard::from_node_indices(HashSet::from_iter([
                 NodeIndex::new(56)
+            ]))
+        )
+    }
+
+    #[test]
+    fn test_hex_knight_table() {
+        let board = test_hexagonal_board();
+        assert_eq!(
+            board.0.knight_jumps_table()[0], // Only testing last node
+            BitBoard::from_node_indices(HashSet::from_iter([
+                NodeIndex::new(9),
+                NodeIndex::new(16),
+                NodeIndex::new(22),
+                NodeIndex::new(23)
+            ]))
+        )
+    }
+
+    // #[test]
+    // fn test_hex_queen_table() {
+    //     let board = test_hexagonal_board();
+    //     let queen_slides_table = board.0.orthogonal_slides_table();
+    //     let mask = queen_slides_table.0;
+    //     assert_eq!(
+    //         mask[0],
+    //         BitBoard::from_node_indices(HashSet::from_iter([
+    //             NodeIndex::new(1),
+    //             NodeIndex::new(2),
+    //             NodeIndex::new(3),
+    //             NodeIndex::new(4),
+    //             NodeIndex::new(5),
+    //             NodeIndex::new(6),
+    //             NodeIndex::new(13),
+    //             NodeIndex::new(21),
+    //             NodeIndex::new(30),
+    //             NodeIndex::new(40),
+    //             NodeIndex::new(7),
+    //             NodeIndex::new(15),
+    //             NodeIndex::new(24),
+    //             NodeIndex::new(34),
+    //             NodeIndex::new(45),
+    //             NodeIndex::new(56),
+    //             NodeIndex::new(66),
+    //             NodeIndex::new(75),
+    //             NodeIndex::new(83),
+    //             NodeIndex::new(90),
+    //             // NodeIndex::new(14),
+    //             // NodeIndex::new(32),
+    //             // NodeIndex::new(53),
+    //             // NodeIndex::new(71),
+    //             // NodeIndex::new(85),
+    //             // NodeIndex::new(8),
+    //             // NodeIndex::new(17),
+    //             // NodeIndex::new(27),
+    //             // NodeIndex::new(38),
+    //             // NodeIndex::new(50),
+    //         ]))
+    //     );
+    // }
+
+    #[test]
+    fn test_hex_king_table() {
+        let board = test_hexagonal_board();
+        assert_eq!(
+            board.0.king_move_table()[0],
+            BitBoard::from_node_indices(HashSet::from_iter([
+                NodeIndex::new(1),
+                NodeIndex::new(6),
+                NodeIndex::new(7),
+                NodeIndex::new(8),
+                NodeIndex::new(14)
+            ]))
+        )
+    }
+
+    #[test]
+    fn test_hex_pawn_move_table_backward() {
+        let board = test_hexagonal_board();
+        assert_eq!(
+            board.0.pawn_move_table(Color::Black)[56],
+            BitBoard::from_node_indices(HashSet::from_iter([
+                NodeIndex::new(45),
+                NodeIndex::new(34)
             ]))
         )
     }
