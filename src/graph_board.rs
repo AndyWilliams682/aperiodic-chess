@@ -113,50 +113,43 @@ impl<
         return result
     }
 
-    pub fn slides_table(
-        &self,
-        diagonals: bool,
-        orthogonals: bool
-    ) -> (Vec<BitBoard>, Vec<HashMap<BitBoard, BitBoard>>) {
-        let mut mask_table: Vec<BitBoard> = vec![];
+    pub fn slide_table_for_direction(&self, direction: &E) -> Vec<HashMap<BitBoard, BitBoard>> {
         let mut attack_table: Vec<HashMap<BitBoard, BitBoard>> = vec![];
         for source_node in self.0.node_indices() {
-            println!("{:?}", source_node);
-            let mask = BitBoard::from_node_indices(
-                self.cast_slides_from(
+            let unobstructed_attacks = BitBoard::from_node_indices(
+                self.slides_from_in_direction(
                     source_node,
-                    BitBoard::empty(),
+                    direction,
                     0,
-                    diagonals,
-                    orthogonals
+                    BitBoard::empty()
                 )
             );
-            mask_table.push(mask);
             let mut attack_map = HashMap::new();
-            for subset in CarryRippler::new(mask) {
+            attack_map.insert(BitBoard::new(0), unobstructed_attacks);
+            for subset in CarryRippler::new(unobstructed_attacks) {
                 attack_map.insert(
                     subset,
                     BitBoard::from_node_indices(
-                        self.cast_slides_from(
+                        self.slides_from_in_direction(
                             source_node,
-                            subset,
+                            direction,
                             0,
-                            diagonals,
-                            orthogonals
+                            subset
                         )
-                    ));
+                    )
+                );
             }
             attack_table.push(attack_map);
         }
-        return (mask_table, attack_table)
+        return attack_table
     }
 
-    pub fn diagonal_slides_table(&self) -> (Vec<BitBoard>, Vec<HashMap<BitBoard, BitBoard>>) {
-        return self.slides_table(true, false)
-    }
-
-    pub fn orthogonal_slides_table(&self) -> (Vec<BitBoard>, Vec<HashMap<BitBoard, BitBoard>>) {
-        return self.slides_table(false, true)
+    pub fn all_slide_tables(&self) -> Vec<Vec<HashMap<BitBoard, BitBoard>>> {
+        let mut output = vec![];
+        for direction in E::all_values() {
+            output.push(self.slide_table_for_direction(&direction))
+        }
+        return output
     }
 
     pub fn king_move_table(&self) -> Vec<BitBoard> {
@@ -480,8 +473,16 @@ mod tests {
         return TraditionalBoardGraph::empty();
     }
 
+    fn traditional_slide_tables() -> Vec<Vec<HashMap<BitBoard, BitBoard>>> {
+        return test_traditional_board().0.all_slide_tables()
+    }
+
     fn test_hexagonal_board() -> HexagonalBoardGraph {
         return HexagonalBoardGraph::empty();
+    }
+
+    fn hexagonal_slide_tables() -> Vec<Vec<HashMap<BitBoard, BitBoard>>> {
+        return test_hexagonal_board().0.all_slide_tables()
     }
 
     #[test]
@@ -700,12 +701,21 @@ mod tests {
     }
 
     #[test]
-    fn test_diagonal_table() {
+    fn test_slide_table_for_direction() {
         let board = test_traditional_board();
-        let diag_slides_table = board.0.diagonal_slides_table();
-        let mask = diag_slides_table.0;
         assert_eq!(
-            mask[63], // Only testing last node
+            *board.0.slide_table_for_direction(&TraditionalDirection(0))[0].get(&BitBoard::new(65536)).unwrap(),
+            BitBoard::from_node_indices(HashSet::from_iter([
+                NodeIndex::new(8),
+            ]))
+        )
+    }
+
+    #[test]
+    fn test_diagonal_slide_table() {
+        let diag_table_3 = &traditional_slide_tables()[3];
+        assert_eq!(
+            *diag_table_3[63].get(&BitBoard::empty()).unwrap(), // Only testing last node
             BitBoard::from_node_indices(HashSet::from_iter([
                 NodeIndex::new(54),
                 NodeIndex::new(45),
@@ -716,24 +726,24 @@ mod tests {
                 NodeIndex::new(0),
             ]))
         );
-        let blocked_map = diag_slides_table.1[63].clone();
+        let blockers = BitBoard::from_node_indices(HashSet::from_iter([NodeIndex::new(45)]));
         assert_eq!(
-            *blocked_map.get(&BitBoard::from_node_indices(HashSet::from_iter([
-                NodeIndex::new(45)
-            ]))).unwrap(),
+            *diag_table_3[63].get(&blockers).unwrap(),
             BitBoard::from_node_indices(HashSet::from_iter([
-                NodeIndex::new(54)
+                NodeIndex::new(54),
             ]))
-        )
+        );
     }
 
     #[test]
     fn test_orthogonal_table() {
-        let board = test_traditional_board();
-        let orthog_slides_table = board.0.orthogonal_slides_table();
-        let mask = orthog_slides_table.0;
+        let slides_table = &traditional_slide_tables();
+        let mut unblocked_attacks = BitBoard::empty();
+        for direction in (0..TraditionalDirection::max_value()).step_by(2) {
+            unblocked_attacks = unblocked_attacks | *slides_table[direction as usize][63].get(&BitBoard::empty()).unwrap();
+        }
         assert_eq!(
-            mask[63], // Only testing last node
+            unblocked_attacks, // Only testing last node
             BitBoard::from_node_indices(HashSet::from_iter([
                 NodeIndex::new(62),
                 NodeIndex::new(61),
@@ -751,11 +761,14 @@ mod tests {
                 NodeIndex::new(7),
             ]))
         );
-        let blocked_map = orthog_slides_table.1[63].clone();
+        let blockers = BitBoard::from_node_indices(HashSet::from_iter([NodeIndex::new(62)]));
+        let mut blocked_attacks: BitBoard = BitBoard::empty();
+        for direction in (0..TraditionalDirection::max_value()).step_by(2) {
+            let unblocked = *slides_table[direction as usize][63].get(&BitBoard::empty()).unwrap();
+            blocked_attacks = blocked_attacks | *slides_table[direction as usize][63].get(&(blockers & unblocked)).unwrap();
+        }
         assert_eq!(
-            *blocked_map.get(&BitBoard::from_node_indices(HashSet::from_iter([
-                NodeIndex::new(62)
-            ]))).unwrap(),
+            blocked_attacks,
             BitBoard::from_node_indices(HashSet::from_iter([
                 NodeIndex::new(55),
                 NodeIndex::new(47),
@@ -830,47 +843,49 @@ mod tests {
         )
     }
 
-    // #[test]
-    // fn test_hex_queen_table() {
-    //     let board = test_hexagonal_board();
-    //     let queen_slides_table = board.0.orthogonal_slides_table();
-    //     let mask = queen_slides_table.0;
-    //     assert_eq!(
-    //         mask[0],
-    //         BitBoard::from_node_indices(HashSet::from_iter([
-    //             NodeIndex::new(1),
-    //             NodeIndex::new(2),
-    //             NodeIndex::new(3),
-    //             NodeIndex::new(4),
-    //             NodeIndex::new(5),
-    //             NodeIndex::new(6),
-    //             NodeIndex::new(13),
-    //             NodeIndex::new(21),
-    //             NodeIndex::new(30),
-    //             NodeIndex::new(40),
-    //             NodeIndex::new(7),
-    //             NodeIndex::new(15),
-    //             NodeIndex::new(24),
-    //             NodeIndex::new(34),
-    //             NodeIndex::new(45),
-    //             NodeIndex::new(56),
-    //             NodeIndex::new(66),
-    //             NodeIndex::new(75),
-    //             NodeIndex::new(83),
-    //             NodeIndex::new(90),
-    //             // NodeIndex::new(14),
-    //             // NodeIndex::new(32),
-    //             // NodeIndex::new(53),
-    //             // NodeIndex::new(71),
-    //             // NodeIndex::new(85),
-    //             // NodeIndex::new(8),
-    //             // NodeIndex::new(17),
-    //             // NodeIndex::new(27),
-    //             // NodeIndex::new(38),
-    //             // NodeIndex::new(50),
-    //         ]))
-    //     );
-    // }
+    #[test]
+    fn test_hex_queen_table() {
+        let slide_tables = hexagonal_slide_tables();
+        let mut attacks = BitBoard::empty();
+        for direction in 0..HexagonalDirection::max_value() {
+            attacks = attacks | *slide_tables[direction as usize][0].get(&BitBoard::empty()).unwrap();
+        }
+        assert_eq!(
+            attacks,
+            BitBoard::from_node_indices(HashSet::from_iter([
+                NodeIndex::new(1),
+                NodeIndex::new(2),
+                NodeIndex::new(3),
+                NodeIndex::new(4),
+                NodeIndex::new(5),
+                NodeIndex::new(6),
+                NodeIndex::new(13),
+                NodeIndex::new(21),
+                NodeIndex::new(30),
+                NodeIndex::new(40),
+                NodeIndex::new(7),
+                NodeIndex::new(15),
+                NodeIndex::new(24),
+                NodeIndex::new(34),
+                NodeIndex::new(45),
+                NodeIndex::new(56),
+                NodeIndex::new(66),
+                NodeIndex::new(75),
+                NodeIndex::new(83),
+                NodeIndex::new(90),
+                NodeIndex::new(14),
+                NodeIndex::new(32),
+                NodeIndex::new(53),
+                NodeIndex::new(71),
+                NodeIndex::new(85),
+                NodeIndex::new(8),
+                NodeIndex::new(17),
+                NodeIndex::new(27),
+                NodeIndex::new(38),
+                NodeIndex::new(50),
+            ]))
+        );
+    }
 
     #[test]
     fn test_hex_king_table() {
