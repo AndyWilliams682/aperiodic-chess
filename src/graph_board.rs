@@ -37,6 +37,23 @@ impl Index<NodeIndex> for JumpTable {
     }
 }
 
+#[derive(Debug)]
+pub struct DirectionalSlideTable(Vec<HashMap<BitBoard, BitBoard>>);
+
+impl DirectionalSlideTable {
+    fn new(val: Vec<HashMap<BitBoard, BitBoard>>) -> Self {
+        return Self(val)
+    }
+}
+
+impl Index<NodeIndex> for DirectionalSlideTable {
+    type Output = HashMap<BitBoard, BitBoard>;
+   
+    fn index(&self, index: NodeIndex) -> &Self::Output {
+        &self.0[index.index()]
+    }
+}
+
 
 // Generic graph that uses LimitedIntTrait for the edges
 #[derive(Debug)]
@@ -130,7 +147,7 @@ impl<
         return JumpTable::new(result)
     }
 
-    pub fn slide_table_for_direction(&self, direction: &E) -> Vec<HashMap<BitBoard, BitBoard>> {
+    pub fn slide_table_for_direction(&self, direction: &E) -> DirectionalSlideTable {
         let mut attack_table: Vec<HashMap<BitBoard, BitBoard>> = vec![];
         for source_node in self.0.node_indices() {
             let unobstructed_attacks = BitBoard::from_node_indices(
@@ -158,10 +175,10 @@ impl<
             }
             attack_table.push(attack_map);
         }
-        return attack_table
+        return DirectionalSlideTable::new(attack_table)
     }
 
-    pub fn all_slide_tables(&self) -> Vec<Vec<HashMap<BitBoard, BitBoard>>> {
+    pub fn all_slide_tables(&self) -> Vec<DirectionalSlideTable> {
         let mut output = vec![];
         for direction in E::all_values() {
             output.push(self.slide_table_for_direction(&direction))
@@ -520,7 +537,7 @@ mod tests {
         return TraditionalBoardGraph::empty();
     }
 
-    fn traditional_slide_tables() -> Vec<Vec<HashMap<BitBoard, BitBoard>>> {
+    fn traditional_slide_tables() -> Vec<DirectionalSlideTable> {
         return test_traditional_board().0.all_slide_tables()
     }
 
@@ -528,7 +545,7 @@ mod tests {
         return HexagonalBoardGraph::empty();
     }
 
-    fn hexagonal_slide_tables() -> Vec<Vec<HashMap<BitBoard, BitBoard>>> {
+    fn hexagonal_slide_tables() -> Vec<DirectionalSlideTable> {
         return test_hexagonal_board().0.all_slide_tables()
     }
 
@@ -744,8 +761,9 @@ mod tests {
     #[test]
     fn test_slide_table_for_direction() {
         let board = test_traditional_board();
+        let source_node = NodeIndex::new(0);
         assert_eq!(
-            *board.0.slide_table_for_direction(&TraditionalDirection(0))[0].get(&BitBoard::new(65536)).unwrap(),
+            *board.0.slide_table_for_direction(&TraditionalDirection(0))[source_node].get(&BitBoard::new(65536)).unwrap(),
             BitBoard::from_ints(vec![8])
         )
     }
@@ -753,13 +771,14 @@ mod tests {
     #[test]
     fn test_diagonal_slide_table() {
         let diag_table_3 = &traditional_slide_tables()[3];
+        let source_node = NodeIndex::new(63);
         assert_eq!(
-            *diag_table_3[63].get(&BitBoard::empty()).unwrap(), // Only testing last node
+            *diag_table_3[source_node].get(&BitBoard::empty()).unwrap(), // Only testing last node
             BitBoard::from_ints(vec![54, 45, 36, 27, 18, 9, 0])
         );
         let blockers = BitBoard::from_ints(vec![45]);
         assert_eq!(
-            *diag_table_3[63].get(&blockers).unwrap(),
+            *diag_table_3[source_node].get(&blockers).unwrap(),
             BitBoard::from_ints(vec![54])
         );
     }
@@ -767,9 +786,10 @@ mod tests {
     #[test]
     fn test_orthogonal_table() {
         let slides_table = &traditional_slide_tables();
+        let source_node = NodeIndex::new(63);
         let mut unblocked_attacks = BitBoard::empty();
         for direction in (0..TraditionalDirection::max_value()).step_by(2) {
-            unblocked_attacks = unblocked_attacks | *slides_table[direction as usize][63].get(&BitBoard::empty()).unwrap();
+            unblocked_attacks = unblocked_attacks | *slides_table[direction as usize][source_node].get(&BitBoard::empty()).unwrap();
         }
         assert_eq!(
             unblocked_attacks, // Only testing last node
@@ -778,8 +798,8 @@ mod tests {
         let blockers = BitBoard::from_ints(vec![62]);
         let mut blocked_attacks: BitBoard = BitBoard::empty();
         for direction in (0..TraditionalDirection::max_value()).step_by(2) {
-            let unblocked = *slides_table[direction as usize][63].get(&BitBoard::empty()).unwrap();
-            blocked_attacks = blocked_attacks | *slides_table[direction as usize][63].get(&(blockers & unblocked)).unwrap();
+            let unblocked = *slides_table[direction as usize][source_node].get(&BitBoard::empty()).unwrap();
+            blocked_attacks = blocked_attacks | *slides_table[direction as usize][source_node].get(&(blockers & unblocked)).unwrap();
         }
         assert_eq!(
             blocked_attacks,
@@ -860,9 +880,10 @@ mod tests {
     #[test]
     fn test_hex_queen_table() {
         let slide_tables = hexagonal_slide_tables();
+        let source_node = NodeIndex::new(0);
         let mut attacks = BitBoard::empty();
         for direction in 0..HexagonalDirection::max_value() {
-            attacks = attacks | *slide_tables[direction as usize][0].get(&BitBoard::empty()).unwrap();
+            attacks = attacks | *slide_tables[direction as usize][source_node].get(&BitBoard::empty()).unwrap();
         }
         assert_eq!(
             attacks,
