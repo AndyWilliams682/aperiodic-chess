@@ -621,11 +621,7 @@ mod tests {
     fn test_diagonal_slides_obstructed() {
         let board = test_traditional_board();
         let source_node = NodeIndex::new(27);
-        let blockers = BitBoard::from_node_indices(HashSet::from_iter([
-            NodeIndex::new(36),
-            NodeIndex::new(34),
-            NodeIndex::new(20)
-        ]));
+        let blockers = BitBoard::from_ints(vec![36, 34, 20]);
         assert_eq!(
             board.0.cast_slides_from(source_node, blockers, 0, true, false),
             HashSet::from_iter([    
@@ -723,10 +719,7 @@ mod tests {
         let board = test_traditional_board();
         assert_eq!(
             board.0.knight_jumps_table()[63], // Only testing last node
-            BitBoard::from_node_indices(HashSet::from_iter([
-                NodeIndex::new(53),
-                NodeIndex::new(46)
-            ]))
+            BitBoard::from_ints(vec![53, 46])
         )
     }
 
@@ -735,9 +728,7 @@ mod tests {
         let board = test_traditional_board();
         assert_eq!(
             *board.0.slide_table_for_direction(&TraditionalDirection(0))[0].get(&BitBoard::new(65536)).unwrap(),
-            BitBoard::from_node_indices(HashSet::from_iter([
-                NodeIndex::new(8),
-            ]))
+            BitBoard::from_ints(vec![8])
         )
     }
 
@@ -746,22 +737,12 @@ mod tests {
         let diag_table_3 = &traditional_slide_tables()[3];
         assert_eq!(
             *diag_table_3[63].get(&BitBoard::empty()).unwrap(), // Only testing last node
-            BitBoard::from_node_indices(HashSet::from_iter([
-                NodeIndex::new(54),
-                NodeIndex::new(45),
-                NodeIndex::new(36),
-                NodeIndex::new(27),
-                NodeIndex::new(18),
-                NodeIndex::new(9),
-                NodeIndex::new(0),
-            ]))
+            BitBoard::from_ints(vec![54, 45, 36, 27, 18, 9, 0])
         );
-        let blockers = BitBoard::from_node_indices(HashSet::from_iter([NodeIndex::new(45)]));
+        let blockers = BitBoard::from_ints(vec![45]);
         assert_eq!(
             *diag_table_3[63].get(&blockers).unwrap(),
-            BitBoard::from_node_indices(HashSet::from_iter([
-                NodeIndex::new(54),
-            ]))
+            BitBoard::from_ints(vec![54])
         );
     }
 
@@ -774,24 +755,9 @@ mod tests {
         }
         assert_eq!(
             unblocked_attacks, // Only testing last node
-            BitBoard::from_node_indices(HashSet::from_iter([
-                NodeIndex::new(62),
-                NodeIndex::new(61),
-                NodeIndex::new(60),
-                NodeIndex::new(59),
-                NodeIndex::new(58),
-                NodeIndex::new(57),
-                NodeIndex::new(56),
-                NodeIndex::new(55),
-                NodeIndex::new(47),
-                NodeIndex::new(39),
-                NodeIndex::new(31),
-                NodeIndex::new(23),
-                NodeIndex::new(15),
-                NodeIndex::new(7),
-            ]))
+            BitBoard::from_ints(vec![62, 61, 60, 59, 58, 57, 56, 55, 47, 39, 31, 23, 15, 7])
         );
-        let blockers = BitBoard::from_node_indices(HashSet::from_iter([NodeIndex::new(62)]));
+        let blockers = BitBoard::from_ints(vec![62]);
         let mut blocked_attacks: BitBoard = BitBoard::empty();
         for direction in (0..TraditionalDirection::max_value()).step_by(2) {
             let unblocked = *slides_table[direction as usize][63].get(&BitBoard::empty()).unwrap();
@@ -799,15 +765,7 @@ mod tests {
         }
         assert_eq!(
             blocked_attacks,
-            BitBoard::from_node_indices(HashSet::from_iter([
-                NodeIndex::new(55),
-                NodeIndex::new(47),
-                NodeIndex::new(39),
-                NodeIndex::new(31),
-                NodeIndex::new(23),
-                NodeIndex::new(15),
-                NodeIndex::new(7),
-            ]))
+            BitBoard::from_ints(vec![55, 47, 39, 31, 23, 15, 7])
         )
     }
 
@@ -816,11 +774,7 @@ mod tests {
         let board = test_traditional_board();
         assert_eq!(
             board.0.king_move_table()[63], // Only testing last node
-            BitBoard::from_node_indices(HashSet::from_iter([
-                NodeIndex::new(62),
-                NodeIndex::new(55),
-                NodeIndex::new(54)
-            ]))
+            BitBoard::from_ints(vec![62, 55, 54])
         )
     }
 
@@ -829,10 +783,7 @@ mod tests {
         let board = test_traditional_board();
         assert_eq!(
             board.0.pawn_move_table(Color::White)[8],
-            BitBoard::from_node_indices(HashSet::from_iter([
-                NodeIndex::new(16),
-                NodeIndex::new(24)
-            ]))
+            BitBoard::from_ints(vec![16, 24])
         )
     }
 
@@ -841,10 +792,7 @@ mod tests {
         let board = test_traditional_board();
         assert_eq!(
             board.0.pawn_move_table(Color::Black)[48],
-            BitBoard::from_node_indices(HashSet::from_iter([
-                NodeIndex::new(40),
-                NodeIndex::new(32)
-            ]))
+            BitBoard::from_ints(vec![40, 32])
         )
     }
 
@@ -853,9 +801,7 @@ mod tests {
         let board = test_traditional_board();
         assert_eq!(
             board.0.pawn_move_table(Color::White)[48],
-            BitBoard::from_node_indices(HashSet::from_iter([
-                NodeIndex::new(56)
-            ]))
+            BitBoard::from_ints(vec![56])
         )
     }
 
@@ -864,10 +810,7 @@ mod tests {
         let board = test_traditional_board();
         assert_eq!(
             board.0.pawn_attack_table(Color::White)[49],
-            BitBoard::from_node_indices(HashSet::from_iter([
-                NodeIndex::new(56),
-                NodeIndex::new(58)
-            ]))
+            BitBoard::from_ints(vec![56, 58])
         )
     }
 
@@ -876,9 +819,7 @@ mod tests {
         let board = test_traditional_board();
         assert_eq!(
             board.0.pawn_attack_table(Color::Black)[48],
-            BitBoard::from_node_indices(HashSet::from_iter([
-                NodeIndex::new(41),
-            ]))
+            BitBoard::from_ints(vec![41])
         )
     }
 
@@ -887,12 +828,7 @@ mod tests {
         let board = test_hexagonal_board();
         assert_eq!(
             board.0.knight_jumps_table()[0], // Only testing last node
-            BitBoard::from_node_indices(HashSet::from_iter([
-                NodeIndex::new(9),
-                NodeIndex::new(16),
-                NodeIndex::new(22),
-                NodeIndex::new(23)
-            ]))
+            BitBoard::from_ints(vec![9, 16, 22, 23])
         )
     }
 
@@ -905,38 +841,13 @@ mod tests {
         }
         assert_eq!(
             attacks,
-            BitBoard::from_node_indices(HashSet::from_iter([
-                NodeIndex::new(1),
-                NodeIndex::new(2),
-                NodeIndex::new(3),
-                NodeIndex::new(4),
-                NodeIndex::new(5),
-                NodeIndex::new(6),
-                NodeIndex::new(13),
-                NodeIndex::new(21),
-                NodeIndex::new(30),
-                NodeIndex::new(40),
-                NodeIndex::new(7),
-                NodeIndex::new(15),
-                NodeIndex::new(24),
-                NodeIndex::new(34),
-                NodeIndex::new(45),
-                NodeIndex::new(56),
-                NodeIndex::new(66),
-                NodeIndex::new(75),
-                NodeIndex::new(83),
-                NodeIndex::new(90),
-                NodeIndex::new(14),
-                NodeIndex::new(32),
-                NodeIndex::new(53),
-                NodeIndex::new(71),
-                NodeIndex::new(85),
-                NodeIndex::new(8),
-                NodeIndex::new(17),
-                NodeIndex::new(27),
-                NodeIndex::new(38),
-                NodeIndex::new(50),
-            ]))
+            BitBoard::from_ints(vec![
+                1, 2, 3, 4, 5, // Direction 10
+                6, 13, 21, 30, 40, // 2
+                7, 15, 24, 34, 45, 56, 66, 75, 83, 90, // 0
+                14, 32, 53, 71, 85, // 1
+                8, 17, 27, 38, 50 // 11
+            ])
         );
     }
 
@@ -945,13 +856,7 @@ mod tests {
         let board = test_hexagonal_board();
         assert_eq!(
             board.0.king_move_table()[0],
-            BitBoard::from_node_indices(HashSet::from_iter([
-                NodeIndex::new(1),
-                NodeIndex::new(6),
-                NodeIndex::new(7),
-                NodeIndex::new(8),
-                NodeIndex::new(14)
-            ]))
+            BitBoard::from_ints(vec![1, 6, 7, 8, 14])
         )
     }
 
@@ -960,10 +865,7 @@ mod tests {
         let board = test_hexagonal_board();
         assert_eq!(
             board.0.pawn_move_table(Color::Black)[56],
-            BitBoard::from_node_indices(HashSet::from_iter([
-                NodeIndex::new(45),
-                NodeIndex::new(34)
-            ]))
+            BitBoard::from_ints(vec![34, 45])
         )
     }
 }

@@ -15,6 +15,14 @@ impl BitBoard {
         return BitBoard(result)
     }
 
+    pub fn from_ints(ints: Vec<u128>) -> BitBoard {
+        let mut result: u128 = 0;
+        for node in ints {
+            result += 1 << node;
+        }
+        return BitBoard(result)
+    }
+
     pub fn new(n: u128) -> BitBoard {
         return BitBoard(n)
     }
