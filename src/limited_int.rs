@@ -13,7 +13,7 @@ pub trait LimitedIntTrait {
 #[macro_export]
 macro_rules! create_limited_int {
     ($name:ident, $max_value:expr) => {
-        #[derive(Debug, PartialEq, PartialOrd, Eq, Hash)]
+        #[derive(Debug, PartialEq, PartialOrd, Eq, Hash, Clone)]
         pub struct $name(u8); // May need to modify u8 in the future?
 
         impl $name {
