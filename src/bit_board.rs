@@ -30,6 +30,11 @@ impl BitBoard {
     pub fn empty() -> BitBoard {
         return BitBoard(0)
     }
+
+    pub fn get_bit_at_node(self, node: NodeIndex) -> bool {
+        let mask: u128 = 1 << node.index();
+        return (self.0 & mask) == 1
+    }
 }
 
 impl Sub for BitBoard {

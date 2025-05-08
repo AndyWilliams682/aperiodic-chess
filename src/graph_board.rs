@@ -8,7 +8,7 @@ use crate::create_limited_int;
 use crate::limited_int::LimitedIntTrait;
 
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Clone, Copy)]
 pub enum Color {
     White,
     Black

@@ -1,5 +1,8 @@
+use petgraph::graph::{Node, NodeIndex};
+
 use crate::graph_board::{SlideTables, JumpTable, Color};
 use crate::bit_board::BitBoard;
+use crate::chess_move::Move;
 
 
 pub struct MoveTables {
@@ -12,6 +15,7 @@ pub struct MoveTables {
     black_pawn_attack_table: JumpTable
 }
 
+#[derive(Debug, Clone, Copy, PartialEq)]
 pub enum PieceType {
     King,
     Queen,
@@ -34,6 +38,7 @@ impl PieceType {
     }
 }
 
+#[derive(Debug, Clone, Copy)]
 pub struct PieceSet {
     player: Color,
     king: BitBoard,
@@ -103,6 +108,25 @@ impl PieceSet {
             }
         }
     }
+
+    fn get_piece_at(&self, node: NodeIndex) -> Option<PieceType> {
+        if self.king.get_bit_at_node(node) == true {
+            return Some(PieceType::King)
+        } else if self.queen.get_bit_at_node(node) == true {
+            return Some(PieceType::Queen)
+        } else if self.rook.get_bit_at_node(node) == true {
+            return Some(PieceType::Rook)
+        } else if self.bishop.get_bit_at_node(node) == true {
+            return Some(PieceType::Bishop)
+        } else if self.knight.get_bit_at_node(node) == true {
+            return Some(PieceType::Knight)
+        } else if self.pawn.get_bit_at_node(node) == true {
+            return Some(PieceType::Pawn)
+        } else {
+            return None
+        }
+
+    }
 }
 
 // impl PieceSet {
@@ -111,7 +135,8 @@ impl PieceSet {
 
 pub struct Position {
     pub active_player: Color,
-    pub pieces: (PieceSet, PieceSet),
+    pub pieces: [PieceSet; 2],
+    pub en_passant_square: Option<NodeIndex>
     // pub board_type
     // pub properties
 }
@@ -120,21 +145,33 @@ impl Position {
     fn new_traditional() -> Self {
         return Self {
             active_player: Color::White,
-            pieces: (
+            pieces: [
                 PieceSet::new_traditional(Color::White),
                 PieceSet::new_traditional(Color::Black)
-            )
+            ],
+            en_passant_square: None
         }
     }
 
     fn new_hexagonal() -> Self {
         return Self {
             active_player: Color::White,
-            pieces: (
+            pieces: [
                 PieceSet::new_hexagonal(Color::White),
                 PieceSet::new_hexagonal(Color::Black)
-            )
+            ],
+            en_passant_square: None
         }
+    }
+
+    fn make_legal_move(&mut self, legal_move: Move) {
+        // Assumes the move is legal?
+        let player_idx = match self.active_player {
+            Color::White => 0,
+            Color::Black => 1
+        };
+
+        let moving_piece = self.pieces[player_idx].get_piece_at(legal_move.from_node);
     }
 }
 
@@ -142,10 +179,14 @@ impl Position {
 mod tests {
     use super::*;
 
+    fn test_traditional_position() -> Position {
+        return Position::new_traditional()
+    }
+
     #[test]
     fn test_new_traditional_occupied() {
-        let position = Position::new_traditional();
-        let occupied = position.pieces.0.occupied | position.pieces.1.occupied;
+        let position = test_traditional_position();
+        let occupied = position.pieces[0].occupied | position.pieces[1].occupied;
         assert_eq!(
             occupied,
             BitBoard::from_ints(vec![
@@ -158,13 +199,22 @@ mod tests {
     #[test]
     fn test_new_hexagonal_occupied() {
         let position = Position::new_hexagonal();
-        let occupied = position.pieces.0.occupied | position.pieces.1.occupied;
+        let occupied = position.pieces[0].occupied | position.pieces[1].occupied;
         assert_eq!(
             occupied,
             BitBoard::from_ints(vec![
                 0, 1, 2, 3, 4, 6, 7, 10, 13, 15, 17, 21, 25, 30, 31, 32, 33, 34,
                 56, 57, 58, 59, 60, 65, 69, 73, 75, 77, 80, 83, 84, 86, 87, 88, 89, 90
             ])
+        )
+    }
+
+    #[test]
+    fn test_get_piece_at_node() {
+        let piece_set = PieceSet::new_traditional(Color::White);
+        assert_eq!(
+            piece_set.get_piece_at(NodeIndex::new(0)).unwrap(),
+            PieceType::Rook
         )
     }
 }
