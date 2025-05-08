@@ -7,6 +7,7 @@ pub trait LimitedIntTrait {
     fn adjacent_values(&self) -> Vec<Self> where Self: Sized;
     fn map_to_other<T: LimitedIntTrait>() -> HashMap<Self, T> where Self: Sized;
     fn shift_by(&self, shift: u8) -> Self where Self: Sized;
+    fn to_usize(&self) -> usize;
 }
 
 #[macro_export]
@@ -71,6 +72,10 @@ macro_rules! create_limited_int {
 
             fn shift_by(&self, shift: u8) -> Self {
                 Self((self.0 + shift) % Self::max_value())
+            }
+
+            fn to_usize(&self) -> usize {
+                self.0 as usize
             }
         }
     };
