@@ -9,7 +9,7 @@ use crate::limited_int::LimitedIntTrait;
 
 
 #[derive(Debug, PartialEq)]
-enum Color {
+pub enum Color {
     White,
     Black
 }
