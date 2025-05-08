@@ -1,7 +1,7 @@
 use petgraph::graph::{Graph, NodeIndex};
 use petgraph::visit::EdgeRef;
 use std::collections::{HashSet, HashMap};
-use std::ops::{Deref, DerefMut};
+use std::ops::{Deref, DerefMut, Index};
 
 use crate::bit_board::{BitBoard, CarryRippler};
 use crate::create_limited_int;
@@ -18,6 +18,23 @@ enum Color {
 pub struct Tile<N: LimitedIntTrait> {
     orientation: N,
     pawn_start: Option<Color>
+}
+
+#[derive(Debug)]
+pub struct JumpTable(Vec<BitBoard>);
+
+impl JumpTable {
+    pub fn new(val: Vec<BitBoard>) -> Self {
+        Self(val)
+    }
+}
+
+impl Index<NodeIndex> for JumpTable {
+    type Output = BitBoard;
+   
+    fn index(&self, index: NodeIndex) -> &Self::Output {
+        &self.0[index.index()]
+    }
 }
 
 
@@ -105,12 +122,12 @@ impl<
         return result
     }
 
-    pub fn knight_jumps_table(&self) -> Vec<BitBoard> {
+    pub fn knight_jumps_table(&self) -> JumpTable {
         let mut result: Vec<BitBoard> = vec![];
         for source_node in self.0.node_indices() {
             result.push(BitBoard::from_node_indices(self.knight_jumps_from(source_node)))
         }
-        return result
+        return JumpTable::new(result)
     }
 
     pub fn slide_table_for_direction(&self, direction: &E) -> Vec<HashMap<BitBoard, BitBoard>> {
@@ -152,7 +169,7 @@ impl<
         return output
     }
 
-    pub fn king_move_table(&self) -> Vec<BitBoard> {
+    pub fn king_move_table(&self) -> JumpTable {
         let mut result: Vec<BitBoard> = vec![];
         for source_node in self.0.node_indices() {
             result.push(BitBoard::from_node_indices(self.cast_slides_from(
@@ -163,10 +180,10 @@ impl<
                 true
             )))
         }
-        return result
+        return JumpTable::new(result)
     }
 
-    pub fn pawn_move_table(&self, color: Color) -> Vec<BitBoard> {
+    pub fn pawn_move_table(&self, color: Color) -> JumpTable {
         let mut result: Vec<BitBoard> = vec![];
 
         let forward_or_backward = match color {
@@ -193,10 +210,10 @@ impl<
                 BitBoard::empty(),
             )));
         }
-        return result
+        return JumpTable::new(result)
     }
 
-    pub fn pawn_attack_table(&self, color: Color) -> Vec<BitBoard> {
+    pub fn pawn_attack_table(&self, color: Color) -> JumpTable {
         let mut result: Vec<BitBoard> = vec![];
 
         let forward_or_backward = match color {
@@ -223,7 +240,7 @@ impl<
             }
             result.push(attacks);
         }
-        return result
+        return JumpTable::new(result)
     }
 }
 
@@ -717,8 +734,9 @@ mod tests {
     #[test]
     fn test_knight_table() {
         let board = test_traditional_board();
+        let source_node = NodeIndex::new(63);
         assert_eq!(
-            board.0.knight_jumps_table()[63], // Only testing last node
+            board.0.knight_jumps_table()[source_node], // Only testing last node
             BitBoard::from_ints(vec![53, 46])
         )
     }
@@ -772,8 +790,9 @@ mod tests {
     #[test]
     fn test_king_table() {
         let board = test_traditional_board();
+        let source_node = NodeIndex::new(63);
         assert_eq!(
-            board.0.king_move_table()[63], // Only testing last node
+            board.0.king_move_table()[source_node], // Only testing last node
             BitBoard::from_ints(vec![62, 55, 54])
         )
     }
@@ -781,8 +800,9 @@ mod tests {
     #[test]
     fn test_pawn_move_table_forward() {
         let board = test_traditional_board();
+        let source_node = NodeIndex::new(8);
         assert_eq!(
-            board.0.pawn_move_table(Color::White)[8],
+            board.0.pawn_move_table(Color::White)[source_node],
             BitBoard::from_ints(vec![16, 24])
         )
     }
@@ -790,8 +810,9 @@ mod tests {
     #[test]
     fn test_pawn_move_table_backward() {
         let board = test_traditional_board();
+        let source_node = NodeIndex::new(48);
         assert_eq!(
-            board.0.pawn_move_table(Color::Black)[48],
+            board.0.pawn_move_table(Color::Black)[source_node],
             BitBoard::from_ints(vec![40, 32])
         )
     }
@@ -799,8 +820,9 @@ mod tests {
     #[test]
     fn test_pawn_move_table_one_space() {
         let board = test_traditional_board();
+        let source_node = NodeIndex::new(48);
         assert_eq!(
-            board.0.pawn_move_table(Color::White)[48],
+            board.0.pawn_move_table(Color::White)[source_node],
             BitBoard::from_ints(vec![56])
         )
     }
@@ -808,8 +830,9 @@ mod tests {
     #[test]
     fn test_pawn_attack_table() {
         let board = test_traditional_board();
+        let source_node = NodeIndex::new(49);
         assert_eq!(
-            board.0.pawn_attack_table(Color::White)[49],
+            board.0.pawn_attack_table(Color::White)[source_node],
             BitBoard::from_ints(vec![56, 58])
         )
     }
@@ -817,8 +840,9 @@ mod tests {
     #[test]
     fn test_pawn_attack_table_at_edge() {
         let board = test_traditional_board();
+        let source_node = NodeIndex::new(48);
         assert_eq!(
-            board.0.pawn_attack_table(Color::Black)[48],
+            board.0.pawn_attack_table(Color::Black)[source_node],
             BitBoard::from_ints(vec![41])
         )
     }
@@ -826,8 +850,9 @@ mod tests {
     #[test]
     fn test_hex_knight_table() {
         let board = test_hexagonal_board();
+        let source_node = NodeIndex::new(0);
         assert_eq!(
-            board.0.knight_jumps_table()[0], // Only testing last node
+            board.0.knight_jumps_table()[source_node], // Only testing last node
             BitBoard::from_ints(vec![9, 16, 22, 23])
         )
     }
@@ -854,8 +879,9 @@ mod tests {
     #[test]
     fn test_hex_king_table() {
         let board = test_hexagonal_board();
+        let source_node = NodeIndex::new(0);
         assert_eq!(
-            board.0.king_move_table()[0],
+            board.0.king_move_table()[source_node],
             BitBoard::from_ints(vec![1, 6, 7, 8, 14])
         )
     }
@@ -863,8 +889,9 @@ mod tests {
     #[test]
     fn test_hex_pawn_move_table_backward() {
         let board = test_hexagonal_board();
+        let source_node = NodeIndex::new(56);
         assert_eq!(
-            board.0.pawn_move_table(Color::Black)[56],
+            board.0.pawn_move_table(Color::Black)[source_node],
             BitBoard::from_ints(vec![34, 45])
         )
     }
