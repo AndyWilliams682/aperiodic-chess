@@ -10,7 +10,7 @@ pub struct Move {
 }
 
 impl Move {
-    fn new(from_node: NodeIndex, to_node: NodeIndex, promotion: Option<PieceType>) -> Self {
+    pub fn new(from_node: NodeIndex, to_node: NodeIndex, promotion: Option<PieceType>) -> Self {
         return Self { from_node, to_node, promotion }
     }
 }

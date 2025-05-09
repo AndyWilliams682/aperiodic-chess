@@ -3,6 +3,7 @@ use petgraph::graph::{Node, NodeIndex};
 use crate::graph_board::{SlideTables, JumpTable, Color};
 use crate::bit_board::BitBoard;
 use crate::chess_move::Move;
+use crate::piece;
 
 
 pub struct MoveTables {
@@ -109,6 +110,17 @@ impl PieceSet {
         }
     }
 
+    fn update_occupied(&mut self) {
+        let mut occupied = BitBoard::empty();
+        occupied = occupied | self.king;
+        occupied = occupied | self.queen;
+        occupied = occupied | self.rook;
+        occupied = occupied | self.bishop;
+        occupied = occupied | self.knight;
+        occupied = occupied | self.pawn;
+        self.occupied = occupied
+    }
+
     fn get_piece_at(&self, node: NodeIndex) -> Option<PieceType> {
         if self.king.get_bit_at_node(node) == true {
             return Some(PieceType::King)
@@ -125,7 +137,37 @@ impl PieceSet {
         } else {
             return None
         }
+    }
 
+    fn get_bitboard_for_piece(&mut self, piece_type: PieceType) -> &mut BitBoard {
+        return match piece_type {
+            PieceType::King => &mut self.king,
+            PieceType::Queen => &mut self.queen,
+            PieceType::Rook => &mut self.rook,
+            PieceType::Bishop => &mut self.bishop,
+            PieceType::Knight => &mut self.knight,
+            PieceType::Pawn => &mut self.pawn,
+        };
+    }
+
+    fn move_piece(&mut self, from_node: NodeIndex, to_node: NodeIndex) {
+        let piece_type = self.get_piece_at(from_node).unwrap();
+        let bitboard = self.get_bitboard_for_piece(piece_type);
+        bitboard.flip_bit_at_node(from_node);
+        bitboard.flip_bit_at_node(to_node);
+    }
+
+    fn capture_piece(&mut self, capture_node: NodeIndex) {
+        let piece_type = self.get_piece_at(capture_node).unwrap();
+        let bitboard = self.get_bitboard_for_piece(piece_type);
+        bitboard.flip_bit_at_node(capture_node);
+    }
+
+    fn promote_piece(&mut self, promotion_node: NodeIndex, promotion_target: PieceType) {
+        // This assumes the move has been registered before applying the promotion
+        self.pawn.flip_bit_at_node(promotion_node);
+        let bitboard = self.get_bitboard_for_piece(promotion_target);
+        bitboard.flip_bit_at_node(promotion_node);
     }
 }
 
@@ -167,20 +209,49 @@ impl Position {
     fn make_legal_move(&mut self, legal_move: Move) {
         // Assumes the move is legal?
         let player_idx = match self.active_player {
-            Color::White => 0,
-            Color::Black => 1
+            Color::White => {
+                self.active_player = Color::Black;
+                0
+            },
+            Color::Black => {
+                self.active_player = Color::White;
+                1
+            }
         };
 
-        let moving_piece = self.pieces[player_idx].get_piece_at(legal_move.from_node);
+        let from_node = legal_move.from_node;
+        let to_node = legal_move.to_node;
+
+        self.pieces[player_idx].move_piece(from_node, to_node);
+
+        let target_piece = self.pieces[(player_idx + 1) % 2].get_piece_at(to_node);
+        match target_piece {
+            Some(_t) => self.pieces[(player_idx + 1) % 2].capture_piece(to_node),
+            None => {}
+        }
+
+        match legal_move.promotion {
+            Some(promotion_target) => self.pieces[player_idx].promote_piece(to_node, promotion_target),
+            None => {}
+        }
+
+        self.pieces[player_idx].update_occupied();
+        self.pieces[(player_idx + 1) % 2].update_occupied();
     }
 }
 
 
 mod tests {
+    use crate::piece::Piece;
+
     use super::*;
 
     fn test_traditional_position() -> Position {
         return Position::new_traditional()
+    }
+
+    fn test_traditional_piece_set() -> PieceSet {
+        return PieceSet::new_traditional(Color::White);
     }
 
     #[test]
@@ -211,10 +282,83 @@ mod tests {
 
     #[test]
     fn test_get_piece_at_node() {
-        let piece_set = PieceSet::new_traditional(Color::White);
+        let piece_set = test_traditional_piece_set();
         assert_eq!(
             piece_set.get_piece_at(NodeIndex::new(0)).unwrap(),
             PieceType::Rook
+        )
+    }
+
+    #[test]
+    fn test_move_piece() {
+        let mut piece_set = test_traditional_piece_set();
+        let from_node = NodeIndex::new(1);
+        let to_node = NodeIndex::new(18);
+        println!("{:?}", piece_set.knight);
+        piece_set.move_piece(from_node, to_node);
+        assert_eq!(
+            piece_set.knight.get_bit_at_node(from_node),
+            false
+        );
+        assert_eq!(
+            piece_set.knight.get_bit_at_node(to_node),
+            true
+        )
+    }
+
+    #[test]
+    fn test_capture_piece() {
+        let mut piece_set = test_traditional_piece_set();
+        println!("{:?}", piece_set.rook);
+        let capture_node = NodeIndex::new(0);
+        piece_set.capture_piece(capture_node);
+        println!("{:?}", piece_set.rook);
+        assert_eq!(
+            piece_set.rook.get_bit_at_node(capture_node),
+            false
+        )
+    }
+
+    #[test]
+    fn test_promote_piece() {
+        let mut piece_set = test_traditional_piece_set();
+        let promotion_node = NodeIndex::new(8);
+        piece_set.promote_piece(promotion_node, PieceType::Queen);
+        assert_eq!(
+            piece_set.pawn.get_bit_at_node(promotion_node),
+            false
+        );
+        assert_eq!(
+            piece_set.queen.get_bit_at_node(promotion_node),
+            true
+        )
+    }
+
+    #[test]
+    fn test_update_occupied() {
+        let mut piece_set = test_traditional_piece_set();
+        piece_set.capture_piece(NodeIndex::new(0));
+        piece_set.update_occupied();
+        assert_eq!(
+            piece_set.occupied,
+            BitBoard::new(65534) // 2 ** 16 - 2
+        )
+    }
+
+    #[test]
+    fn test_make_legal_move() {
+        let mut position = test_traditional_position();
+        let from_node = NodeIndex::new(1);
+        let to_node = NodeIndex::new(18);
+        let legal_move = Move::new(from_node, to_node, None);
+        position.make_legal_move(legal_move);
+        assert_eq!(
+            position.pieces[0].knight.get_bit_at_node(from_node),
+            false
+        );
+        assert_eq!(
+            position.pieces[0].knight.get_bit_at_node(to_node),
+            true
         )
     }
 }
