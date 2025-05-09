@@ -33,7 +33,12 @@ impl BitBoard {
 
     pub fn get_bit_at_node(self, node: NodeIndex) -> bool {
         let mask: u128 = 1 << node.index();
-        return (self.0 & mask) == 1
+        return (self.0 & mask) != 0
+    }
+
+    pub fn flip_bit_at_node(&mut self, node: NodeIndex){
+        let mask: u128 = 1 << node.index();
+        self.0 = self.0 ^ mask
     }
 }
 
@@ -103,6 +108,14 @@ mod tests {
         assert_eq!(
             BitBoard::from_node_indices(HashSet::from_iter([NodeIndex::new(0), NodeIndex::new(25)])),
             BitBoard(33554433)
+        )
+    }
+
+    #[test]
+    fn test_get_bit_at_node() {
+        assert_eq!(
+            BitBoard(33554433).get_bit_at_node(NodeIndex::new(25)),
+            true
         )
     }
 
