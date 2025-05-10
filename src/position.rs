@@ -286,7 +286,7 @@ mod tests {
 
     #[test]
     fn test_new_hexagonal_occupied() {
-        let position = Position::new_hexagonal();
+        let position: Position = Position::new_hexagonal();
         let occupied = position.pieces[0].occupied | position.pieces[1].occupied;
         assert_eq!(
             occupied,
@@ -303,6 +303,16 @@ mod tests {
         assert_eq!(
             piece_set.get_piece_at(NodeIndex::new(0)).unwrap(),
             PieceType::Rook
+        )
+    }
+
+    #[test]
+    fn test_get_bitboard_for_piece() {
+        let mut piece_set = test_traditional_piece_set();
+        let piece_type = PieceType::King;
+        assert_eq!(
+            *piece_set.get_bitboard_for_piece(piece_type),
+            BitBoard::new(16)
         )
     }
 
