@@ -2,7 +2,7 @@ use petgraph::graph::{Node, NodeIndex};
 
 use crate::graph_board::{SlideTables, JumpTable, Color};
 use crate::bit_board::BitBoard;
-use crate::chess_move::Move;
+use crate::chess_move::{EnPassantData, Move};
 use crate::piece;
 
 
@@ -178,7 +178,7 @@ impl PieceSet {
 pub struct Position {
     pub active_player: Color,
     pub pieces: [PieceSet; 2],
-    pub en_passant_square: Option<NodeIndex>
+    pub en_passant_data: Option<EnPassantData>
     // pub board_type
     // pub properties
 }
@@ -191,7 +191,7 @@ impl Position {
                 PieceSet::new_traditional(Color::White),
                 PieceSet::new_traditional(Color::Black)
             ],
-            en_passant_square: None
+            en_passant_data: None
         }
     }
 
@@ -202,7 +202,7 @@ impl Position {
                 PieceSet::new_hexagonal(Color::White),
                 PieceSet::new_hexagonal(Color::Black)
             ],
-            en_passant_square: None
+            en_passant_data: None
         }
     }
 
@@ -222,6 +222,7 @@ impl Position {
         let from_node = legal_move.from_node;
         let to_node = legal_move.to_node;
 
+        let moving_piece = self.pieces[player_idx].get_piece_at(from_node).unwrap();
         self.pieces[player_idx].move_piece(from_node, to_node);
 
         let target_piece = self.pieces[(player_idx + 1) % 2].get_piece_at(to_node);
@@ -233,6 +234,22 @@ impl Position {
         match legal_move.promotion {
             Some(promotion_target) => self.pieces[player_idx].promote_piece(to_node, promotion_target),
             None => {}
+        }
+
+        if moving_piece == PieceType::Pawn {
+            match &self.en_passant_data {
+                Some(en_passant_data) => {
+                    if to_node == en_passant_data.capturable_tile {
+                        self.pieces[(player_idx + 1) % 2].capture_piece(en_passant_data.piece_tile)
+                    }
+                },
+                None => {}
+            }
+        }
+
+        match legal_move.en_passant_data {
+            Some(node) => self.en_passant_data = Some(node),
+            None => self.en_passant_data = None
         }
 
         self.pieces[player_idx].update_occupied();
@@ -346,11 +363,57 @@ mod tests {
     }
 
     #[test]
+    fn test_en_passant_move() {
+        let mut position = test_traditional_position();
+        let to_node = NodeIndex::new(24);
+        let legal_move = Move::new(
+            NodeIndex::new(8),
+            to_node,
+            None,
+            Some(NodeIndex::new(16))
+        );
+        position.make_legal_move(legal_move);
+        assert_eq!(
+            position.en_passant_data.unwrap(),
+            EnPassantData::new(NodeIndex::new(16), to_node)
+        )
+    }
+
+    #[test]
+    fn test_en_passant_capture() {
+        let mut position = test_traditional_position();
+        let en_passant_node = NodeIndex::new(16);
+        let captured_node = NodeIndex::new(24);
+        let first_move = Move::new(
+            NodeIndex::new(8),
+            captured_node,
+            None,
+            Some(en_passant_node)
+        );
+        position.make_legal_move(first_move);
+        let capturing_move = Move::new(
+            NodeIndex::new(48),
+            en_passant_node,
+            None,
+            None
+        );
+        position.make_legal_move(capturing_move);
+        assert_eq!(
+            position.pieces[0].pawn.get_bit_at_node(NodeIndex::new(24)),
+            false
+        );
+        assert_eq!(
+            position.pieces[1].pawn.get_bit_at_node(NodeIndex::new(16)),
+            true
+        )
+    }
+
+    #[test]
     fn test_make_legal_move() {
         let mut position = test_traditional_position();
         let from_node = NodeIndex::new(1);
         let to_node = NodeIndex::new(18);
-        let legal_move = Move::new(from_node, to_node, None);
+        let legal_move = Move::new(from_node, to_node, None, None);
         position.make_legal_move(legal_move);
         assert_eq!(
             position.pieces[0].knight.get_bit_at_node(from_node),
@@ -359,6 +422,40 @@ mod tests {
         assert_eq!(
             position.pieces[0].knight.get_bit_at_node(to_node),
             true
+        )
+    }
+
+    #[test]
+    fn test_sequential_moves() {
+        let mut position = test_traditional_position();
+        let first_move = Move::new(
+            NodeIndex::new(12),
+            NodeIndex::new(28),
+            None,
+            Some(NodeIndex::new(20))
+        );
+        let second_move = Move::new(
+            NodeIndex::new(51),
+            NodeIndex::new(35),
+            None,
+            Some(NodeIndex::new(43))
+        );
+        let third_move = Move::new(
+            NodeIndex::new(28),
+            NodeIndex::new(35),
+            None,
+            None
+        );
+        position.make_legal_move(first_move);
+        position.make_legal_move(second_move);
+        position.make_legal_move(third_move);
+        assert_eq!(
+            position.pieces[0].occupied,
+            BitBoard::new(2_u128.pow(16) - 1 - 2_u128.pow(12) + 2_u128.pow(35))
+        );
+        assert_eq!(
+            position.pieces[1].occupied,
+            BitBoard::new(2_u128.pow(64) - 2_u128.pow(48) - 2_u128.pow(51))
         )
     }
 }
