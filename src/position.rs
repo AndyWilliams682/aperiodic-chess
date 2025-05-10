@@ -3,7 +3,6 @@ use petgraph::graph::{Node, NodeIndex};
 use crate::graph_board::{SlideTables, JumpTable, Color};
 use crate::bit_board::BitBoard;
 use crate::chess_move::{EnPassantData, Move};
-use crate::piece;
 
 
 pub struct MoveTables {

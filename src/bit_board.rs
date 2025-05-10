@@ -120,6 +120,16 @@ mod tests {
     }
 
     #[test]
+    fn test_flip_bit_at_node() {
+        let mut bitboard = BitBoard::empty();
+        bitboard.flip_bit_at_node(NodeIndex::new(0));
+        assert_eq!(
+            bitboard,
+            BitBoard::new(1)
+        )
+    }
+
+    #[test]
     fn test_carry_ripple() {
         let mut test = CarryRippler::new(BitBoard(3));
         assert_eq!(
