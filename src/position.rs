@@ -1,19 +1,9 @@
-use petgraph::graph::{Node, NodeIndex};
+use petgraph::graph::NodeIndex;
 
-use crate::graph_board::{SlideTables, JumpTable, Color};
+use crate::graph_board::Color;
 use crate::bit_board::BitBoard;
 use crate::chess_move::{EnPassantData, Move};
 
-
-pub struct MoveTables {
-    slide_tables: SlideTables,
-    knight_table: JumpTable,
-    king_table: JumpTable,
-    white_pawn_move_table: JumpTable,
-    black_pawn_move_table: JumpTable,
-    white_pawn_attack_table: JumpTable,
-    black_pawn_attack_table: JumpTable
-}
 
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub enum PieceType {
@@ -207,16 +197,8 @@ impl Position {
 
     fn make_legal_move(&mut self, legal_move: Move) {
         // Assumes the move is legal?
-        let player_idx = match self.active_player {
-            Color::White => {
-                self.active_player = Color::Black;
-                0
-            },
-            Color::Black => {
-                self.active_player = Color::White;
-                1
-            }
-        };
+        let player_idx = self.active_player.as_idx();
+        let opponent_idx = self.active_player.opponent().as_idx();
 
         let from_node = legal_move.from_node;
         let to_node = legal_move.to_node;
@@ -224,9 +206,9 @@ impl Position {
         let moving_piece = self.pieces[player_idx].get_piece_at(from_node).unwrap();
         self.pieces[player_idx].move_piece(from_node, to_node);
 
-        let target_piece = self.pieces[(player_idx + 1) % 2].get_piece_at(to_node);
+        let target_piece = self.pieces[opponent_idx].get_piece_at(to_node);
         match target_piece {
-            Some(_t) => self.pieces[(player_idx + 1) % 2].capture_piece(to_node),
+            Some(_t) => self.pieces[opponent_idx].capture_piece(to_node),
             None => {}
         }
 
@@ -239,7 +221,7 @@ impl Position {
             match &self.en_passant_data {
                 Some(en_passant_data) => {
                     if to_node == en_passant_data.capturable_tile {
-                        self.pieces[(player_idx + 1) % 2].capture_piece(en_passant_data.piece_tile)
+                        self.pieces[opponent_idx].capture_piece(en_passant_data.piece_tile)
                     }
                 },
                 None => {}
@@ -252,14 +234,13 @@ impl Position {
         }
 
         self.pieces[player_idx].update_occupied();
-        self.pieces[(player_idx + 1) % 2].update_occupied();
+        self.pieces[opponent_idx].update_occupied();
+        self.active_player = self.active_player.opponent();
     }
 }
 
 
 mod tests {
-    use crate::piece::Piece;
-
     use super::*;
 
     fn test_traditional_position() -> Position {

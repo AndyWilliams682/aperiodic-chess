@@ -14,6 +14,22 @@ pub enum Color {
     Black
 }
 
+impl Color {
+    pub fn as_idx(&self) -> usize {
+        return match self {
+            Color::White => 0,
+            Color::Black => 1
+        }
+    }
+
+    pub fn opponent(&self) -> Self {
+        return match self {
+            Color::White => Color::Black,
+            Color::Black => Color::White
+        }
+    }
+}
+
 #[derive(Debug)]
 pub struct Tile<N: LimitedIntTrait> {
     orientation: N,
