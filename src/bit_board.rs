@@ -40,6 +40,21 @@ impl BitBoard {
         let mask: u128 = 1 << node.index();
         self.0 = self.0 ^ mask
     }
+
+    pub fn is_zero(&self) -> bool {
+        if self.0 == 0 {
+            return true
+        }
+        false
+    }
+
+    pub fn lowest_one(&self) -> Option<NodeIndex> {
+        if self.is_zero() == true {
+            None
+        } else {
+            Some(NodeIndex::new(self.0.trailing_zeros() as usize))
+        }
+    }
 }
 
 impl Sub for BitBoard {
@@ -126,6 +141,31 @@ mod tests {
         assert_eq!(
             bitboard,
             BitBoard::new(1)
+        )
+    }
+
+    #[test]
+    fn test_is_zero() {
+        assert_eq!(
+            BitBoard::empty().is_zero(),
+            true
+        );
+        assert_eq!(
+            BitBoard::new(1).is_zero(),
+            false
+        )
+    }
+
+    #[test]
+    fn test_lowest_one() {
+        let bitboard = BitBoard::new(24);
+        assert_eq!(
+            bitboard.lowest_one(),
+            Some(NodeIndex::new(3))
+        );
+        assert_eq!(
+            BitBoard::empty().lowest_one(),
+            None
         )
     }
 
