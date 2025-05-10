@@ -1,6 +1,6 @@
 use petgraph::graph::NodeIndex;
 use std::collections::HashSet;
-use std::ops::{Sub, BitAnd, BitOr};
+use std::ops::{Sub, BitAnd, BitOr, Not};
 
 
 #[derive(Debug, PartialEq, Eq, Clone, Copy, Hash)]
@@ -87,6 +87,14 @@ impl BitOr for BitBoard {
     }
 }
 
+impl Not for BitBoard {
+    type Output = Self;
+
+    fn not(self) -> Self::Output {
+        BitBoard(!self.0)
+    }
+}
+
 pub struct CarryRippler {
     mask: BitBoard,
     current_subset: BitBoard,
@@ -166,6 +174,14 @@ mod tests {
         assert_eq!(
             BitBoard::empty().lowest_one(),
             None
+        )
+    }
+
+    #[test]
+    fn test_bitboard_not() {
+        assert_eq!(
+            !BitBoard::empty(),
+            BitBoard(340282366920938463463374607431768211455) // 2 ** 128 - 1
         )
     }
 
