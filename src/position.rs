@@ -30,14 +30,14 @@ impl PieceType {
 
 #[derive(Debug, Clone, Copy)]
 pub struct PieceSet {
-    player: Color,
-    king: BitBoard,
-    queen: BitBoard,
-    rook: BitBoard,
-    bishop: BitBoard,
-    knight: BitBoard,
-    pawn: BitBoard,
-    occupied: BitBoard
+    pub player: Color,
+    pub king: BitBoard,
+    pub queen: BitBoard,
+    pub rook: BitBoard,
+    pub bishop: BitBoard,
+    pub knight: BitBoard,
+    pub pawn: BitBoard,
+    pub occupied: BitBoard
 }
 
 impl PieceSet {
