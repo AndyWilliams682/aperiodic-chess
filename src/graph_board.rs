@@ -209,7 +209,7 @@ impl<
                 )
             );
             let mut attack_map = HashMap::new();
-            attack_map.insert(BitBoard::new(0), unobstructed_attacks);
+            attack_map.insert(BitBoard::empty(), unobstructed_attacks);
             for subset in CarryRippler::new(unobstructed_attacks) {
                 attack_map.insert(
                     subset,
@@ -250,7 +250,7 @@ impl<
         return JumpTable::new(result)
     }
 
-    pub fn pawn_move_table(&self, color: Color) -> JumpTable {
+    pub fn pawn_single_table(&self, color: Color) -> JumpTable {
         let mut result: Vec<BitBoard> = vec![];
 
         let forward_or_backward = match color {
@@ -263,17 +263,12 @@ impl<
         for source_node in self.0.node_indices() {
             let tile = &self.0[source_node];
 
-            let move_limit = match &tile.pawn_start {
-                Some(pawn_start_color) if pawn_start_color == &color => 2,
-                _ => 1
-            };
-
             let direction = map.get(&tile.orientation).unwrap().shift_by(forward_or_backward);
 
             result.push(BitBoard::from_node_indices(self.slides_from_in_direction(
                 source_node,
                 &direction,
-                move_limit,
+                1,
                 BitBoard::empty(),
             )));
         }
@@ -308,6 +303,33 @@ impl<
             result.push(attacks);
         }
         return JumpTable::new(result)
+    }
+
+    fn pawn_double_table(&self, color: Color) -> DirectionalSlideTable {
+        let mut attack_table: Vec<HashMap<BitBoard, BitBoard>> = vec![];
+        
+        let single_table = self.pawn_single_table(color); // A double move is two single moves
+
+        for source_node in self.0.node_indices() {
+            let tile = &self.0[source_node];
+
+            let unobstructed_attacks = match &tile.pawn_start {
+                Some(pawn_start_color) if pawn_start_color == &color => {
+                    let intermediate_node = single_table[source_node].lowest_one().unwrap();
+                        single_table[intermediate_node]
+                },
+                _ => BitBoard::empty()
+            };
+
+            let mut attack_map = HashMap::new();
+            attack_map.insert(BitBoard::empty(), unobstructed_attacks);
+
+            let occupied = single_table[source_node];
+            attack_map.insert(occupied, BitBoard::empty());
+        
+            attack_table.push(attack_map);
+        }
+        return DirectionalSlideTable::new(attack_table)
     }
 }
 
@@ -857,33 +879,45 @@ mod tests {
     }
 
     #[test]
-    fn test_pawn_move_table_forward() {
+    fn test_pawn_double_table_forward() {
         let board = test_traditional_board();
         let source_node = NodeIndex::new(8);
         assert_eq!(
-            board.0.pawn_move_table(Color::White)[source_node],
-            BitBoard::from_ints(vec![16, 24])
-        )
+            *board.0.pawn_double_table(Color::White)[source_node].get(&BitBoard::empty()).unwrap(),
+            BitBoard::from_ints(vec![24])
+        );
+        assert_eq!(
+            *board.0.pawn_double_table(Color::White)[source_node].get(&BitBoard::from_ints(vec![16])).unwrap(),
+            BitBoard::empty()
+        );
     }
 
     #[test]
-    fn test_pawn_move_table_backward() {
+    fn test_pawn_double_table_backward() {
         let board = test_traditional_board();
         let source_node = NodeIndex::new(48);
         assert_eq!(
-            board.0.pawn_move_table(Color::Black)[source_node],
-            BitBoard::from_ints(vec![40, 32])
-        )
+            *board.0.pawn_double_table(Color::Black)[source_node].get(&BitBoard::empty()).unwrap(),
+            BitBoard::from_ints(vec![32])
+        );
+        assert_eq!(
+            *board.0.pawn_double_table(Color::Black)[source_node].get(&BitBoard::from_ints(vec![40])).unwrap(),
+            BitBoard::empty()
+        );
     }
 
     #[test]
-    fn test_pawn_move_table_one_space() {
+    fn test_pawn_single_table() {
         let board = test_traditional_board();
         let source_node = NodeIndex::new(48);
         assert_eq!(
-            board.0.pawn_move_table(Color::White)[source_node],
+            board.0.pawn_single_table(Color::White)[source_node],
             BitBoard::from_ints(vec![56])
-        )
+        );
+        assert_eq!(
+            board.0.pawn_single_table(Color::White)[NodeIndex::new(56)],
+            BitBoard::empty()
+        );
     }
 
     #[test]
@@ -942,12 +976,12 @@ mod tests {
     }
 
     #[test]
-    fn test_hex_pawn_move_table_backward() {
+    fn test_hex_pawn_double_table_backward() {
         let board = test_hexagonal_board();
         let source_node = NodeIndex::new(56);
         assert_eq!(
-            board.0.pawn_move_table(Color::Black)[source_node],
-            BitBoard::from_ints(vec![34, 45])
+            *board.0.pawn_double_table(Color::Black)[source_node].get(&BitBoard::empty()).unwrap(),
+            BitBoard::from_ints(vec![34])
         )
     }
 }

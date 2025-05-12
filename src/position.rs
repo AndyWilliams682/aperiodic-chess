@@ -128,7 +128,7 @@ impl PieceSet {
         }
     }
 
-    fn get_bitboard_for_piece(&mut self, piece_type: PieceType) -> &mut BitBoard {
+    pub fn get_bitboard_for_piece(&mut self, piece_type: PieceType) -> &mut BitBoard {
         return match piece_type {
             PieceType::King => &mut self.king,
             PieceType::Queen => &mut self.queen,
