@@ -173,7 +173,7 @@ pub struct Position {
 }
 
 impl Position {
-    fn new_traditional() -> Self {
+    pub fn new_traditional() -> Self {
         return Self {
             active_player: Color::White,
             pieces: [
@@ -184,7 +184,7 @@ impl Position {
         }
     }
 
-    fn new_hexagonal() -> Self {
+    pub fn new_hexagonal() -> Self {
         return Self {
             active_player: Color::White,
             pieces: [
@@ -219,12 +219,10 @@ impl Position {
 
         if moving_piece == PieceType::Pawn {
             match &self.en_passant_data {
-                Some(en_passant_data) => {
-                    if to_node == en_passant_data.capturable_tile {
-                        self.pieces[opponent_idx].capture_piece(en_passant_data.piece_tile)
-                    }
+                Some(en_passant_data) if to_node == en_passant_data.capturable_tile => {
+                    self.pieces[opponent_idx].capture_piece(en_passant_data.piece_tile)
                 },
-                None => {}
+                _ => {}
             }
         }
 
