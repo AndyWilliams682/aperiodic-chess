@@ -16,6 +16,7 @@ impl EnPassantData {
 }
 
 
+#[derive(Debug, PartialEq)]
 pub struct Move {
     pub from_node: NodeIndex,
     pub to_node: NodeIndex,

@@ -305,7 +305,7 @@ impl<
         return JumpTable::new(result)
     }
 
-    fn pawn_double_table(&self, color: Color) -> DirectionalSlideTable {
+    pub fn pawn_double_table(&self, color: Color) -> DirectionalSlideTable {
         let mut attack_table: Vec<HashMap<BitBoard, BitBoard>> = vec![];
         
         let single_table = self.pawn_single_table(color); // A double move is two single moves
@@ -356,10 +356,10 @@ create_limited_int!(TraditionalDirection, 8);
 create_limited_int!(UniformTileOrientation, 1);
 
 #[derive(Debug)]
-pub struct TraditionalBoardGraph(BoardGraph<UniformTileOrientation, TraditionalDirection>);
+pub struct TraditionalBoardGraph(pub BoardGraph<UniformTileOrientation, TraditionalDirection>);
 
 impl TraditionalBoardGraph {
-    pub fn empty() -> Self {
+    pub fn new() -> Self {
         let mut board_graph = BoardGraph::new();
         for node in 0..64 {
             board_graph.add_node(Self::new_tile(node));
@@ -435,7 +435,7 @@ create_limited_int!(HexagonalDirection, 12);
 pub struct HexagonalBoardGraph(pub BoardGraph<UniformTileOrientation, HexagonalDirection>);
 
 impl HexagonalBoardGraph {
-    pub fn empty() -> Self {
+    pub fn new() -> Self {
         let mut board_graph = BoardGraph::new();
         for node in 0..91 {
             board_graph.add_node(Self::new_tile(node));
@@ -606,7 +606,7 @@ mod tests {
     use super::*;
 
     fn test_traditional_board() -> TraditionalBoardGraph {
-        return TraditionalBoardGraph::empty();
+        return TraditionalBoardGraph::new();
     }
 
     fn traditional_slide_tables() -> SlideTables {
@@ -614,7 +614,7 @@ mod tests {
     }
 
     fn test_hexagonal_board() -> HexagonalBoardGraph {
-        return HexagonalBoardGraph::empty();
+        return HexagonalBoardGraph::new();
     }
 
     fn hexagonal_slide_tables() -> SlideTables {
