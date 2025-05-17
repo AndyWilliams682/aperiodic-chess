@@ -1,17 +1,13 @@
 use petgraph::graph::NodeIndex;
 
-use crate::{bit_board::{BitBoard, BitBoardMoves}, chess_move::{EnPassantData, Move}, graph_board::{Color, DirectionalSlideTable, JumpTable, SlideTables}, piece, position::{PieceSet, PieceType, Position}};
+use crate::{bit_board::{BitBoard, BitBoardMoves}, chess_move::{EnPassantData, Move}, graph_board::{Color, JumpTable, SlideTables, PawnTables}, piece, position::{PieceSet, PieceType, Position}};
 
 pub struct MoveTables {
     pub slide_tables: SlideTables,
     pub knight_table: JumpTable,
     pub king_table: JumpTable,
-    pub white_pawn_single_table: JumpTable,
-    pub black_pawn_single_table: JumpTable,
-    pub white_pawn_double_table: DirectionalSlideTable,
-    pub black_pawn_double_table: DirectionalSlideTable,
-    pub white_pawn_attack_table: JumpTable,
-    pub black_pawn_attack_table: JumpTable,
+    pub white_pawn_tables: PawnTables,
+    pub black_pawn_tables: PawnTables,
 }
 
 impl MoveTables {
@@ -27,32 +23,32 @@ impl MoveTables {
     }
 
     fn query_pawn(&self, color: Color, source_node: NodeIndex, enemies: BitBoard, occupied: BitBoard, current_ep_data: &Option<EnPassantData>) -> BitBoard {
-        let (single_table, double_table, attack_table) = match color {
-            Color::White => (&self.white_pawn_single_table, &self.white_pawn_double_table, &self.white_pawn_attack_table),
-            Color::Black => (&self.black_pawn_single_table, &self.black_pawn_double_table, &self.black_pawn_attack_table)
+        let pawn_tables = match color {
+            Color::White => &self.white_pawn_tables,
+            Color::Black => &self.black_pawn_tables
         };
         let mut all_moves = BitBoard::empty();
-        let single_moves = single_table[source_node] & !occupied;
-        all_moves = all_moves | (single_table[source_node] & !occupied);
+        let single_moves = pawn_tables.single_table[source_node] & !occupied;
+        all_moves = all_moves | (pawn_tables.single_table[source_node] & !occupied);
         if !single_moves.is_zero() { // Only check double moves if the single_move is unblocked
-            all_moves = all_moves | (*double_table[source_node].get(&BitBoard::empty()).unwrap() & !occupied);
+            all_moves = all_moves | (*pawn_tables.double_table[source_node].get(&BitBoard::empty()).unwrap() & !occupied);
         }
-        all_moves = all_moves | (attack_table[source_node] & enemies);
+        all_moves = all_moves | (pawn_tables.attack_table[source_node] & enemies);
         match current_ep_data { // Can capture via EP even if no enemy is present
-            Some(data) => all_moves = all_moves | (attack_table[source_node] & BitBoard::from_ints(vec![data.capturable_tile.index() as u128])),
+            Some(data) => all_moves = all_moves | (pawn_tables.attack_table[source_node] & BitBoard::from_ints(vec![data.capturable_tile.index() as u128])),
             None => {}
         }
         all_moves
     }
 
     fn check_en_passantable(&self, color: Color, source_node: NodeIndex) -> Option<EnPassantData> {
-        let (single_table, double_table) = match color {
-            Color::White => (&self.white_pawn_single_table, &self.white_pawn_double_table),
-            Color::Black => (&self.black_pawn_single_table, &self.black_pawn_double_table)
+        let pawn_tables = match color {
+            Color::White => &self.white_pawn_tables,
+            Color::Black => &self.black_pawn_tables
         };
-        match double_table[source_node].get(&BitBoard::empty()).unwrap().lowest_one() {
+        match pawn_tables.double_table[source_node].get(&BitBoard::empty()).unwrap().lowest_one() {
             Some(piece_tile) => {
-                let capturable_tile = single_table[source_node].lowest_one().unwrap();
+                let capturable_tile = pawn_tables.single_table[source_node].lowest_one().unwrap();
                 Some(EnPassantData { capturable_tile, piece_tile })
             },
             _ => None
@@ -60,15 +56,15 @@ impl MoveTables {
     }
 
     fn check_promotable(&self, color: Color, source_node: NodeIndex) -> Option<Vec<NodeIndex>> {
-        let (single_table, attack_table) = match color {
-            Color::White => (&self.white_pawn_single_table, &self.white_pawn_attack_table),
-            Color::Black => (&self.black_pawn_single_table, &self.black_pawn_attack_table)
+        let pawn_tables = match color {
+            Color::White => &self.white_pawn_tables,
+            Color::Black => &self.black_pawn_tables
         };
-        let total_moves = single_table[source_node] & attack_table[source_node];
+        let total_moves = pawn_tables.single_table[source_node] & pawn_tables.attack_table[source_node];
         let mut output = vec![];
         while !total_moves.is_zero() {
             let to_node = total_moves.lowest_one().unwrap();
-            if single_table[to_node].is_zero() {
+            if pawn_tables.single_table[to_node].is_zero() {
                 output.push(to_node)
             }
         }
@@ -141,12 +137,8 @@ mod tests {
             slide_tables: board.0.all_slide_tables(),
             knight_table: board.0.knight_jumps_table(),
             king_table: board.0.king_move_table(),
-            white_pawn_single_table: board.0.pawn_single_table(Color::White),
-            white_pawn_double_table: board.0.pawn_double_table(Color::White),
-            white_pawn_attack_table: board.0.pawn_attack_table(Color::White),
-            black_pawn_single_table: board.0.pawn_single_table(Color::Black),
-            black_pawn_double_table: board.0.pawn_double_table(Color::Black),
-            black_pawn_attack_table: board.0.pawn_attack_table(Color::Black),
+            white_pawn_tables: board.0.pawn_tables(Color::White),
+            black_pawn_tables: board.0.pawn_tables(Color::Black)
         }
     }
 

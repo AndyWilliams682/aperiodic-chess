@@ -112,6 +112,19 @@ impl Index<usize> for SlideTables {
     }
 }
 
+#[derive(Debug)]
+pub struct PawnTables {
+    pub single_table: JumpTable,
+    pub double_table: DirectionalSlideTable,
+    pub attack_table: JumpTable,
+}
+
+impl PawnTables {
+    pub fn new(single_table: JumpTable, double_table: DirectionalSlideTable, attack_table: JumpTable) -> Self {
+        Self { single_table, double_table, attack_table }
+    }
+}
+
 
 // Generic graph that uses LimitedIntTrait for the edges
 #[derive(Debug)]
@@ -338,6 +351,14 @@ impl<
             attack_table.push(attack_map);
         }
         return DirectionalSlideTable::new(attack_table)
+    }
+
+    pub fn pawn_tables(&self, color: Color) -> PawnTables {
+        PawnTables::new(
+            self.pawn_single_table(color),
+            self.pawn_double_table(color),
+            self.pawn_attack_table(color)
+        )
     }
 }
 
