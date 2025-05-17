@@ -43,6 +43,14 @@ impl JumpTable {
     pub fn new(val: Vec<BitBoard>) -> Self {
         Self(val)
     }
+
+    pub fn empty(num_nodes: usize) -> Self {
+        Self::new(vec![BitBoard::empty(); num_nodes])
+    }
+
+    pub fn num_nodes(&self) -> usize {
+        return self.0.len()
+    }
 }
 
 impl Index<NodeIndex> for JumpTable {
@@ -982,6 +990,15 @@ mod tests {
         assert_eq!(
             *board.0.pawn_double_table(Color::Black)[source_node].get(&BitBoard::empty()).unwrap(),
             BitBoard::from_ints(vec![34])
+        )
+    }
+
+    #[test]
+    fn test_jump_table_empty_and_len() {
+        let test = JumpTable::empty(64);
+        assert_eq!(
+            test.num_nodes(),
+            64
         )
     }
 }
