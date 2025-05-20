@@ -36,7 +36,7 @@ pub struct Tile<N: LimitedIntTrait> {
     pawn_start: Option<Color>
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Clone)]
 pub struct JumpTable(pub Vec<BitBoard>);
 
 impl JumpTable {
@@ -81,7 +81,7 @@ impl IndexMut<NodeIndex> for JumpTable {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct DirectionalSlideTable(Vec<HashMap<BitBoard, BitBoard>>);
 
 impl DirectionalSlideTable {
@@ -114,7 +114,7 @@ impl Index<NodeIndex> for DirectionalSlideTable {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct SlideTables(Vec<DirectionalSlideTable>);
 
 impl SlideTables {
@@ -138,6 +138,14 @@ impl SlideTables {
         }
         result
     }
+
+    pub fn reverse(&self) -> Vec<JumpTable> {
+        let mut output = vec![];
+        for directional_table in &self.0 {
+            output.push(directional_table.reverse())
+        }
+        output
+    }
 }
 
 impl Index<usize> for SlideTables {
@@ -148,7 +156,7 @@ impl Index<usize> for SlideTables {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct PawnTables {
     pub single_table: JumpTable,
     pub double_table: DirectionalSlideTable,

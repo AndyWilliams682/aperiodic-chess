@@ -3,14 +3,32 @@ use petgraph::graph::NodeIndex;
 use crate::{bit_board::{BitBoard, BitBoardMoves}, chess_move::{EnPassantData, Move}, graph_board::{Color, JumpTable, SlideTables, PawnTables}, piece, position::{PieceSet, PieceType, Position}};
 
 pub struct MoveTables {
+    pub king_table: JumpTable, // king_table is it's own reverse
     pub slide_tables: SlideTables,
     pub knight_table: JumpTable,
-    pub king_table: JumpTable,
     pub white_pawn_tables: PawnTables,
     pub black_pawn_tables: PawnTables,
+    pub reverse_slide_tables: Vec<JumpTable>,
+    pub reverse_knight_tables: JumpTable,
+    pub reverse_white_pawn_table: JumpTable,
+    pub reverse_black_pawn_table: JumpTable
 }
 
 impl MoveTables {
+    fn new(king: JumpTable, slide: SlideTables, knight: JumpTable, white_pawn: PawnTables, black_pawn: PawnTables) -> Self {
+        Self {
+            king_table: king,
+            slide_tables: slide.clone(),
+            knight_table: knight.clone(),
+            white_pawn_tables: white_pawn.clone(),
+            black_pawn_tables: black_pawn.clone(),
+            reverse_slide_tables: slide.reverse(),
+            reverse_knight_tables: knight.reverse(),
+            reverse_white_pawn_table: white_pawn.attack_table.reverse(),
+            reverse_black_pawn_table: black_pawn.attack_table.reverse()
+        }
+    }
+
     fn query_piece(&self, piece_type: PieceType, source_node: NodeIndex, occupied: BitBoard) -> BitBoard {
         return match piece_type {
             PieceType::King => self.king_table[source_node],
@@ -133,13 +151,13 @@ mod tests {
 
     fn test_move_tables() -> MoveTables {
         let board = TraditionalBoardGraph::new();
-        MoveTables {
-            slide_tables: board.0.all_slide_tables(),
-            knight_table: board.0.knight_jumps_table(),
-            king_table: board.0.king_move_table(),
-            white_pawn_tables: board.0.pawn_tables(Color::White),
-            black_pawn_tables: board.0.pawn_tables(Color::Black)
-        }
+        MoveTables::new(
+            board.0.king_move_table(),
+            board.0.all_slide_tables(),
+            board.0.knight_jumps_table(),
+            board.0.pawn_tables(Color::White),
+            board.0.pawn_tables(Color::Black)
+        )
     }
 
     #[test]
