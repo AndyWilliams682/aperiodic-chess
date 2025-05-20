@@ -9,7 +9,7 @@ pub struct MoveTables {
     pub white_pawn_tables: PawnTables,
     pub black_pawn_tables: PawnTables,
     pub reverse_slide_tables: Vec<JumpTable>,
-    pub reverse_knight_tables: JumpTable,
+    pub reverse_knight_table: JumpTable,
     pub reverse_white_pawn_table: JumpTable,
     pub reverse_black_pawn_table: JumpTable
 }
@@ -23,7 +23,7 @@ impl MoveTables {
             white_pawn_tables: white_pawn.clone(),
             black_pawn_tables: black_pawn.clone(),
             reverse_slide_tables: slide.reverse(),
-            reverse_knight_tables: knight.reverse(),
+            reverse_knight_table: knight.reverse(),
             reverse_white_pawn_table: white_pawn.attack_table.reverse(),
             reverse_black_pawn_table: black_pawn.attack_table.reverse()
         }
@@ -141,6 +141,49 @@ impl MoveTables {
 
         piece_iters.into_iter().flatten()
     }
+
+    fn is_in_check(&self, position: &Position, color: Color) -> bool {
+        let opponent_idx = color.opponent().as_idx();
+        let king_node = position.pieces[color.as_idx()].king.lowest_one().unwrap();
+
+        // Orthogonals
+        for rev_direction_table in self.reverse_slide_tables.iter().step_by(2) {
+            if !(
+                rev_direction_table[king_node] & (
+                    position.pieces[opponent_idx].rook | position.pieces[opponent_idx].queen
+                )
+            ).is_zero() {
+                return true // Need to account for blockers hereq
+            }
+        }
+
+        // Diagonals
+        for rev_direction_table in self.reverse_slide_tables.iter().skip(1).step_by(2) {
+            if !(
+                rev_direction_table[king_node] & (
+                    position.pieces[opponent_idx].rook | position.pieces[opponent_idx].queen
+                )
+            ).is_zero() {
+                return true
+            }
+        }
+        
+        // Knights
+        if !(self.reverse_knight_table[king_node] & position.pieces[opponent_idx].knight).is_zero() {
+            return true
+        }
+
+        // Pawns
+        let pawn_threats = match color {
+            Color::White => &self.reverse_black_pawn_table,
+            Color::Black => &self.reverse_white_pawn_table
+        };
+        if !(pawn_threats[king_node] & position.pieces[opponent_idx].pawn).is_zero() {
+            return true
+        };
+
+        false // Don't need to check for King-to-King threats
+    }
 }
 
 
@@ -257,5 +300,20 @@ mod tests {
             ),
             BitBoard::from_ints(vec![41, 33])
         )
+    }
+
+    
+    #[test]
+    fn test_is_in_check() {
+        let position = Position::new_traditional();
+        let move_tables = test_move_tables();
+        assert_eq!(
+            move_tables.is_in_check(&position, Color::White),
+            false
+        );
+        assert_eq!(
+            move_tables.is_in_check(&position, Color::Black),
+            false
+        );
     }
 }
