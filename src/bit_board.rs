@@ -125,18 +125,51 @@ impl Iterator for CarryRippler {
 }
 
 #[derive(Debug)]
+pub struct BitBoardNodes {
+    remaining_nodes: BitBoard
+}
+
+impl BitBoardNodes {
+    pub fn new(remaining_nodes: BitBoard) -> Self {
+        Self { remaining_nodes }
+    }
+}
+
+impl Iterator for BitBoardNodes {
+    type Item = NodeIndex;
+   
+    fn next(&mut self) -> Option<Self::Item> {
+        let next_node = self.remaining_nodes.lowest_one();
+        match next_node {
+            Some(node) => self.remaining_nodes.flip_bit_at_node(node),
+            _ => {}
+        }
+        next_node
+    }
+}
+
+#[derive(Debug)]
 pub struct BitBoardMoves {
     source_node: NodeIndex,
     piece_type: PieceType,
-    remaining_moves: BitBoard,
+    remaining_moves: BitBoardNodes,
     next_ep_data: Option<EnPassantData>,
     promotable_nodes: Option<Vec<NodeIndex>>,
-    current_promotion_values: Vec<PieceType>
+    current_promotion_node: Option<NodeIndex>,
+    current_promotion_counter: u32
 }
 
 impl BitBoardMoves {
-    pub fn new(source_node: NodeIndex, piece_type: PieceType, remaining_moves: BitBoard, next_ep_data: Option<EnPassantData>, promotable_nodes: Option<Vec<NodeIndex>>) -> BitBoardMoves {
-        BitBoardMoves { source_node, piece_type, remaining_moves, next_ep_data, promotable_nodes, current_promotion_values: vec![] }
+    pub fn new(source_node: NodeIndex, piece_type: PieceType, remaining_move_board: BitBoard, next_ep_data: Option<EnPassantData>, promotable_nodes: Option<Vec<NodeIndex>>) -> BitBoardMoves {
+        BitBoardMoves {
+            source_node,
+            piece_type,
+            remaining_moves: BitBoardNodes::new(remaining_move_board),
+            next_ep_data,
+            promotable_nodes,
+            current_promotion_node: None,
+            current_promotion_counter: 0
+        }
     }
 }
 
@@ -144,9 +177,23 @@ impl Iterator for BitBoardMoves {
     type Item = Move;
 
     fn next(&mut self) -> Option<Self::Item> {
-        if let Some(to_node) = self.remaining_moves.lowest_one() {
-            let mut promotion = None;
-            let mut en_passant_tile = None;
+        let mut promotion = None;
+        let mut en_passant_tile = None;
+       
+        // Need to iterate through the possible promotions if possible
+        if let Some(to_node) = self.current_promotion_node {
+            self.current_promotion_counter += 1;
+            let promotion = match self.current_promotion_counter {
+                1 => Some(PieceType::Bishop), // 0 will already be handled for the Knight
+                2 => Some(PieceType::Rook),
+                _ => { // Reset after Queen
+                    self.current_promotion_node.take();
+                    self.current_promotion_counter = 0;
+                    Some(PieceType::Queen)
+                }
+            };
+            Some(Move::new(self.source_node, to_node, promotion, en_passant_tile))
+        } else if let Some(to_node) = self.remaining_moves.next() {
             if self.piece_type == PieceType::Pawn {
                 match &self.next_ep_data {
                     Some(data) if data.piece_tile == to_node => {
@@ -155,32 +202,13 @@ impl Iterator for BitBoardMoves {
                     _ => {}
                 }
 
-                match &self.promotable_nodes {
+                match &self.promotable_nodes { // Handles promotion to Knight
                     Some(nodes) if nodes.contains(&to_node) => {
-                        promotion = match self.current_promotion_values.len() {
-                            0 => {
-                                self.current_promotion_values.push(PieceType::Knight);
-                                Some(PieceType::Knight)
-                            },
-                            1 => {
-                                self.current_promotion_values.push(PieceType::Bishop);
-                                Some(PieceType::Bishop)
-                            },
-                            2 => {
-                                self.current_promotion_values.push(PieceType::Rook);
-                                Some(PieceType::Rook)
-                            },
-                            _ => {
-                                self.current_promotion_values = vec![];
-                                self.remaining_moves.flip_bit_at_node(to_node);
-                                Some(PieceType::Queen)
-                            }
-                        };
+                        self.current_promotion_node = Some(to_node);
+                        promotion = Some(PieceType::Knight);
                     },
-                    _ => { self.remaining_moves.flip_bit_at_node(to_node); }
+                    _ => {}
                 }
-            } else {
-                self.remaining_moves.flip_bit_at_node(to_node);
             }
             Some(Move::new(self.source_node, to_node, promotion, en_passant_tile))
         } else {
@@ -188,7 +216,6 @@ impl Iterator for BitBoardMoves {
         }
     }
 }
-
 
 #[cfg(test)]
 mod tests {
@@ -270,6 +297,36 @@ mod tests {
         );
         assert_eq!(
             test.next(),
+            None
+        )
+    }
+
+    #[test]
+    fn test_bitboard_nodes() {
+        let bitboard = BitBoard::from_ints(vec![1, 3, 4]);
+        let mut bitboard_nodes = BitBoardNodes::new(bitboard);
+        assert_eq!(
+            bitboard_nodes.next().unwrap(),
+            NodeIndex::new(1)
+        );
+        assert_eq!(
+            bitboard_nodes.next().unwrap(),
+            NodeIndex::new(3)
+        );
+        assert_eq!(
+            bitboard_nodes.next().unwrap(),
+            NodeIndex::new(4)
+        );
+        assert_eq!(
+            bitboard_nodes.next(),
+            None
+        );
+    }
+
+    #[test]
+    fn test_bitboard_nodes_empty() {
+        assert_eq!(
+            BitBoardNodes::new(BitBoard::empty()).next(),
             None
         )
     }
