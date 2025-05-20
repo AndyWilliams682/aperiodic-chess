@@ -1,9 +1,9 @@
 use petgraph::graph::{Graph, NodeIndex};
 use petgraph::visit::EdgeRef;
 use std::collections::{HashSet, HashMap};
-use std::ops::{Deref, DerefMut, Index};
+use std::ops::{Deref, DerefMut, Index, IndexMut};
 
-use crate::bit_board::{BitBoard, CarryRippler};
+use crate::bit_board::{BitBoard, CarryRippler, BitBoardNodes};
 use crate::create_limited_int;
 use crate::limited_int::LimitedIntTrait;
 
@@ -36,8 +36,8 @@ pub struct Tile<N: LimitedIntTrait> {
     pawn_start: Option<Color>
 }
 
-#[derive(Debug)]
-pub struct JumpTable(Vec<BitBoard>);
+#[derive(Debug, PartialEq)]
+pub struct JumpTable(pub Vec<BitBoard>);
 
 impl JumpTable {
     pub fn new(val: Vec<BitBoard>) -> Self {
@@ -51,6 +51,20 @@ impl JumpTable {
     pub fn num_nodes(&self) -> usize {
         return self.0.len()
     }
+
+    pub fn reverse(&self) -> Self {
+        let num_nodes = self.num_nodes();
+        let mut output = Self::empty(num_nodes);
+
+        let mut source_node = 0;
+        for source_node_moves in &self.0 {
+            for to_node in BitBoardNodes::new(*source_node_moves) {
+                output[to_node].flip_bit_at_node(NodeIndex::new(source_node));
+            }
+            source_node += 1;
+        }
+        output
+    }
 }
 
 impl Index<NodeIndex> for JumpTable {
@@ -58,6 +72,12 @@ impl Index<NodeIndex> for JumpTable {
    
     fn index(&self, index: NodeIndex) -> &Self::Output {
         &self.0[index.index()]
+    }
+}
+
+impl IndexMut<NodeIndex> for JumpTable {
+    fn index_mut(&mut self, index: NodeIndex) -> &mut Self::Output {
+        &mut self.0[index.index()]
     }
 }
 
@@ -1020,6 +1040,28 @@ mod tests {
         assert_eq!(
             test.num_nodes(),
             64
+        )
+    }
+
+    #[test]
+    fn test_reverse_knight_table() {
+        let board = test_traditional_board();
+        let knight_table = board.0.knight_jumps_table();
+        let output = knight_table.reverse();
+        // For traditional/hexagonal boards, these are equal
+        assert_eq!(
+            output,
+            knight_table
+        )
+    }
+   
+    #[test]
+    fn test_reverse_pawn_table() {
+        let board = test_traditional_board();
+        // For traditional/hexagonal boards, rev(White)=Black
+        assert_eq!(
+            board.0.pawn_attack_table(Color::White).reverse(),
+            board.0.pawn_attack_table(Color::Black)
         )
     }
 }
