@@ -85,8 +85,24 @@ impl IndexMut<NodeIndex> for JumpTable {
 pub struct DirectionalSlideTable(Vec<HashMap<BitBoard, BitBoard>>);
 
 impl DirectionalSlideTable {
-    fn new(val: Vec<HashMap<BitBoard, BitBoard>>) -> Self {
+    pub fn new(val: Vec<HashMap<BitBoard, BitBoard>>) -> Self {
         return Self(val)
+    }
+
+    pub fn reverse(&self) -> JumpTable {
+        // Returning a JumpTable because this does not care about blockers (will be handled later)
+        let num_nodes = self.0.len();
+        let mut output = JumpTable::empty(num_nodes);
+       
+        let mut source_node = 0;
+        for source_node_moves in &self.0 {
+            let unblocked_moves = source_node_moves.get(&BitBoard::empty()).unwrap();
+            for to_node in BitBoardNodes::new(*unblocked_moves) {
+                output[to_node].flip_bit_at_node(NodeIndex::new(source_node));
+            }
+            source_node += 1;
+        }
+        output
     }
 }
 
@@ -1062,6 +1078,22 @@ mod tests {
         assert_eq!(
             board.0.pawn_attack_table(Color::White).reverse(),
             board.0.pawn_attack_table(Color::Black)
+        )
+    }
+
+    #[test]
+    fn test_reverse_directional_slide_table() {
+        let board = test_traditional_board();
+        let directional_slide_table = board.0.slide_table_for_direction(
+            &TraditionalDirection(0)
+        );
+        assert_eq!(
+            directional_slide_table.reverse()[NodeIndex::new(56)],
+            BitBoard::from_ints(vec![0, 8, 16, 24, 32, 40, 48])
+        );
+        assert_eq!(
+            directional_slide_table.reverse()[NodeIndex::new(0)],
+            BitBoard::empty()
         )
     }
 }
