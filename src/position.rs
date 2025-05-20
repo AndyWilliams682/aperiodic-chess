@@ -57,8 +57,8 @@ impl PieceSet {
             },
             Color::Black => Self {
                 player: color,
-                king: BitBoard::from_ints(vec![59]),
-                queen: BitBoard::from_ints(vec![60]),
+                king: BitBoard::from_ints(vec![60]),
+                queen: BitBoard::from_ints(vec![59]),
                 rook: BitBoard::from_ints(vec![56, 63]),
                 bishop: BitBoard::from_ints(vec![58, 61]),
                 knight: BitBoard::from_ints(vec![57, 62]),
