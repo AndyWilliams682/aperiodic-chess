@@ -158,6 +158,18 @@ impl PieceSet {
         let bitboard = self.get_bitboard_for_piece(promotion_target);
         bitboard.flip_bit_at_node(promotion_node);
     }
+
+    fn return_piece(&mut self, captured_node: NodeIndex, captured_piece: PieceType) {
+        let bitboard = self.get_bitboard_for_piece(captured_piece);
+        bitboard.flip_bit_at_node(captured_node);
+    } // Inverse of capture_piece
+    
+    fn demote_piece(&mut self, demotion_node: NodeIndex) {
+        let piece_type = self.get_piece_at(demotion_node).unwrap();
+        let bitboard = self.get_bitboard_for_piece(piece_type);
+        bitboard.flip_bit_at_node(demotion_node);
+        self.pawn.flip_bit_at_node(demotion_node);
+    } // inverse of promote_piece
 }
 
 // impl PieceSet {
@@ -335,6 +347,33 @@ mod tests {
         );
         assert_eq!(
             piece_set.queen.get_bit_at_node(promotion_node),
+            true
+        )
+    }
+
+    #[test]
+    fn test_return_piece() {
+        let mut piece_set = test_traditional_piece_set();
+        let captured_node = NodeIndex::new(16);
+        let captured_piece = PieceType::Rook;
+        piece_set.return_piece(captured_node, captured_piece);
+        assert_eq!(
+            piece_set.rook.get_bit_at_node(captured_node),
+            true
+        )
+    }
+
+    #[test]
+    fn test_demote_piece() {
+        let mut piece_set = test_traditional_piece_set();
+        let demotion_node = NodeIndex::new(0);
+        piece_set.demote_piece(demotion_node);
+        assert_eq!(
+            piece_set.rook.get_bit_at_node(demotion_node),
+            false
+        );
+        assert_eq!(
+            piece_set.pawn.get_bit_at_node(demotion_node),
             true
         )
     }
