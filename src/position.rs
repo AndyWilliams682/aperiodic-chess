@@ -1,3 +1,4 @@
+use std::sync::Arc;
 use petgraph::graph::NodeIndex;
 
 use crate::graph_board::Color;
@@ -172,14 +173,34 @@ impl PieceSet {
     } // inverse of promote_piece
 }
 
-// impl PieceSet {
+
+#[derive(Debug, Clone)]
+pub struct PositionRecord {
+    pub en_passant_data: Option<EnPassantData>,
+    pub captured_piece: Option<PieceType>,
+    pub previous_record: Option<Arc<PositionRecord>>,
+    // previous_zobrist_key??
+}
+
+impl PositionRecord {
+    pub fn default() -> PositionRecord {
+        PositionRecord {
+            en_passant_data: None,
+            captured_piece: None,
+            previous_record: None
+        }
+    }
    
-// }
+    pub fn get_previous_record(&self) -> Option<Arc<PositionRecord>> {
+        self.previous_record.as_ref().cloned()
+    }
+}
+
 
 pub struct Position {
     pub active_player: Color,
     pub pieces: [PieceSet; 2],
-    pub en_passant_data: Option<EnPassantData>
+    pub record: Arc<PositionRecord>
     // pub board_type
     // pub properties
 }
@@ -192,7 +213,7 @@ impl Position {
                 PieceSet::new_traditional(Color::White),
                 PieceSet::new_traditional(Color::Black)
             ],
-            en_passant_data: None
+            record: PositionRecord::default().into()
         }
     }
 
@@ -203,7 +224,7 @@ impl Position {
                 PieceSet::new_hexagonal(Color::White),
                 PieceSet::new_hexagonal(Color::Black)
             ],
-            en_passant_data: None
+            record: PositionRecord::default().into()
         }
     }
 
@@ -230,7 +251,7 @@ impl Position {
         }
 
         if moving_piece == PieceType::Pawn {
-            match &self.en_passant_data {
+            match &self.record.en_passant_data {
                 Some(en_passant_data) if to_node == en_passant_data.capturable_tile => {
                     self.pieces[opponent_idx].capture_piece(en_passant_data.piece_tile)
                 },
@@ -238,10 +259,11 @@ impl Position {
             }
         }
 
-        match legal_move.en_passant_data {
-            Some(node) => self.en_passant_data = Some(node),
-            None => self.en_passant_data = None
-        }
+        self.record = PositionRecord {
+            en_passant_data: legal_move.en_passant_data,
+            captured_piece: target_piece,
+            previous_record: Some(self.record.clone())
+        }.into();
 
         self.pieces[player_idx].update_occupied();
         self.pieces[opponent_idx].update_occupied();
@@ -401,7 +423,7 @@ mod tests {
         );
         position.make_legal_move(legal_move);
         assert_eq!(
-            position.en_passant_data.unwrap(),
+            *position.record.en_passant_data.as_ref().unwrap(),
             EnPassantData::new(NodeIndex::new(16), to_node)
         )
     }

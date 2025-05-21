@@ -99,7 +99,7 @@ impl MoveTables {
 
         let enemy_occupants = position.pieces[position.active_player.opponent().as_idx()].occupied;
         let all_occupants = enemy_occupants | active_pieces.occupied;
-        let current_ep = &position.en_passant_data;
+        let current_ep = &position.record.en_passant_data;
 
         let mut piece_iters: Vec<BitBoardMoves> = vec![];
 

@@ -3,7 +3,7 @@ use petgraph::graph::NodeIndex;
 use crate::position::PieceType;
 
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Clone)]
 pub struct EnPassantData {
     pub capturable_tile: NodeIndex,
     pub piece_tile: NodeIndex
