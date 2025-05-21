@@ -1,4 +1,5 @@
 use std::sync::Arc;
+use itertools::WithPosition;
 use petgraph::graph::NodeIndex;
 
 use crate::graph_board::Color;
@@ -269,6 +270,37 @@ impl Position {
         self.pieces[opponent_idx].update_occupied();
         self.active_player = self.active_player.opponent();
     }
+
+    fn unmake_legal_move(&mut self, legal_move: Move) {
+        // Assumes the move was legal
+        self.active_player = self.active_player.opponent();
+        let player_idx = self.active_player.as_idx();
+        let opponent_idx = self.active_player.opponent().as_idx();
+       
+        let from_node = legal_move.from_node;
+        let to_node = legal_move.to_node;
+       
+        self.pieces[player_idx].move_piece(to_node, from_node);
+       
+        let captured_piece = self.record.captured_piece;
+        match captured_piece {
+            Some(piece_type) => self.pieces[opponent_idx].return_piece(to_node, piece_type),
+            None => {}
+        }
+       
+        match legal_move.promotion {
+            Some(_t) => self.pieces[player_idx].demote_piece(from_node),
+            None => {} // TODO: Use better syntax for cases like this, if Some(_t) = legal_move.promotion {}
+        }
+       
+        self.pieces[player_idx].update_occupied();
+        self.pieces[opponent_idx].update_occupied();
+        if let Some(prev_record) = self.record.get_previous_record() {
+            self.record = prev_record
+        } else {
+            self.record = PositionRecord::default().into();
+        }
+    }
 }
 
 
@@ -497,6 +529,10 @@ mod tests {
         );
         position.make_legal_move(first_move);
         position.make_legal_move(second_move);
+        assert_eq!(
+            *position.record.en_passant_data.as_ref().unwrap(),
+            EnPassantData { capturable_tile: NodeIndex::new(43), piece_tile: NodeIndex::new(35) }
+        );
         position.make_legal_move(third_move);
         assert_eq!(
             position.pieces[0].occupied,
@@ -506,5 +542,68 @@ mod tests {
             position.pieces[1].occupied,
             BitBoard::new(2_u128.pow(64) - 2_u128.pow(48) - 2_u128.pow(51))
         )
+    }
+
+    #[test]
+    fn test_unmake_legal_move() {
+        let mut position = test_traditional_position();
+        position.make_legal_move(
+            Move::new(NodeIndex::new(15), NodeIndex::new(31), None, Some(NodeIndex::new(23)))
+        );
+        let from_node = NodeIndex::new(1);
+        let to_node = NodeIndex::new(18);
+        let legal_move = Move::new(from_node, to_node, None, None);
+        position.active_player = Color::White;
+        position.make_legal_move(legal_move);
+        let legal_move = Move::new(from_node, to_node, None, None);
+        position.unmake_legal_move(legal_move);
+        assert_eq!(
+            position.pieces[0].knight.get_bit_at_node(from_node),
+            true
+        );
+        assert_eq!(
+            position.pieces[0].knight.get_bit_at_node(to_node),
+            false
+        );
+        assert_eq!(
+            position.record.en_passant_data,
+            Some(EnPassantData { capturable_tile: NodeIndex::new(23), piece_tile: NodeIndex::new(31) })
+        );
+        let from_node = NodeIndex::new(8);
+        let to_node = NodeIndex::new(16);
+        let demotion_move = Move::new(from_node, to_node, Some(PieceType::Knight), None);
+        position.make_legal_move(demotion_move);
+        let demotion_move = Move::new(from_node, to_node, Some(PieceType::Knight), None);
+        position.unmake_legal_move(demotion_move);
+        assert_eq!(
+            position.pieces[0].knight.get_bit_at_node(from_node) & position.pieces[0].knight.get_bit_at_node(to_node),
+            false
+        );
+        assert_eq!(
+            position.pieces[0].pawn.get_bit_at_node(from_node),
+            true
+        );
+        let from_node = NodeIndex::new(0);
+        let to_node = NodeIndex::new(56);
+        let capture_move = Move::new(from_node, to_node, None, None);
+        position.make_legal_move(capture_move);
+        assert_eq!(
+            position.record.captured_piece,
+            Some(PieceType::Rook)
+        );
+        let capture_move = Move::new(from_node, to_node, None, None);
+        position.unmake_legal_move(capture_move);
+        assert_eq!(
+            position.pieces[0].rook.get_bit_at_node(from_node),
+            true
+        );
+        assert_eq!(
+            position.pieces[0].rook.get_bit_at_node(to_node),
+            false
+        );
+        assert_eq!(
+            position.pieces[1].rook.get_bit_at_node(to_node),
+            true
+        );
     }
 }
