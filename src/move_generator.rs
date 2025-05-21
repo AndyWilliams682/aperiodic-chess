@@ -354,21 +354,21 @@ mod tests {
     // #[test]
     // fn test_get_legal_moves() {
     //     let board = TraditionalBoardGraph::new();
-    //     let move_tables = MoveTables::new();
+    //     let move_tables = test_move_tables();
     //     let position = Position::new_traditional();
     //     position.make_legal_move(Move::new(
-    //         from_node: NodeIndex::new(59),
-    //         to_node: NodeIndex::new(12),
+    //         NodeIndex::new(59),
+    //         NodeIndex::new(12),
     //         None, None
     //     )); // Removing the King's pawn
     //     position.make_legal_move(Move::new(
-    //         from_node: NodeIndex::new(12),
-    //         to_node: NodeIndex::new(28),
+    //         NodeIndex::new(12),
+    //         NodeIndex::new(28),
     //         None, None
     //     )); // Moving the black queen back a few spaces
     //     position.make_legal_move(Move::new(
-    //         from_node: NodeIndex::new(13),
-    //         to_node: NodeIndex::new(21),
+    //         NodeIndex::new(13),
+    //         NodeIndex::new(21),
     //         None, None
     //     )); // Moving pawn in range to capture
     //     let legal_moves = move_tables.get_legal_moves(&position);
