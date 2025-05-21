@@ -229,7 +229,7 @@ impl Position {
         }
     }
 
-    fn make_legal_move(&mut self, legal_move: Move) {
+    pub fn make_legal_move(&mut self, legal_move: Move) {
         // Assumes the move is legal?
         let player_idx = self.active_player.as_idx();
         let opponent_idx = self.active_player.opponent().as_idx();
@@ -271,7 +271,7 @@ impl Position {
         self.active_player = self.active_player.opponent();
     }
 
-    fn unmake_legal_move(&mut self, legal_move: Move) {
+    pub fn unmake_legal_move(&mut self, legal_move: Move) {
         // Assumes the move was legal
         self.active_player = self.active_player.opponent();
         let player_idx = self.active_player.as_idx();
