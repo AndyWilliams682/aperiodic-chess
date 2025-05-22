@@ -195,7 +195,7 @@ impl MoveTables {
         // Kings cannot be captured, allies cannot be captured
         // Could check the validity of the move wrt the move tables
         let moving_player = position.active_player;
-        position.make_legal_move(chess_move.clone());
+        position.make_legal_move(&chess_move.clone());
         let legality = !self.is_in_check(position, moving_player);
         position.unmake_legal_move(chess_move.clone());
         return legality
@@ -211,6 +211,23 @@ impl MoveTables {
         }
         legal_moves
     }
+
+    fn perft(&self, position: &mut Position, depth: u8) -> u64 {
+        // TODO: May want to move to a separate Engine object?
+        let mut output = 0;
+       
+        let legal_moves = self.get_legal_moves(position);
+       
+        if depth == 1 {
+            return legal_moves.len() as u64;
+        }
+        for legal_move in legal_moves {
+            position.make_legal_move(&legal_move.clone());
+            output += self.perft(position, depth - 1);
+            position.unmake_legal_move(legal_move);
+        }
+        output
+    }
 }
 
 
@@ -218,6 +235,7 @@ impl MoveTables {
 mod tests {
     use super::*;
     use crate::graph_board::TraditionalBoardGraph;
+    use std::time::Instant;
 
     fn test_move_tables() -> MoveTables {
         let board = TraditionalBoardGraph::new();
@@ -342,7 +360,7 @@ mod tests {
             move_tables.is_in_check(&position, Color::Black),
             false
         ); // Initial position, not in check for black
-        position.make_legal_move(Move::new(
+        position.make_legal_move(&Move::new(
             NodeIndex::new(1),
             NodeIndex::new(43),
             None, None
@@ -351,7 +369,7 @@ mod tests {
             move_tables.is_in_check(&position, Color::Black),
             true
         ); // Black in check by Knight
-        position.make_legal_move(Move::new(
+        position.make_legal_move(&Move::new(
             NodeIndex::new(59),
             NodeIndex::new(20),
             None, None
@@ -360,7 +378,7 @@ mod tests {
             move_tables.is_in_check(&position, Color::White),
             false
         ); // White not in check by blocked orthogonal queen
-        position.make_legal_move(Move::new(
+        position.make_legal_move(&Move::new(
             NodeIndex::new(12),
             NodeIndex::new(28),
             None, None
@@ -369,7 +387,7 @@ mod tests {
             move_tables.is_in_check(&position, Color::White),
             true
         ); // White in check by unblocked orthogonal queen
-        position.make_legal_move(Move::new(
+        position.make_legal_move(&Move::new(
             NodeIndex::new(20),
             NodeIndex::new(18),
             None, None
@@ -378,7 +396,7 @@ mod tests {
             move_tables.is_in_check(&position, Color::White),
             false
         ); // White not in check by blocked diagonal queen
-        position.make_legal_move(Move::new(
+        position.make_legal_move(&Move::new(
             NodeIndex::new(11),
             NodeIndex::new(19),
             None, None
@@ -427,5 +445,26 @@ mod tests {
             legal_moves.len(),
             5
         );
+    }
+
+    #[test]
+    fn test_perft_to_6() {
+        let move_tables = test_move_tables();
+        let mut position = Position::new_traditional();
+        assert_eq!(move_tables.perft(&mut position, 1), 20);
+        assert_eq!(move_tables.perft(&mut position, 2), 400);
+        assert_eq!(move_tables.perft(&mut position, 3), 8902);
+        assert_eq!(move_tables.perft(&mut position, 4), 197281);
+        let start = Instant::now();
+        assert_eq!(move_tables.perft(&mut position, 5), 4865609);
+        // let start = Instant::now();
+        // assert_eq!(move_tables.perft(&mut position, 6), 119060324);
+        let duration = start.elapsed();
+        let speed = duration.as_secs() * 1_000 + (duration.subsec_millis() as u64);
+        println!("{:?}", speed);
+        assert_eq!(
+            speed < 2000,
+            true
+        )
     }
 }
