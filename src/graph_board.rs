@@ -134,7 +134,8 @@ impl SlideTables {
         };
         for direction in (initial_direction..self.0.len()).step_by(direction_step) {
             let unblocked_attacks = *self[direction][source_node].get(&BitBoard::empty()).unwrap();
-            result = result | *self[direction][source_node].get(&(occupied & unblocked_attacks)).unwrap();
+            let blocked_attacks = *self[direction][source_node].get(&(occupied & unblocked_attacks)).unwrap(); 
+            result = result | blocked_attacks;
         }
         result
     }
