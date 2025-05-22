@@ -101,7 +101,7 @@ impl PieceSet {
         }
     }
 
-    fn update_occupied(&mut self) {
+    pub fn update_occupied(&mut self) {
         let mut occupied = BitBoard::empty();
         occupied = occupied | self.king;
         occupied = occupied | self.queen;

@@ -93,7 +93,7 @@ impl MoveTables {
         }
     }
 
-    fn get_pseudo_moves(&self, position: &mut Position) -> impl Iterator<Item=Move> {
+    fn get_pseudo_moves(&self, position: &Position) -> impl Iterator<Item=Move> {
         let active_player = position.active_player;
         let active_pieces = &position.pieces[active_player.as_idx()];
 
@@ -190,21 +190,27 @@ impl MoveTables {
         false // Don't need to check for King-to-King threats
     }
 
-    // fn is_legal_move(chess_move: &Move, position: &Position) -> bool {
-    //     position.make_legal_move(chess_move);
-    //     !self.is_in_check(position)
-    // }
+    fn is_legal_move(&self, chess_move: &Move, position: &mut Position) -> bool {
+        // Could check other parameters:
+        // Kings cannot be captured, allies cannot be captured
+        // Could check the validity of the move wrt the move tables
+        let moving_player = position.active_player;
+        position.make_legal_move(chess_move.clone());
+        let legality = !self.is_in_check(position, moving_player);
+        position.unmake_legal_move(chess_move.clone());
+        return legality
+    }
    
-    // fn get_legal_moves(&self, position: &mut Position) -> impl Iterator<Item=Move> {
-    //     let mut legal_moves = Vec::new();
-    //     for chess_move in self.get_pseudo_moves(position) {
-    //         if !self.is_legal_move(&chess_move, &position) {
-    //             continue;
-    //         }
-    //         legal_moves.push(chess_move);
-    //     }
-    //     legal_moves
-    // }
+    fn get_legal_moves(&self, position: &mut Position) -> Vec<Move> {
+        let mut legal_moves = Vec::new();
+        for chess_move in self.get_pseudo_moves(&position.to_owned()) {
+            if !self.is_legal_move(&chess_move, position) {
+                continue;
+            }
+            legal_moves.push(chess_move);
+        }
+        legal_moves
+    }
 }
 
 
@@ -383,46 +389,43 @@ mod tests {
         ); // White in check by unblocked diagonal queen
     }
 
-    // #[test]
-    // fn test_get_legal_moves() {
-    //     let board = TraditionalBoardGraph::new();
-    //     let move_tables = test_move_tables();
-    //     let position = Position::new_traditional();
-    //     position.make_legal_move(Move::new(
-    //         NodeIndex::new(59),
-    //         NodeIndex::new(12),
-    //         None, None
-    //     )); // Removing the King's pawn
-    //     position.make_legal_move(Move::new(
-    //         NodeIndex::new(12),
-    //         NodeIndex::new(28),
-    //         None, None
-    //     )); // Moving the black queen back a few spaces
-    //     position.make_legal_move(Move::new(
-    //         NodeIndex::new(13),
-    //         NodeIndex::new(21),
-    //         None, None
-    //     )); // Moving pawn in range to capture
-    //     let legal_moves = move_tables.get_legal_moves(&position);
-    //     assert_eq!(
-    //         legal_moves.next().unwrap(),
-    //         Move::new(NodeIndex::new(3), NodeIndex::new(12), None, None)
-    //     ); // Blocking with Queen
-    //     assert_eq!(
-    //         legal_moves.next().unwrap(),
-    //         Move::new(NodeIndex::new(5), NodeIndex::new(12), None, None)
-    //     ); // Blocking with Bishop
-    //     assert_eq!(
-    //         legal_moves.next().unwrap(),
-    //         Move::new(NodeIndex::new(6), NodeIndex::new(12), None, None)
-    //     ); // Blocking with Knight
-    //     assert_eq!(
-    //         legal_moves.next().unwrap(),
-    //         Move::new(NodeIndex::new(21), NodeIndex::new(28), None, None)
-    //     ); // Capturing with Pawn
-    //     assert_eq!(
-    //         legal_moves.next(),
-    //         None
-    //     );
-    // }
+    #[test]
+    fn test_get_legal_moves() {
+        let move_tables = test_move_tables();
+        let mut position = Position::new_traditional();
+       
+        position.pieces[0].pawn.flip_bit_at_node(NodeIndex::new(12));
+        position.pieces[1].queen.flip_bit_at_node(NodeIndex::new(28));
+        position.pieces[0].pawn.flip_bit_at_node(NodeIndex::new(13));
+        position.pieces[0].pawn.flip_bit_at_node(NodeIndex::new(21));
+        position.pieces[0].update_occupied();
+        position.pieces[1].update_occupied();
+       
+        let legal_moves = move_tables.get_legal_moves(&mut position);
+       
+        assert_eq!(
+            legal_moves.get(0).unwrap(),
+            &Move::new(NodeIndex::new(4), NodeIndex::new(13), None, None)
+        ); // Evading with King
+        assert_eq!(
+            legal_moves.get(1).unwrap(),
+            &Move::new(NodeIndex::new(3), NodeIndex::new(12), None, None)
+        ); // Blocking with Queen
+        assert_eq!(
+            legal_moves.get(2).unwrap(),
+            &Move::new(NodeIndex::new(5), NodeIndex::new(12), None, None)
+        ); // Blocking with Bishop
+        assert_eq!(
+            legal_moves.get(3).unwrap(),
+            &Move::new(NodeIndex::new(6), NodeIndex::new(12), None, None)
+        ); // Blocking with Knight
+        assert_eq!(
+            legal_moves.get(4).unwrap(),
+            &Move::new(NodeIndex::new(21), NodeIndex::new(28), None, None)
+        ); // Capturing with Pawn
+        assert_eq!(
+            legal_moves.len(),
+            5
+        );
+    }
 }
