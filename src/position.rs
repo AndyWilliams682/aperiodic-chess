@@ -284,24 +284,29 @@ impl Position {
        
         self.pieces[player_idx].move_piece(to_node, from_node);
        
-        let captured_piece = self.record.captured_piece;
-        match captured_piece {
-            Some(piece_type) => self.pieces[opponent_idx].return_piece(to_node, piece_type),
-            None => {}
+        let captured_piece = self.record.captured_piece.to_owned();
+        if let Some(piece_type) = captured_piece {
+            self.pieces[opponent_idx].return_piece(to_node, piece_type)
         }
-       
         match legal_move.promotion {
             Some(_t) => self.pieces[player_idx].demote_piece(from_node),
             None => {} // TODO: Use better syntax for cases like this, if Some(_t) = legal_move.promotion {}
         }
-       
-        self.pieces[player_idx].update_occupied();
-        self.pieces[opponent_idx].update_occupied();
         if let Some(prev_record) = self.record.get_previous_record() {
             self.record = prev_record
         } else {
             self.record = PositionRecord::default().into();
         }
+        if captured_piece == Some(PieceType::Pawn) {
+            if let Some(en_passant_data) = &self.record.en_passant_data {
+                if to_node == en_passant_data.capturable_tile {
+                    self.pieces[opponent_idx].capture_piece(to_node);
+                    self.pieces[opponent_idx].return_piece(en_passant_data.piece_tile, PieceType::Pawn)
+                }
+            }
+        }
+        self.pieces[player_idx].update_occupied();
+        self.pieces[opponent_idx].update_occupied();
     }
 }
 
