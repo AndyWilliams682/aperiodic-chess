@@ -230,7 +230,7 @@ impl Position {
         }
     }
 
-    pub fn make_legal_move(&mut self, legal_move: Move) {
+    pub fn make_legal_move(&mut self, legal_move: &Move) {
         // Assumes the move is legal?
         let player_idx = self.active_player.as_idx();
         let opponent_idx = self.active_player.opponent().as_idx();
@@ -241,7 +241,7 @@ impl Position {
         let moving_piece = self.pieces[player_idx].get_piece_at(from_node).unwrap();
         self.pieces[player_idx].move_piece(from_node, to_node);
 
-        let target_piece = self.pieces[opponent_idx].get_piece_at(to_node);
+        let mut target_piece = self.pieces[opponent_idx].get_piece_at(to_node);
         match target_piece {
             Some(_t) => self.pieces[opponent_idx].capture_piece(to_node),
             None => {}
@@ -255,6 +255,7 @@ impl Position {
         if moving_piece == PieceType::Pawn {
             match &self.record.en_passant_data {
                 Some(en_passant_data) if to_node == en_passant_data.capturable_tile => {
+                    target_piece = Some(PieceType::Pawn);
                     self.pieces[opponent_idx].capture_piece(en_passant_data.piece_tile)
                 },
                 _ => {}
@@ -262,7 +263,7 @@ impl Position {
         }
 
         self.record = PositionRecord {
-            en_passant_data: legal_move.en_passant_data,
+            en_passant_data: legal_move.en_passant_data.clone(),
             captured_piece: target_piece,
             previous_record: Some(self.record.clone())
         }.into();
@@ -454,7 +455,7 @@ mod tests {
             None,
             Some(NodeIndex::new(16))
         );
-        position.make_legal_move(legal_move);
+        position.make_legal_move(&legal_move);
         assert_eq!(
             *position.record.en_passant_data.as_ref().unwrap(),
             EnPassantData::new(NodeIndex::new(16), to_node)
@@ -472,14 +473,14 @@ mod tests {
             None,
             Some(en_passant_node)
         );
-        position.make_legal_move(first_move);
+        position.make_legal_move(&first_move);
         let capturing_move = Move::new(
             NodeIndex::new(48),
             en_passant_node,
             None,
             None
         );
-        position.make_legal_move(capturing_move);
+        position.make_legal_move(&capturing_move);
         assert_eq!(
             position.pieces[0].pawn.get_bit_at_node(NodeIndex::new(24)),
             false
@@ -496,7 +497,7 @@ mod tests {
         let from_node = NodeIndex::new(1);
         let to_node = NodeIndex::new(18);
         let legal_move = Move::new(from_node, to_node, None, None);
-        position.make_legal_move(legal_move);
+        position.make_legal_move(&legal_move);
         assert_eq!(
             position.pieces[0].knight.get_bit_at_node(from_node),
             false
@@ -528,13 +529,13 @@ mod tests {
             None,
             None
         );
-        position.make_legal_move(first_move);
-        position.make_legal_move(second_move);
+        position.make_legal_move(&first_move);
+        position.make_legal_move(&second_move);
         assert_eq!(
             *position.record.en_passant_data.as_ref().unwrap(),
             EnPassantData { capturable_tile: NodeIndex::new(43), piece_tile: NodeIndex::new(35) }
         );
-        position.make_legal_move(third_move);
+        position.make_legal_move(&third_move);
         assert_eq!(
             position.pieces[0].occupied,
             BitBoard::new(2_u128.pow(16) - 1 - 2_u128.pow(12) + 2_u128.pow(35))
@@ -549,13 +550,13 @@ mod tests {
     fn test_unmake_legal_move() {
         let mut position = test_traditional_position();
         position.make_legal_move(
-            Move::new(NodeIndex::new(15), NodeIndex::new(31), None, Some(NodeIndex::new(23)))
+            &Move::new(NodeIndex::new(15), NodeIndex::new(31), None, Some(NodeIndex::new(23)))
         );
         let from_node = NodeIndex::new(1);
         let to_node = NodeIndex::new(18);
         let legal_move = Move::new(from_node, to_node, None, None);
         position.active_player = Color::White;
-        position.make_legal_move(legal_move);
+        position.make_legal_move(&legal_move);
         let legal_move = Move::new(from_node, to_node, None, None);
         position.unmake_legal_move(legal_move);
         assert_eq!(
@@ -573,7 +574,7 @@ mod tests {
         let from_node = NodeIndex::new(8);
         let to_node = NodeIndex::new(16);
         let demotion_move = Move::new(from_node, to_node, Some(PieceType::Knight), None);
-        position.make_legal_move(demotion_move);
+        position.make_legal_move(&demotion_move);
         let demotion_move = Move::new(from_node, to_node, Some(PieceType::Knight), None);
         position.unmake_legal_move(demotion_move);
         assert_eq!(
@@ -587,7 +588,7 @@ mod tests {
         let from_node = NodeIndex::new(0);
         let to_node = NodeIndex::new(56);
         let capture_move = Move::new(from_node, to_node, None, None);
-        position.make_legal_move(capture_move);
+        position.make_legal_move(&capture_move);
         assert_eq!(
             position.record.captured_piece,
             Some(PieceType::Rook)
