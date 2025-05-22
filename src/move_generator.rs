@@ -1,6 +1,6 @@
 use petgraph::graph::NodeIndex;
 
-use crate::{bit_board::{BitBoard, BitBoardMoves}, chess_move::{EnPassantData, Move}, graph_board::{Color, JumpTable, SlideTables, PawnTables}, piece, position::{PieceSet, PieceType, Position}};
+use crate::{bit_board::{BitBoard, BitBoardMoves, BitBoardNodes}, chess_move::{EnPassantData, Move}, graph_board::{Color, JumpTable, SlideTables, PawnTables}, piece, position::{PieceSet, PieceType, Position}};
 
 pub struct MoveTables {
     pub king_table: JumpTable, // king_table is it's own reverse
@@ -145,29 +145,38 @@ impl MoveTables {
     fn is_in_check(&self, position: &Position, color: Color) -> bool {
         let opponent_idx = color.opponent().as_idx();
         let king_node = position.pieces[color.as_idx()].king.lowest_one().unwrap();
-
+       
+        let enemy_occupants = position.pieces[opponent_idx].occupied;
+        let all_occupants = enemy_occupants | position.pieces[color.as_idx()].occupied;
+       
         // Orthogonals
+        let mut direction_counter = 0;
         for rev_direction_table in self.reverse_slide_tables.iter().step_by(2) {
-            if !(
-                rev_direction_table[king_node] & (
-                    position.pieces[opponent_idx].rook | position.pieces[opponent_idx].queen
-                )
-            ).is_zero() {
-                return true // Need to account for blockers hereq
+            let candidates = rev_direction_table[king_node] & (
+                position.pieces[opponent_idx].rook | position.pieces[opponent_idx].queen
+            );
+            for candidate in BitBoardNodes::new(candidates) {
+                if self.slide_tables.query(candidate, all_occupants, true, false).get_bit_at_node(king_node) {
+                    return true
+                }
             }
+            direction_counter += 2;
         }
-
+       
         // Diagonals
+        let mut direction_counter = 1;
         for rev_direction_table in self.reverse_slide_tables.iter().skip(1).step_by(2) {
-            if !(
-                rev_direction_table[king_node] & (
-                    position.pieces[opponent_idx].rook | position.pieces[opponent_idx].queen
-                )
-            ).is_zero() {
-                return true
+            let candidates = rev_direction_table[king_node] & (
+                position.pieces[opponent_idx].bishop | position.pieces[opponent_idx].queen
+            );
+            for candidate in BitBoardNodes::new(candidates) {
+                if self.slide_tables.query(candidate, all_occupants, false, true).get_bit_at_node(king_node) {
+                    return true
+                }
             }
+            direction_counter += 2;
         }
-        
+       
         // Knights
         if !(self.reverse_knight_table[king_node] & position.pieces[opponent_idx].knight).is_zero() {
             return true
@@ -326,11 +335,11 @@ mod tests {
         assert_eq!(
             move_tables.is_in_check(&position, Color::White),
             false
-        );
+        ); // Initial position, not in check for white
         assert_eq!(
             move_tables.is_in_check(&position, Color::Black),
             false
-        );
+        ); // Initial position, not in check for black
         position.make_legal_move(Move::new(
             NodeIndex::new(1),
             NodeIndex::new(43),
@@ -339,16 +348,43 @@ mod tests {
         assert_eq!(
             move_tables.is_in_check(&position, Color::Black),
             true
-        );
+        ); // Black in check by Knight
         position.make_legal_move(Move::new(
             NodeIndex::new(59),
-            NodeIndex::new(52),
+            NodeIndex::new(20),
             None, None
         ));
         assert_eq!(
             move_tables.is_in_check(&position, Color::White),
             false
-        )
+        ); // White not in check by blocked orthogonal queen
+        position.make_legal_move(Move::new(
+            NodeIndex::new(12),
+            NodeIndex::new(28),
+            None, None
+        ));
+        assert_eq!(
+            move_tables.is_in_check(&position, Color::White),
+            true
+        ); // White in check by unblocked orthogonal queen
+        position.make_legal_move(Move::new(
+            NodeIndex::new(20),
+            NodeIndex::new(18),
+            None, None
+        ));
+        assert_eq!(
+            move_tables.is_in_check(&position, Color::White),
+            false
+        ); // White not in check by blocked diagonal queen
+        position.make_legal_move(Move::new(
+            NodeIndex::new(11),
+            NodeIndex::new(19),
+            None, None
+        ));
+        assert_eq!(
+            move_tables.is_in_check(&position, Color::White),
+            true
+        ); // White in check by unblocked diagonal queen
     }
 
     // #[test]
