@@ -206,14 +206,15 @@ impl<
         let mut result: HashSet<NodeIndex> = HashSet::new();
         let mut current_node = source_node;
         let mut distance_traveled = 0;
+        let mut hit_obstruction = false;
 
         while let Some(n) = self.get_next_node_in_direction(current_node, direction) {
             if BitBoard::new(1 << n.index()) & obstructions != BitBoard::empty() {
-                break
-            }
+                hit_obstruction = true;
+            } // Assuming the first obstruction is an enemy, include it in result
             result.insert(n);
             distance_traveled += 1;
-            if distance_traveled == limit {
+            if (distance_traveled == limit) | hit_obstruction {
                 break
             }
             current_node = n;
@@ -761,13 +762,13 @@ mod tests {
     fn test_slide_move_with_obstructions() {
         let board = test_traditional_board();
         let source_node = NodeIndex::new(1);
-        let obstructions = BitBoard::new(32);
+        let obstructions = BitBoard::new(16);
         assert_eq!(
             board.0.slides_from_in_direction(source_node, &TraditionalDirection(6), 0, obstructions),
             HashSet::from_iter([
                 NodeIndex::new(2),
                 NodeIndex::new(3),
-                NodeIndex::new(4)
+                NodeIndex::new(4),
             ])
         )
     }
@@ -807,6 +808,9 @@ mod tests {
                 NodeIndex::new(0),
                 NodeIndex::new(9),
                 NodeIndex::new(18),
+                NodeIndex::new(36),
+                NodeIndex::new(34),
+                NodeIndex::new(20)
             ])
         )
     }
@@ -909,7 +913,7 @@ mod tests {
         let source_node = NodeIndex::new(0);
         assert_eq!(
             *board.0.slide_table_for_direction(&TraditionalDirection(0))[source_node].get(&BitBoard::new(65536)).unwrap(),
-            BitBoard::from_ints(vec![8])
+            BitBoard::from_ints(vec![8, 16])
         )
     }
 
@@ -923,7 +927,7 @@ mod tests {
         let occupied = BitBoard::from_ints(vec![45]);
         assert_eq!(
             traditional_slide_tables().query(source_node, occupied, false, true),
-            BitBoard::from_ints(vec![54])
+            BitBoard::from_ints(vec![54, 45])
         );
     }
 
@@ -937,7 +941,7 @@ mod tests {
         let occupied = BitBoard::from_ints(vec![62]);
         assert_eq!(
             traditional_slide_tables().query(source_node, occupied, true, false),
-            BitBoard::from_ints(vec![55, 47, 39, 31, 23, 15, 7])
+            BitBoard::from_ints(vec![62, 55, 47, 39, 31, 23, 15, 7])
         )
     }
 
