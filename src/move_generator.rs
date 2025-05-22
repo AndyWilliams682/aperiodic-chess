@@ -150,7 +150,6 @@ impl MoveTables {
         let all_occupants = enemy_occupants | position.pieces[color.as_idx()].occupied;
        
         // Orthogonals
-        let mut direction_counter = 0;
         for rev_direction_table in self.reverse_slide_tables.iter().step_by(2) {
             let candidates = rev_direction_table[king_node] & (
                 position.pieces[opponent_idx].rook | position.pieces[opponent_idx].queen
@@ -160,11 +159,9 @@ impl MoveTables {
                     return true
                 }
             }
-            direction_counter += 2;
         }
        
         // Diagonals
-        let mut direction_counter = 1;
         for rev_direction_table in self.reverse_slide_tables.iter().skip(1).step_by(2) {
             let candidates = rev_direction_table[king_node] & (
                 position.pieces[opponent_idx].bishop | position.pieces[opponent_idx].queen
@@ -174,7 +171,6 @@ impl MoveTables {
                     return true
                 }
             }
-            direction_counter += 2;
         }
        
         // Knights
