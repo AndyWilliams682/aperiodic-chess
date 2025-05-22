@@ -198,6 +198,7 @@ impl PositionRecord {
 }
 
 
+#[derive(Debug, Clone)]
 pub struct Position {
     pub active_player: Color,
     pub pieces: [PieceSet; 2],
