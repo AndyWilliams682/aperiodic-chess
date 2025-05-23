@@ -273,7 +273,7 @@ impl Position {
         self.active_player = self.active_player.opponent();
     }
 
-    pub fn unmake_legal_move(&mut self, legal_move: Move) {
+    pub fn unmake_legal_move(&mut self, legal_move: &Move) {
         // Assumes the move was legal
         self.active_player = self.active_player.opponent();
         let player_idx = self.active_player.as_idx();
@@ -563,7 +563,7 @@ mod tests {
         position.active_player = Color::White;
         position.make_legal_move(&legal_move);
         let legal_move = Move::new(from_node, to_node, None, None);
-        position.unmake_legal_move(legal_move);
+        position.unmake_legal_move(&legal_move);
         assert_eq!(
             position.pieces[0].knight.get_bit_at_node(from_node),
             true
@@ -581,7 +581,7 @@ mod tests {
         let demotion_move = Move::new(from_node, to_node, Some(PieceType::Knight), None);
         position.make_legal_move(&demotion_move);
         let demotion_move = Move::new(from_node, to_node, Some(PieceType::Knight), None);
-        position.unmake_legal_move(demotion_move);
+        position.unmake_legal_move(&demotion_move);
         assert_eq!(
             position.pieces[0].knight.get_bit_at_node(from_node) & position.pieces[0].knight.get_bit_at_node(to_node),
             false
@@ -599,7 +599,7 @@ mod tests {
             Some(PieceType::Rook)
         );
         let capture_move = Move::new(from_node, to_node, None, None);
-        position.unmake_legal_move(capture_move);
+        position.unmake_legal_move(&capture_move);
         assert_eq!(
             position.pieces[0].rook.get_bit_at_node(from_node),
             true

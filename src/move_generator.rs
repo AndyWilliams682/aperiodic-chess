@@ -195,9 +195,9 @@ impl MoveTables {
         // Kings cannot be captured, allies cannot be captured
         // Could check the validity of the move wrt the move tables
         let moving_player = position.active_player;
-        position.make_legal_move(&chess_move.clone());
+        position.make_legal_move(chess_move);
         let legality = !self.is_in_check(position, moving_player);
-        position.unmake_legal_move(chess_move.clone());
+        position.unmake_legal_move(chess_move);
         return legality
     }
    
@@ -222,9 +222,9 @@ impl MoveTables {
             return legal_moves.len() as u64;
         }
         for legal_move in legal_moves {
-            position.make_legal_move(&legal_move.clone());
+            position.make_legal_move(&legal_move);
             output += self.perft(position, depth - 1);
-            position.unmake_legal_move(legal_move);
+            position.unmake_legal_move(&legal_move);
         }
         output
     }
