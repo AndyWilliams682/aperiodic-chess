@@ -122,7 +122,7 @@ impl SlideTables {
         return Self(val)
     }
    
-    pub fn query(&self, source_node: NodeIndex, occupied: BitBoard, orthogonals: bool, diagonals: bool) -> BitBoard {
+    pub fn query(&self, source_node: &NodeIndex, occupied: &BitBoard, orthogonals: bool, diagonals: bool) -> BitBoard {
         let mut result = BitBoard::empty();
         let initial_direction = match orthogonals {
             true => 0,
@@ -133,8 +133,8 @@ impl SlideTables {
             false => 2
         };
         for direction in (initial_direction..self.0.len()).step_by(direction_step) {
-            let unblocked_attacks = *self[direction][source_node].get(&BitBoard::empty()).unwrap();
-            let blocked_attacks = *self[direction][source_node].get(&(occupied & unblocked_attacks)).unwrap(); 
+            let unblocked_attacks = *self[direction][*source_node].get(&BitBoard::empty()).unwrap();
+            let blocked_attacks = *self[direction][*source_node].get(&(*occupied & unblocked_attacks)).unwrap(); 
             result = result | blocked_attacks;
         }
         result
@@ -922,12 +922,12 @@ mod tests {
     fn test_diagonal_slide_table() {
         let source_node = NodeIndex::new(63);
         assert_eq!(
-            traditional_slide_tables().query(source_node, BitBoard::empty(), false, true),
+            traditional_slide_tables().query(&source_node, &BitBoard::empty(), false, true),
             BitBoard::from_ints(vec![54, 45, 36, 27, 18, 9, 0])
         );
         let occupied = BitBoard::from_ints(vec![45]);
         assert_eq!(
-            traditional_slide_tables().query(source_node, occupied, false, true),
+            traditional_slide_tables().query(&source_node, &occupied, false, true),
             BitBoard::from_ints(vec![54, 45])
         );
     }
@@ -936,12 +936,12 @@ mod tests {
     fn test_orthogonal_table() {
         let source_node = NodeIndex::new(63);
         assert_eq!(
-            traditional_slide_tables().query(source_node, BitBoard::empty(), true, false),
+            traditional_slide_tables().query(&source_node, &BitBoard::empty(), true, false),
             BitBoard::from_ints(vec![62, 61, 60, 59, 58, 57, 56, 55, 47, 39, 31, 23, 15, 7])
         );
         let occupied = BitBoard::from_ints(vec![62]);
         assert_eq!(
-            traditional_slide_tables().query(source_node, occupied, true, false),
+            traditional_slide_tables().query(&source_node, &occupied, true, false),
             BitBoard::from_ints(vec![62, 55, 47, 39, 31, 23, 15, 7])
         )
     }
@@ -1032,7 +1032,7 @@ mod tests {
     fn test_hex_queen_table() {
         let source_node = NodeIndex::new(0);
         assert_eq!(
-            hexagonal_slide_tables().query(source_node, BitBoard::empty(), true, true),
+            hexagonal_slide_tables().query(&source_node, &BitBoard::empty(), true, true),
             BitBoard::from_ints(vec![
                 1, 2, 3, 4, 5, // Direction 10
                 6, 13, 21, 30, 40, // 2

@@ -32,9 +32,9 @@ impl MoveTables {
     fn query_piece(&self, piece_type: PieceType, source_node: NodeIndex, occupied: BitBoard) -> BitBoard {
         return match piece_type {
             PieceType::King => self.king_table[source_node],
-            PieceType::Queen => self.slide_tables.query(source_node, occupied, true, true),
-            PieceType::Rook => self.slide_tables.query(source_node, occupied, true, false),
-            PieceType::Bishop => self.slide_tables.query(source_node, occupied, false, true),
+            PieceType::Queen => self.slide_tables.query(&source_node, &occupied, true, true),
+            PieceType::Rook => self.slide_tables.query(&source_node, &occupied, true, false),
+            PieceType::Bishop => self.slide_tables.query(&source_node, &occupied, false, true),
             PieceType::Knight => self.knight_table[source_node],
             _ => BitBoard::empty() // Pawns are handled in a different function
         }
@@ -155,7 +155,7 @@ impl MoveTables {
                 position.pieces[opponent_idx].rook | position.pieces[opponent_idx].queen
             );
             for candidate in BitBoardNodes::new(candidates) {
-                if self.slide_tables.query(candidate, all_occupants, true, false).get_bit_at_node(king_node) {
+                if self.slide_tables.query(&candidate, &all_occupants, true, false).get_bit_at_node(king_node) {
                     return true
                 }
             }
@@ -167,7 +167,7 @@ impl MoveTables {
                 position.pieces[opponent_idx].bishop | position.pieces[opponent_idx].queen
             );
             for candidate in BitBoardNodes::new(candidates) {
-                if self.slide_tables.query(candidate, all_occupants, false, true).get_bit_at_node(king_node) {
+                if self.slide_tables.query(&candidate, &all_occupants, false, true).get_bit_at_node(king_node) {
                     return true
                 }
             }
