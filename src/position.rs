@@ -7,7 +7,7 @@ use crate::bit_board::BitBoard;
 use crate::chess_move::{EnPassantData, Move};
 
 
-#[derive(Debug, Clone, Copy, PartialEq)]
+#[derive(Debug, Clone, Copy, PartialEq)] // TODO: Candidate 3
 pub enum PieceType {
     King,
     Queen,
@@ -198,7 +198,7 @@ impl PositionRecord {
 }
 
 
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct Position {
     pub active_player: Color,
     pub pieces: [PieceSet; 2],
@@ -263,9 +263,9 @@ impl Position {
         }
 
         self.record = PositionRecord {
-            en_passant_data: legal_move.en_passant_data.clone(),
+            en_passant_data: legal_move.en_passant_data.clone(), // TODO: Candidate 1
             captured_piece: target_piece,
-            previous_record: Some(self.record.clone())
+            previous_record: Some(self.record.clone()) // TODO: Candidate 2
         }.into();
 
         self.pieces[player_idx].update_occupied();

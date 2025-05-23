@@ -40,7 +40,7 @@ impl MoveTables {
         }
     }
 
-    fn query_pawn(&self, color: Color, source_node: NodeIndex, enemies: BitBoard, occupied: BitBoard, current_ep_data: &Option<EnPassantData>) -> BitBoard {
+    fn query_pawn(&self, color: Color, source_node: NodeIndex, enemies: &BitBoard, occupied: BitBoard, current_ep_data: &Option<EnPassantData>) -> BitBoard {
         let pawn_tables = match color {
             Color::White => &self.white_pawn_tables,
             Color::Black => &self.black_pawn_tables
@@ -51,7 +51,7 @@ impl MoveTables {
         if !single_moves.is_zero() { // Only check double moves if the single_move is unblocked
             all_moves = all_moves | (*pawn_tables.double_table[source_node].get(&BitBoard::empty()).unwrap() & !occupied);
         }
-        all_moves = all_moves | (pawn_tables.attack_table[source_node] & enemies);
+        all_moves = all_moves | (pawn_tables.attack_table[source_node] & *enemies);
         match current_ep_data { // Can capture via EP even if no enemy is present
             Some(data) => all_moves = all_moves | (pawn_tables.attack_table[source_node] & BitBoard::from_ints(vec![data.capturable_tile.index() as u128])),
             None => {}
@@ -112,7 +112,7 @@ impl MoveTables {
                 let mut raw_attacks = if piece_type == PieceType::Pawn {
                     next_ep_data = self.check_en_passantable(active_player, source_node);
                     promotable_tiles = self.check_promotable(active_player, source_node);
-                    self.query_pawn(active_player, source_node, enemy_occupants, all_occupants, current_ep)
+                    self.query_pawn(active_player, source_node, &enemy_occupants, all_occupants, current_ep)
                 } else {
                     self.query_piece(piece_type, source_node, all_occupants)
                 };
@@ -203,7 +203,7 @@ impl MoveTables {
    
     fn get_legal_moves(&self, position: &mut Position) -> Vec<Move> {
         let mut legal_moves = Vec::new();
-        for chess_move in self.get_pseudo_moves(&position.to_owned()) {
+        for chess_move in self.get_pseudo_moves(&position) {
             if !self.is_legal_move(&chess_move, position) {
                 continue;
             }
@@ -269,35 +269,35 @@ mod tests {
         let enemies = BitBoard::empty();
         let occupied = BitBoard::empty();
         assert_eq!( // Double and single
-            move_tables.query_pawn(color, source_node, enemies, occupied, &None),
+            move_tables.query_pawn(color, source_node, &enemies, occupied, &None),
             BitBoard::from_ints(vec![17, 25])
         );
         assert_eq!( // Attacks, blocked double
-            move_tables.query_pawn(color, source_node, BitBoard::from_ints(vec![16, 18]), BitBoard::from_ints(vec![25]), &None),
+            move_tables.query_pawn(color, source_node, &BitBoard::from_ints(vec![16, 18]), BitBoard::from_ints(vec![25]), &None),
             BitBoard::from_ints(vec![16, 17, 18])
         );
         assert_eq!( // Blocked single, occupied attacks by allies
-            move_tables.query_pawn(color, source_node, BitBoard::from_ints(vec![17]), BitBoard::from_ints(vec![16, 17, 18]), &None),
+            move_tables.query_pawn(color, source_node, &BitBoard::from_ints(vec![17]), BitBoard::from_ints(vec![16, 17, 18]), &None),
             BitBoard::empty()
         );
         assert_eq!( // Blocked single, occupied
-            move_tables.query_pawn(color, source_node, BitBoard::empty(), BitBoard::from_ints(vec![17]), &None),
+            move_tables.query_pawn(color, source_node, &BitBoard::empty(), BitBoard::from_ints(vec![17]), &None),
             BitBoard::empty()
         );
         assert_eq!( // Single move, no doubles
-            move_tables.query_pawn(color, NodeIndex::new(17), enemies, occupied, &None),
+            move_tables.query_pawn(color, NodeIndex::new(17), &enemies, occupied, &None),
             BitBoard::from_ints(vec![25])
         );
         assert_eq!( // En Passant Capture
             move_tables.query_pawn(
-                color, source_node, enemies, occupied, 
+                color, source_node, &enemies, occupied, 
                 &Some(EnPassantData { capturable_tile: NodeIndex::new(16), piece_tile: NodeIndex::new(8) })
             ),
             BitBoard::from_ints(vec![16, 17, 25])
         );
         assert_eq!( // Irrelevant En Passant
             move_tables.query_pawn(
-                color, source_node, enemies, occupied, 
+                color, source_node, &enemies, occupied, 
                 &Some(EnPassantData { capturable_tile: NodeIndex::new(19), piece_tile: NodeIndex::new(11) })
             ),
             BitBoard::from_ints(vec![17, 25])
@@ -312,35 +312,35 @@ mod tests {
         let enemies = BitBoard::empty();
         let occupied = BitBoard::empty();
         assert_eq!( // Double and single
-            move_tables.query_pawn(color, source_node, enemies, occupied, &None),
+            move_tables.query_pawn(color, source_node, &enemies, occupied, &None),
             BitBoard::from_ints(vec![41, 33])
         );
         assert_eq!( // Attacks, blocked double
-            move_tables.query_pawn(color, source_node, BitBoard::from_ints(vec![40, 42]), BitBoard::from_ints(vec![33]), &None),
+            move_tables.query_pawn(color, source_node, &BitBoard::from_ints(vec![40, 42]), BitBoard::from_ints(vec![33]), &None),
             BitBoard::from_ints(vec![40, 41, 42])
         );
         assert_eq!( // Blocked single, occupied attacks by allies
-            move_tables.query_pawn(color, source_node, BitBoard::from_ints(vec![41]), BitBoard::from_ints(vec![40, 41, 42]), &None),
+            move_tables.query_pawn(color, source_node, &BitBoard::from_ints(vec![41]), BitBoard::from_ints(vec![40, 41, 42]), &None),
             BitBoard::empty()
         );
         assert_eq!( // Blocked single, occupied
-            move_tables.query_pawn(color, source_node, BitBoard::empty(), BitBoard::from_ints(vec![41]), &None),
+            move_tables.query_pawn(color, source_node, &BitBoard::empty(), BitBoard::from_ints(vec![41]), &None),
             BitBoard::empty()
         );
         assert_eq!(
-            move_tables.query_pawn(color, NodeIndex::new(41), enemies, occupied, &None),
+            move_tables.query_pawn(color, NodeIndex::new(41), &enemies, occupied, &None),
             BitBoard::from_ints(vec![33])
         );
         assert_eq!( // En Passant Capture
             move_tables.query_pawn(
-                color, source_node, enemies, occupied, 
+                color, source_node, &enemies, occupied, 
                 &Some(EnPassantData { capturable_tile: NodeIndex::new(40), piece_tile: NodeIndex::new(48) })
             ),
             BitBoard::from_ints(vec![40, 41, 33])
         );
         assert_eq!( // Irrelevant En Passant
             move_tables.query_pawn(
-                color, source_node, enemies, occupied, 
+                color, source_node, &enemies, occupied, 
                 &Some(EnPassantData { capturable_tile: NodeIndex::new(43), piece_tile: NodeIndex::new(51) })
             ),
             BitBoard::from_ints(vec![41, 33])
@@ -455,16 +455,16 @@ mod tests {
         assert_eq!(move_tables.perft(&mut position, 2), 400);
         assert_eq!(move_tables.perft(&mut position, 3), 8902);
         assert_eq!(move_tables.perft(&mut position, 4), 197281);
-        let start = Instant::now();
+        // let start = Instant::now();
         assert_eq!(move_tables.perft(&mut position, 5), 4865609);
         // let start = Instant::now();
-        // assert_eq!(move_tables.perft(&mut position, 6), 119060324);
-        let duration = start.elapsed();
-        let speed = duration.as_secs() * 1_000 + (duration.subsec_millis() as u64);
-        println!("{:?}", speed);
-        assert_eq!(
-            speed < 2000,
-            true
-        )
+        assert_eq!(move_tables.perft(&mut position, 6), 119060324);
+        // let duration = start.elapsed();
+        // let speed = duration.as_secs() * 1_000 + (duration.subsec_millis() as u64);
+        // println!("{:?}", speed);
+        // assert_eq!(
+        //     speed < 1,
+        //     true
+        // )
     }
 }
