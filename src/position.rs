@@ -29,7 +29,7 @@ impl PieceType {
     }
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct PieceSet {
     pub king: BitBoard,
     pub queen: BitBoard,
