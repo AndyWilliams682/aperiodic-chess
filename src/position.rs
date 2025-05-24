@@ -316,21 +316,9 @@ impl Position {
 mod tests {
     use super::*;
 
-    fn test_traditional_position() -> Position {
-        return Position::new_traditional();
-    }
-
-    fn test_hexagonal_board() -> Position {
-        return Position::new_hexagonal();
-    }
-
-    fn test_traditional_piece_set() -> PieceSet {
-        return test_traditional_position().pieces[0];
-    }
-
     #[test]
     fn test_new_traditional_occupied() {
-        let position = test_traditional_position();
+        let position = Position::new_traditional();
         let occupied = position.pieces[0].occupied | position.pieces[1].occupied;
         assert_eq!(
             occupied,
@@ -356,7 +344,7 @@ mod tests {
 
     #[test]
     fn test_get_piece_at_node() {
-        let piece_set = test_traditional_piece_set();
+        let piece_set = Position::new_traditional().pieces[0];;
         assert_eq!(
             piece_set.get_piece_at(NodeIndex::new(0)).unwrap(),
             PieceType::Rook
@@ -369,7 +357,7 @@ mod tests {
 
     #[test]
     fn test_get_bitboard_for_piece() {
-        let mut piece_set = test_traditional_piece_set();
+        let mut piece_set = Position::new_traditional().pieces[0];;
         let piece_type = PieceType::King;
         assert_eq!(
             *piece_set.get_bitboard_for_piece(piece_type),
@@ -379,7 +367,7 @@ mod tests {
 
     #[test]
     fn test_move_piece() {
-        let mut piece_set = test_traditional_piece_set();
+        let mut piece_set = Position::new_traditional().pieces[0];;
         let from_node = NodeIndex::new(1);
         let to_node = NodeIndex::new(18);
         piece_set.move_piece(from_node, to_node);
@@ -391,7 +379,7 @@ mod tests {
 
     #[test]
     fn test_make_legal_move() {
-        let mut position = test_traditional_position();
+        let mut position = Position::new_traditional();
         let from_node = NodeIndex::new(1);
         let to_node = NodeIndex::new(18);
         let legal_move = Move::new(from_node, to_node, None, None);
@@ -404,7 +392,7 @@ mod tests {
 
     #[test]
     fn test_capture_piece() {
-        let mut piece_set = test_traditional_piece_set();
+        let mut piece_set = Position::new_traditional().pieces[0];;
         let capture_node = NodeIndex::new(0);
         piece_set.capture_piece(capture_node);
         assert_eq!(
@@ -415,7 +403,7 @@ mod tests {
 
     #[test]
     fn test_promote_piece() {
-        let mut piece_set = test_traditional_piece_set();
+        let mut piece_set = Position::new_traditional().pieces[0];;
         let promotion_node = NodeIndex::new(8);
         piece_set.promote_piece(promotion_node, PieceType::Queen);
         assert_eq!(
@@ -430,7 +418,7 @@ mod tests {
 
     #[test]
     fn test_return_piece() {
-        let mut piece_set = test_traditional_piece_set();
+        let mut piece_set = Position::new_traditional().pieces[0];;
         let captured_node = NodeIndex::new(16);
         let captured_piece = PieceType::Rook;
         piece_set.return_piece(captured_node, captured_piece);
@@ -442,7 +430,7 @@ mod tests {
 
     #[test]
     fn test_demote_piece() {
-        let mut piece_set = test_traditional_piece_set();
+        let mut piece_set = Position::new_traditional().pieces[0];;
         let demotion_node = NodeIndex::new(0);
         piece_set.demote_piece(demotion_node);
         assert_eq!(
@@ -457,7 +445,7 @@ mod tests {
 
     #[test]
     fn test_update_occupied() {
-        let mut piece_set = test_traditional_piece_set();
+        let mut piece_set = Position::new_traditional().pieces[0];;
         piece_set.capture_piece(NodeIndex::new(0));
         piece_set.update_occupied();
         assert_eq!(
@@ -468,7 +456,7 @@ mod tests {
 
     #[test]
     fn test_en_passant_move() {
-        let mut position = test_traditional_position();
+        let mut position = Position::new_traditional();
         let to_node = NodeIndex::new(24);
         let legal_move = Move::new(
             NodeIndex::new(8),
@@ -485,7 +473,7 @@ mod tests {
 
     #[test]
     fn test_en_passant_capture() {
-        let mut position = test_traditional_position();
+        let mut position = Position::new_traditional();
         let en_passant_node = NodeIndex::new(16);
         let captured_node = NodeIndex::new(24);
         let first_move = Move::new(
@@ -514,7 +502,7 @@ mod tests {
 
     #[test]
     fn test_sequential_moves() {
-        let mut position = test_traditional_position();
+        let mut position = Position::new_traditional();
         let first_move = Move::new(
             NodeIndex::new(12),
             NodeIndex::new(28),
