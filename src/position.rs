@@ -552,34 +552,26 @@ mod tests {
 
     #[test]
     fn test_unmake_legal_move() {
-        let mut position = test_traditional_position();
-        position.make_legal_move(
-            &Move::new(NodeIndex::new(15), NodeIndex::new(31), None, Some(NodeIndex::new(23)))
-        );
+        let mut position = Position::from_string("RNBQKBNRPPPPPPP16P16pppppppprnbqkbnr w 23,31".to_string());
+        
         let from_node = NodeIndex::new(1);
         let to_node = NodeIndex::new(18);
         let legal_move = Move::new(from_node, to_node, None, None);
-        position.active_player = Color::White;
         position.make_legal_move(&legal_move);
-        let legal_move = Move::new(from_node, to_node, None, None);
         position.unmake_legal_move(&legal_move);
         assert_eq!(
-            position.pieces[0].knight.get_bit_at_node(from_node),
-            true
-        );
-        assert_eq!(
-            position.pieces[0].knight.get_bit_at_node(to_node),
-            false
+            position.pieces[0].knight,
+            BitBoard::from_ints(vec![1, 6])
         );
         assert_eq!(
             position.record.en_passant_data,
             Some(EnPassantData { capturable_tile: NodeIndex::new(23), piece_tile: NodeIndex::new(31) })
         );
+
         let from_node = NodeIndex::new(8);
         let to_node = NodeIndex::new(16);
         let demotion_move = Move::new(from_node, to_node, Some(PieceType::Knight), None);
         position.make_legal_move(&demotion_move);
-        let demotion_move = Move::new(from_node, to_node, Some(PieceType::Knight), None);
         position.unmake_legal_move(&demotion_move);
         assert_eq!(
             position.pieces[0].knight,
@@ -589,10 +581,7 @@ mod tests {
             position.pieces[0].pawn,
             BitBoard::from_ints(vec![8, 9, 10, 11, 12, 13, 14, 31])
         );
-        assert_eq!(
-            position.pieces[0].pawn.get_bit_at_node(from_node),
-            true
-        );
+
         let from_node = NodeIndex::new(0);
         let to_node = NodeIndex::new(56);
         let capture_move = Move::new(from_node, to_node, None, None);
@@ -601,7 +590,6 @@ mod tests {
             position.record.captured_piece,
             Some(PieceType::Rook)
         );
-        let capture_move = Move::new(from_node, to_node, None, None);
         position.unmake_legal_move(&capture_move);
         assert_eq!(
             position.pieces[0].rook,
