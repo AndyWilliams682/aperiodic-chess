@@ -12,13 +12,7 @@ mod piece_set;
 
 fn main() {
     let board = TraditionalBoardGraph::new();
-    let move_tables = MoveTables::new(
-        board.0.king_move_table(),
-        board.0.all_slide_tables(),
-        board.0.knight_jumps_table(),
-        board.0.pawn_tables(Color::White),
-        board.0.pawn_tables(Color::Black)
-    );
+    let move_tables = board.0.move_tables();
     let mut position = Position::new_traditional();
     println!("{:?}", move_tables.perft(&mut position, 5));
 }

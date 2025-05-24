@@ -6,6 +6,7 @@ use std::ops::{Deref, DerefMut, Index, IndexMut};
 use crate::bit_board::{BitBoard, CarryRippler, BitBoardNodes};
 use crate::create_limited_int;
 use crate::limited_int::LimitedIntTrait;
+use crate::move_generator::MoveTables;
 
 
 #[derive(Debug, PartialEq, Clone, Copy)]
@@ -405,6 +406,20 @@ impl<
             self.pawn_double_table(color),
             self.pawn_attack_table(color)
         )
+    }
+
+    pub fn move_tables(&self) -> MoveTables {
+        MoveTables {
+            king_table: self.king_move_table(),
+            slide_tables: self.all_slide_tables(),
+            knight_table: self.knight_jumps_table(),
+            white_pawn_tables: self.pawn_tables(Color::White),
+            black_pawn_tables: self.pawn_tables(Color::Black),
+            reverse_slide_tables: self.all_slide_tables().reverse(),
+            reverse_knight_table: self.knight_jumps_table().reverse(),
+            reverse_white_pawn_table: self.pawn_attack_table(Color::White).reverse(),
+            reverse_black_pawn_table: self.pawn_attack_table(Color::Black).reverse()
+        }
     }
 }
 

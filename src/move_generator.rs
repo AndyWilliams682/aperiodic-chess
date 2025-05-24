@@ -15,20 +15,6 @@ pub struct MoveTables {
 }
 
 impl MoveTables {
-    pub fn new(king: JumpTable, slide: SlideTables, knight: JumpTable, white_pawn: PawnTables, black_pawn: PawnTables) -> Self {
-        Self {
-            king_table: king,
-            slide_tables: slide.clone(),
-            knight_table: knight.clone(),
-            white_pawn_tables: white_pawn.clone(),
-            black_pawn_tables: black_pawn.clone(),
-            reverse_slide_tables: slide.reverse(),
-            reverse_knight_table: knight.reverse(),
-            reverse_white_pawn_table: white_pawn.attack_table.reverse(),
-            reverse_black_pawn_table: black_pawn.attack_table.reverse()
-        }
-    }
-
     fn query_piece(&self, piece_type: &PieceType, source_node: NodeIndex, occupied: BitBoard) -> BitBoard {
         return match piece_type {
             PieceType::King => self.king_table[source_node],
@@ -240,13 +226,7 @@ mod tests {
 
     fn test_move_tables() -> MoveTables {
         let board = TraditionalBoardGraph::new();
-        MoveTables::new(
-            board.0.king_move_table(),
-            board.0.all_slide_tables(),
-            board.0.knight_jumps_table(),
-            board.0.pawn_tables(Color::White),
-            board.0.pawn_tables(Color::Black)
-        )
+        board.0.move_tables()
     }
 
     #[test]
