@@ -3,7 +3,7 @@ use petgraph::visit::EdgeRef;
 use std::collections::{HashSet, HashMap};
 use std::ops::{Deref, DerefMut, Index, IndexMut};
 
-use crate::bit_board::{BitBoard, CarryRippler, BitBoardNodes};
+use crate::bit_board::{BitBoard, CarryRippler, BitBoardTiles};
 use crate::create_limited_int;
 use crate::limited_int::LimitedIntTrait;
 use crate::move_generator::MoveTables;
@@ -47,24 +47,24 @@ impl JumpTable {
         Self(val)
     }
 
-    pub fn empty(num_nodes: usize) -> Self {
-        Self::new(vec![BitBoard::empty(); num_nodes])
+    pub fn empty(num_tiles: usize) -> Self {
+        Self::new(vec![BitBoard::empty(); num_tiles])
     }
 
-    pub fn num_nodes(&self) -> usize {
+    pub fn num_tiles(&self) -> usize {
         return self.0.len()
     }
 
     pub fn reverse(&self) -> Self {
-        let num_nodes = self.num_nodes();
-        let mut output = Self::empty(num_nodes);
+        let num_tiles = self.num_tiles();
+        let mut output = Self::empty(num_tiles);
 
-        let mut source_node = 0;
-        for source_node_moves in &self.0 {
-            for to_node in BitBoardNodes::new(*source_node_moves) {
-                output[to_node].flip_bit_at_node(TileIndex::new(source_node));
+        let mut source_tile = 0;
+        for source_tile_moves in &self.0 {
+            for to_tile in BitBoardTiles::new(*source_tile_moves) {
+                output[to_tile].flip_bit_at_tile_index(TileIndex::new(source_tile));
             }
-            source_node += 1;
+            source_tile += 1;
         }
         output
     }
@@ -94,16 +94,16 @@ impl DirectionalSlideTable {
 
     pub fn reverse(&self) -> JumpTable {
         // Returning a JumpTable because this does not care about blockers (will be handled later)
-        let num_nodes = self.0.len();
-        let mut output = JumpTable::empty(num_nodes);
+        let num_tiles = self.0.len();
+        let mut output = JumpTable::empty(num_tiles);
        
-        let mut source_node = 0;
-        for source_node_moves in &self.0 {
-            let unblocked_moves = source_node_moves.get(&BitBoard::empty()).unwrap();
-            for to_node in BitBoardNodes::new(*unblocked_moves) {
-                output[to_node].flip_bit_at_node(TileIndex::new(source_node));
+        let mut source_tile = 0;
+        for source_tile_moves in &self.0 {
+            let unblocked_moves = source_tile_moves.get(&BitBoard::empty()).unwrap();
+            for to_tile in BitBoardTiles::new(*unblocked_moves) {
+                output[to_tile].flip_bit_at_tile_index(TileIndex::new(source_tile));
             }
-            source_node += 1;
+            source_tile += 1;
         }
         output
     }
@@ -125,7 +125,7 @@ impl SlideTables {
         return Self(val)
     }
    
-    pub fn query(&self, source_node: &TileIndex, occupied: &BitBoard, orthogonals: bool, diagonals: bool) -> BitBoard {
+    pub fn query(&self, source_tile: &TileIndex, occupied: &BitBoard, orthogonals: bool, diagonals: bool) -> BitBoard {
         let mut result = BitBoard::empty();
         let initial_direction = match orthogonals {
             true => 0,
@@ -136,8 +136,8 @@ impl SlideTables {
             false => 2
         };
         for direction in (initial_direction..self.0.len()).step_by(direction_step) {
-            let unblocked_attacks = *self[direction][*source_node].get(&BitBoard::empty()).unwrap();
-            let blocked_attacks = *self[direction][*source_node].get(&(*occupied & unblocked_attacks)).unwrap(); 
+            let unblocked_attacks = *self[direction][*source_tile].get(&BitBoard::empty()).unwrap();
+            let blocked_attacks = *self[direction][*source_tile].get(&(*occupied & unblocked_attacks)).unwrap(); 
             result = result | blocked_attacks;
         }
         result
@@ -186,19 +186,19 @@ impl<
         BoardGraph(Graph::new())
     }
    
-    fn get_next_node_in_direction(&self, source_node: TileIndex, direction: &E) -> Option<TileIndex> {
-        self.edges_directed(source_node, petgraph::Direction::Outgoing)
+    fn get_next_tile_in_direction(&self, source_tile: TileIndex, direction: &E) -> Option<TileIndex> {
+        self.edges_directed(source_tile, petgraph::Direction::Outgoing)
             .find(|edge| &edge.weight() == &direction)
             .map(|edge| edge.target())
     }
    
-    pub fn knight_jumps_from(&self, source_node: TileIndex) -> HashSet<TileIndex> {
+    pub fn knight_jumps_from(&self, source_tile: TileIndex) -> HashSet<TileIndex> {
         let mut result: HashSet<TileIndex> = HashSet::new();
         for direction in E::all_values() {
-            if let Some(next_node) = self.get_next_node_in_direction(source_node, &direction) {
+            if let Some(next_tile) = self.get_next_tile_in_direction(source_tile, &direction) {
                 for next_direction in E::adjacent_values(&direction) {
-                    if let Some(final_node) = self.get_next_node_in_direction(next_node, &next_direction) {
-                        result.insert(final_node);
+                    if let Some(final_tile) = self.get_next_tile_in_direction(next_tile, &next_direction) {
+                        result.insert(final_tile);
                     }
                 }
             }
@@ -206,13 +206,13 @@ impl<
         return result
     }
 
-    pub fn slides_from_in_direction(&self, source_node: TileIndex, direction: &E, limit: u32, obstructions: BitBoard) -> HashSet<TileIndex> {
+    pub fn slides_from_in_direction(&self, source_tile: TileIndex, direction: &E, limit: u32, obstructions: BitBoard) -> HashSet<TileIndex> {
         let mut result: HashSet<TileIndex> = HashSet::new();
-        let mut current_node = source_node;
+        let mut current_tile = source_tile;
         let mut distance_traveled = 0;
         let mut hit_obstruction = false;
 
-        while let Some(n) = self.get_next_node_in_direction(current_node, direction) {
+        while let Some(n) = self.get_next_tile_in_direction(current_tile, direction) {
             if BitBoard::new(1 << n.index()) & obstructions != BitBoard::empty() {
                 hit_obstruction = true;
             } // Assuming the first obstruction is an enemy, include it in result
@@ -221,14 +221,14 @@ impl<
             if (distance_traveled == limit) | hit_obstruction {
                 break
             }
-            current_node = n;
+            current_tile = n;
         }
         return result
     }
 
     pub fn cast_slides_from(
         &self,
-        source_node: TileIndex,
+        source_tile: TileIndex,
         obstructions: BitBoard,
         limit: u32,
         diagonals: bool,
@@ -250,7 +250,7 @@ impl<
                                     .skip(initital_direction)
                                     .step_by(direction_step) { // TODO: Better iterator usage
             result.extend(self.slides_from_in_direction(
-                source_node,
+                source_tile,
                 &even_direction,
                 limit,
                 obstructions
@@ -261,18 +261,18 @@ impl<
 
     pub fn knight_jumps_table(&self) -> JumpTable {
         let mut result: Vec<BitBoard> = vec![];
-        for source_node in self.0.node_indices() {
-            result.push(BitBoard::from_node_indices(self.knight_jumps_from(source_node)))
+        for source_tile in self.0.node_indices() {
+            result.push(BitBoard::from_tile_indices(self.knight_jumps_from(source_tile)))
         }
         return JumpTable::new(result)
     }
 
     pub fn slide_table_for_direction(&self, direction: &E) -> DirectionalSlideTable {
         let mut attack_table: Vec<HashMap<BitBoard, BitBoard>> = vec![];
-        for source_node in self.0.node_indices() {
-            let unobstructed_attacks = BitBoard::from_node_indices(
+        for source_tile in self.0.node_indices() {
+            let unobstructed_attacks = BitBoard::from_tile_indices(
                 self.slides_from_in_direction(
-                    source_node,
+                    source_tile,
                     direction,
                     0,
                     BitBoard::empty()
@@ -283,9 +283,9 @@ impl<
             for subset in CarryRippler::new(unobstructed_attacks) {
                 attack_map.insert(
                     subset,
-                    BitBoard::from_node_indices(
+                    BitBoard::from_tile_indices(
                         self.slides_from_in_direction(
-                            source_node,
+                            source_tile,
                             direction,
                             0,
                             subset
@@ -308,9 +308,9 @@ impl<
 
     pub fn king_move_table(&self) -> JumpTable {
         let mut result: Vec<BitBoard> = vec![];
-        for source_node in self.0.node_indices() {
-            result.push(BitBoard::from_node_indices(self.cast_slides_from(
-                source_node,
+        for source_tile in self.0.node_indices() {
+            result.push(BitBoard::from_tile_indices(self.cast_slides_from(
+                source_tile,
                 BitBoard::empty(),
                 1,
                 true,
@@ -330,13 +330,13 @@ impl<
 
         let map = N::map_to_other::<E>();
 
-        for source_node in self.0.node_indices() {
-            let tile = &self.0[source_node];
+        for source_tile in self.0.node_indices() {
+            let tile = &self.0[source_tile];
 
             let direction = map.get(&tile.orientation).unwrap().shift_by(forward_or_backward);
 
-            result.push(BitBoard::from_node_indices(self.slides_from_in_direction(
-                source_node,
+            result.push(BitBoard::from_tile_indices(self.slides_from_in_direction(
+                source_tile,
                 &direction,
                 1,
                 BitBoard::empty(),
@@ -355,16 +355,16 @@ impl<
 
         let map = N::map_to_other::<E>();
 
-        for source_node in self.0.node_indices() {
-            let tile = &self.0[source_node];
+        for source_tile in self.0.node_indices() {
+            let tile = &self.0[source_tile];
 
             let move_direction = map.get(&tile.orientation).unwrap().shift_by(forward_or_backward);
             let attack_directions = E::adjacent_values(&move_direction);
             let mut attacks = BitBoard::empty();
 
             for direction in attack_directions {
-                attacks = attacks | BitBoard::from_node_indices(self.slides_from_in_direction(
-                    source_node,
+                attacks = attacks | BitBoard::from_tile_indices(self.slides_from_in_direction(
+                    source_tile,
                     &direction,
                     1, 
                     BitBoard::empty()
@@ -380,13 +380,13 @@ impl<
         
         let single_table = self.pawn_single_table(color); // A double move is two single moves
 
-        for source_node in self.0.node_indices() {
-            let tile = &self.0[source_node];
+        for source_tile in self.0.node_indices() {
+            let tile = &self.0[source_tile];
 
             let unobstructed_attacks = match &tile.pawn_start {
                 Some(pawn_start_color) if pawn_start_color == &color => {
-                    let intermediate_node = single_table[source_node].lowest_one().unwrap();
-                        single_table[intermediate_node]
+                    let intermediate_tile = single_table[source_tile].lowest_one().unwrap();
+                        single_table[intermediate_tile]
                 },
                 _ => BitBoard::empty()
             };
@@ -394,7 +394,7 @@ impl<
             let mut attack_map = HashMap::new();
             attack_map.insert(BitBoard::empty(), unobstructed_attacks);
 
-            let occupied = single_table[source_node];
+            let occupied = single_table[source_tile];
             attack_map.insert(occupied, BitBoard::empty());
         
             attack_table.push(attack_map);
@@ -453,13 +453,13 @@ pub struct TraditionalBoardGraph(pub BoardGraph<UniformTileOrientation, Traditio
 impl TraditionalBoardGraph {
     pub fn new() -> Self {
         let mut board_graph = BoardGraph::new();
-        for node in 0..64 {
-            board_graph.add_node(Self::new_tile(node));
+        for tile in 0..64 {
+            board_graph.add_node(Self::new_tile(tile));
         }
-        for node_idx in board_graph.node_indices() {
-            for direction in Self::get_valid_directions(node_idx) {
-                let other_idx = TileIndex::from((node_idx.index() as i32 + Self::get_node_index_shift(&direction)) as u32);
-                board_graph.add_edge(node_idx, other_idx, direction);
+        for tile_idx in board_graph.node_indices() {
+            for direction in Self::get_valid_directions(tile_idx) {
+                let other_idx = TileIndex::from((tile_idx.index() as i32 + Self::get_tile_index_shift(&direction)) as u32);
+                board_graph.add_edge(tile_idx, other_idx, direction);
             }
         }
         return TraditionalBoardGraph(board_graph)
@@ -504,7 +504,7 @@ impl TraditionalBoardGraph {
     }
    
     // This function is used for making the empty traditional board
-    fn get_node_index_shift(direction: &TraditionalDirection) -> i32 {
+    fn get_tile_index_shift(direction: &TraditionalDirection) -> i32 {
         let sign = match &direction.0 {
             2..=5 => -1,
             _ => 1,
@@ -529,13 +529,13 @@ pub struct HexagonalBoardGraph(pub BoardGraph<UniformTileOrientation, HexagonalD
 impl HexagonalBoardGraph {
     pub fn new() -> Self {
         let mut board_graph = BoardGraph::new();
-        for node in 0..91 {
-            board_graph.add_node(Self::new_tile(node));
+        for tile in 0..91 {
+            board_graph.add_node(Self::new_tile(tile));
         }
-        for node_idx in board_graph.node_indices() {
-            for direction in Self::get_valid_directions(node_idx) {
-                let other_idx = TileIndex::from((node_idx.index() as i32 + Self::get_node_index_shift(node_idx, &direction)) as u32);
-                board_graph.add_edge(node_idx, other_idx, direction);
+        for tile_idx in board_graph.node_indices() {
+            for direction in Self::get_valid_directions(tile_idx) {
+                let other_idx = TileIndex::from((tile_idx.index() as i32 + Self::get_tile_index_shift(tile_idx, &direction)) as u32);
+                board_graph.add_edge(tile_idx, other_idx, direction);
             }
         }
         return HexagonalBoardGraph(board_graph)
@@ -640,7 +640,7 @@ impl HexagonalBoardGraph {
         return result
     }
    
-    fn get_node_index_shift(source: TileIndex, direction: &HexagonalDirection) -> i32 {
+    fn get_tile_index_shift(source: TileIndex, direction: &HexagonalDirection) -> i32 {
         let row = Self::row_length(source);
         return match direction.0 {
             0 => {
@@ -714,19 +714,19 @@ mod tests {
     }
 
     #[test]
-    fn test_get_next_node_in_direction_returns_node() {
+    fn test_get_next_tile_in_direction_returns_tile() {
         let board = test_traditional_board();
         assert_eq!(
-            board.0.get_next_node_in_direction(TileIndex::new(0), &TraditionalDirection(0)).unwrap(),
+            board.0.get_next_tile_in_direction(TileIndex::new(0), &TraditionalDirection(0)).unwrap(),
             TileIndex::new(8)
         );
     }
 
     #[test]
-    fn test_get_next_node_in_direction_returns_none() {
+    fn test_get_next_tile_in_direction_returns_none() {
         let board = test_traditional_board();
         assert_eq!(
-            board.0.get_next_node_in_direction(TileIndex::new(0), &TraditionalDirection(2)),
+            board.0.get_next_tile_in_direction(TileIndex::new(0), &TraditionalDirection(2)),
             None
         )
     }
@@ -734,9 +734,9 @@ mod tests {
     #[test]
     fn test_knight_move_from() {
         let board = test_traditional_board();
-        let source_node = TileIndex::new(27);
+        let source_tile = TileIndex::new(27);
         assert_eq!(
-            board.0.knight_jumps_from(source_node),
+            board.0.knight_jumps_from(source_tile),
             HashSet::from_iter([
                 TileIndex::new(27 + 10),
                 TileIndex::new(27 - 10),
@@ -753,9 +753,9 @@ mod tests {
     #[test]
     fn test_slide_move_from_no_limit_no_obstructions() {
         let board = test_traditional_board();
-        let source_node = TileIndex::new(1);
+        let source_tile = TileIndex::new(1);
         assert_eq!(
-            board.0.slides_from_in_direction(source_node, &TraditionalDirection(6), 0, BitBoard::empty()),
+            board.0.slides_from_in_direction(source_tile, &TraditionalDirection(6), 0, BitBoard::empty()),
             HashSet::from_iter([
                 TileIndex::new(2),
                 TileIndex::new(3),
@@ -769,9 +769,9 @@ mod tests {
     #[test]
     fn test_slide_move_with_limit() {
         let board = test_traditional_board();
-        let source_node = TileIndex::new(1);
+        let source_tile = TileIndex::new(1);
         assert_eq!(
-            board.0.slides_from_in_direction(source_node, &TraditionalDirection(6), 1, BitBoard::empty()),
+            board.0.slides_from_in_direction(source_tile, &TraditionalDirection(6), 1, BitBoard::empty()),
             HashSet::from_iter([TileIndex::new(2)])
         )
     }
@@ -779,10 +779,10 @@ mod tests {
     #[test]
     fn test_slide_move_with_obstructions() {
         let board = test_traditional_board();
-        let source_node = TileIndex::new(1);
+        let source_tile = TileIndex::new(1);
         let obstructions = BitBoard::new(16);
         assert_eq!(
-            board.0.slides_from_in_direction(source_node, &TraditionalDirection(6), 0, obstructions),
+            board.0.slides_from_in_direction(source_tile, &TraditionalDirection(6), 0, obstructions),
             HashSet::from_iter([
                 TileIndex::new(2),
                 TileIndex::new(3),
@@ -794,9 +794,9 @@ mod tests {
     #[test]
     fn test_diagonal_slides_unobstructed() {
         let board = test_traditional_board();
-        let source_node = TileIndex::new(27);
+        let source_tile = TileIndex::new(27);
         assert_eq!(
-            board.0.cast_slides_from(source_node, BitBoard::empty(), 0, true, false),
+            board.0.cast_slides_from(source_tile, BitBoard::empty(), 0, true, false),
             HashSet::from_iter([    
                 TileIndex::new(0),
                 TileIndex::new(9),
@@ -818,10 +818,10 @@ mod tests {
     #[test]
     fn test_diagonal_slides_obstructed() {
         let board = test_traditional_board();
-        let source_node = TileIndex::new(27);
+        let source_tile = TileIndex::new(27);
         let occupied = BitBoard::from_ints(vec![36, 34, 20]);
         assert_eq!(
-            board.0.cast_slides_from(source_node, occupied, 0, true, false),
+            board.0.cast_slides_from(source_tile, occupied, 0, true, false),
             HashSet::from_iter([    
                 TileIndex::new(0),
                 TileIndex::new(9),
@@ -836,9 +836,9 @@ mod tests {
     #[test]
     fn test_orthogonal_slides_unobstructed() {
         let board = test_traditional_board();
-        let source_node = TileIndex::new(27);
+        let source_tile = TileIndex::new(27);
         assert_eq!(
-            board.0.cast_slides_from(source_node, BitBoard::empty(), 0, false, true),
+            board.0.cast_slides_from(source_tile, BitBoard::empty(), 0, false, true),
             HashSet::from_iter([    
                 TileIndex::new(24),
                 TileIndex::new(25),
@@ -861,9 +861,9 @@ mod tests {
     #[test]
     fn test_both_slides_unobstructed() {
         let board = test_traditional_board();
-        let source_node = TileIndex::new(27);
+        let source_tile = TileIndex::new(27);
         assert_eq!(
-            board.0.cast_slides_from(source_node, BitBoard::empty(), 0, true, true),
+            board.0.cast_slides_from(source_tile, BitBoard::empty(), 0, true, true),
             HashSet::from_iter([    
                 TileIndex::new(24),
                 TileIndex::new(25),
@@ -899,9 +899,9 @@ mod tests {
     #[test]
     fn test_cast_slides_with_limit() {
         let board = test_traditional_board();
-        let source_node = TileIndex::new(27);
+        let source_tile = TileIndex::new(27);
         assert_eq!(
-            board.0.cast_slides_from(source_node, BitBoard::empty(), 1, true, true),
+            board.0.cast_slides_from(source_tile, BitBoard::empty(), 1, true, true),
             HashSet::from_iter([
                 TileIndex::new(36),
                 TileIndex::new(35),
@@ -918,9 +918,9 @@ mod tests {
     #[test]
     fn test_knight_table() {
         let board = test_traditional_board();
-        let source_node = TileIndex::new(63);
+        let source_tile = TileIndex::new(63);
         assert_eq!(
-            board.0.knight_jumps_table()[source_node],
+            board.0.knight_jumps_table()[source_tile],
             BitBoard::from_ints(vec![53, 46])
         )
     }
@@ -928,37 +928,37 @@ mod tests {
     #[test]
     fn test_slide_table_for_direction() {
         let board = test_traditional_board();
-        let source_node = TileIndex::new(0);
+        let source_tile = TileIndex::new(0);
         assert_eq!(
-            *board.0.slide_table_for_direction(&TraditionalDirection(0))[source_node].get(&BitBoard::new(65536)).unwrap(),
+            *board.0.slide_table_for_direction(&TraditionalDirection(0))[source_tile].get(&BitBoard::new(65536)).unwrap(),
             BitBoard::from_ints(vec![8, 16])
         )
     }
 
     #[test]
     fn test_diagonal_slide_table() {
-        let source_node = TileIndex::new(63);
+        let source_tile = TileIndex::new(63);
         assert_eq!(
-            traditional_slide_tables().query(&source_node, &BitBoard::empty(), false, true),
+            traditional_slide_tables().query(&source_tile, &BitBoard::empty(), false, true),
             BitBoard::from_ints(vec![54, 45, 36, 27, 18, 9, 0])
         );
         let occupied = BitBoard::from_ints(vec![45]);
         assert_eq!(
-            traditional_slide_tables().query(&source_node, &occupied, false, true),
+            traditional_slide_tables().query(&source_tile, &occupied, false, true),
             BitBoard::from_ints(vec![54, 45])
         );
     }
 
     #[test]
     fn test_orthogonal_table() {
-        let source_node = TileIndex::new(63);
+        let source_tile = TileIndex::new(63);
         assert_eq!(
-            traditional_slide_tables().query(&source_node, &BitBoard::empty(), true, false),
+            traditional_slide_tables().query(&source_tile, &BitBoard::empty(), true, false),
             BitBoard::from_ints(vec![62, 61, 60, 59, 58, 57, 56, 55, 47, 39, 31, 23, 15, 7])
         );
         let occupied = BitBoard::from_ints(vec![62]);
         assert_eq!(
-            traditional_slide_tables().query(&source_node, &occupied, true, false),
+            traditional_slide_tables().query(&source_tile, &occupied, true, false),
             BitBoard::from_ints(vec![62, 55, 47, 39, 31, 23, 15, 7])
         )
     }
@@ -966,9 +966,9 @@ mod tests {
     #[test]
     fn test_king_table() {
         let board = test_traditional_board();
-        let source_node = TileIndex::new(63);
+        let source_tile = TileIndex::new(63);
         assert_eq!(
-            board.0.king_move_table()[source_node],
+            board.0.king_move_table()[source_tile],
             BitBoard::from_ints(vec![62, 55, 54])
         )
     }
@@ -976,13 +976,13 @@ mod tests {
     #[test]
     fn test_pawn_double_table_forward() {
         let board = test_traditional_board();
-        let source_node = TileIndex::new(8);
+        let source_tile = TileIndex::new(8);
         assert_eq!(
-            *board.0.pawn_double_table(Color::White)[source_node].get(&BitBoard::empty()).unwrap(),
+            *board.0.pawn_double_table(Color::White)[source_tile].get(&BitBoard::empty()).unwrap(),
             BitBoard::from_ints(vec![24])
         );
         assert_eq!(
-            *board.0.pawn_double_table(Color::White)[source_node].get(&BitBoard::from_ints(vec![16])).unwrap(),
+            *board.0.pawn_double_table(Color::White)[source_tile].get(&BitBoard::from_ints(vec![16])).unwrap(),
             BitBoard::empty()
         );
     }
@@ -990,13 +990,13 @@ mod tests {
     #[test]
     fn test_pawn_double_table_backward() {
         let board = test_traditional_board();
-        let source_node = TileIndex::new(48);
+        let source_tile = TileIndex::new(48);
         assert_eq!(
-            *board.0.pawn_double_table(Color::Black)[source_node].get(&BitBoard::empty()).unwrap(),
+            *board.0.pawn_double_table(Color::Black)[source_tile].get(&BitBoard::empty()).unwrap(),
             BitBoard::from_ints(vec![32])
         );
         assert_eq!(
-            *board.0.pawn_double_table(Color::Black)[source_node].get(&BitBoard::from_ints(vec![40])).unwrap(),
+            *board.0.pawn_double_table(Color::Black)[source_tile].get(&BitBoard::from_ints(vec![40])).unwrap(),
             BitBoard::empty()
         );
     }
@@ -1004,9 +1004,9 @@ mod tests {
     #[test]
     fn test_pawn_single_table() {
         let board = test_traditional_board();
-        let source_node = TileIndex::new(48);
+        let source_tile = TileIndex::new(48);
         assert_eq!(
-            board.0.pawn_single_table(Color::White)[source_node],
+            board.0.pawn_single_table(Color::White)[source_tile],
             BitBoard::from_ints(vec![56])
         );
         assert_eq!(
@@ -1018,9 +1018,9 @@ mod tests {
     #[test]
     fn test_pawn_attack_table() {
         let board = test_traditional_board();
-        let source_node = TileIndex::new(49);
+        let source_tile = TileIndex::new(49);
         assert_eq!(
-            board.0.pawn_attack_table(Color::White)[source_node],
+            board.0.pawn_attack_table(Color::White)[source_tile],
             BitBoard::from_ints(vec![56, 58])
         )
     }
@@ -1028,9 +1028,9 @@ mod tests {
     #[test]
     fn test_pawn_attack_table_at_edge() {
         let board = test_traditional_board();
-        let source_node = TileIndex::new(48);
+        let source_tile = TileIndex::new(48);
         assert_eq!(
-            board.0.pawn_attack_table(Color::Black)[source_node],
+            board.0.pawn_attack_table(Color::Black)[source_tile],
             BitBoard::from_ints(vec![41])
         )
     }
@@ -1038,18 +1038,18 @@ mod tests {
     #[test]
     fn test_hex_knight_table() {
         let board = test_hexagonal_board();
-        let source_node = TileIndex::new(0);
+        let source_tile = TileIndex::new(0);
         assert_eq!(
-            board.0.knight_jumps_table()[source_node],
+            board.0.knight_jumps_table()[source_tile],
             BitBoard::from_ints(vec![9, 16, 22, 23])
         )
     }
 
     #[test]
     fn test_hex_queen_table() {
-        let source_node = TileIndex::new(0);
+        let source_tile = TileIndex::new(0);
         assert_eq!(
-            hexagonal_slide_tables().query(&source_node, &BitBoard::empty(), true, true),
+            hexagonal_slide_tables().query(&source_tile, &BitBoard::empty(), true, true),
             BitBoard::from_ints(vec![
                 1, 2, 3, 4, 5, // Direction 10
                 6, 13, 21, 30, 40, // 2
@@ -1063,9 +1063,9 @@ mod tests {
     #[test]
     fn test_hex_king_table() {
         let board = test_hexagonal_board();
-        let source_node = TileIndex::new(0);
+        let source_tile = TileIndex::new(0);
         assert_eq!(
-            board.0.king_move_table()[source_node],
+            board.0.king_move_table()[source_tile],
             BitBoard::from_ints(vec![1, 6, 7, 8, 14])
         )
     }
@@ -1073,9 +1073,9 @@ mod tests {
     #[test]
     fn test_hex_pawn_double_table_backward() {
         let board = test_hexagonal_board();
-        let source_node = TileIndex::new(56);
+        let source_tile = TileIndex::new(56);
         assert_eq!(
-            *board.0.pawn_double_table(Color::Black)[source_node].get(&BitBoard::empty()).unwrap(),
+            *board.0.pawn_double_table(Color::Black)[source_tile].get(&BitBoard::empty()).unwrap(),
             BitBoard::from_ints(vec![34])
         )
     }
@@ -1084,7 +1084,7 @@ mod tests {
     fn test_jump_table_empty_and_len() {
         let test = JumpTable::empty(64);
         assert_eq!(
-            test.num_nodes(),
+            test.num_tiles(),
             64
         )
     }

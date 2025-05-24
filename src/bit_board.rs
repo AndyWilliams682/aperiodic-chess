@@ -10,18 +10,18 @@ use crate::graph_board::TileIndex;
 pub struct BitBoard(u128);
 
 impl BitBoard {
-    pub fn from_node_indices(node_indices: HashSet<TileIndex>) -> BitBoard {
+    pub fn from_tile_indices(tile_indices: HashSet<TileIndex>) -> BitBoard {
         let mut result: u128 = 0;
-        for node in node_indices {
-            result += 1 << node.index();
+        for tile in tile_indices {
+            result += 1 << tile.index();
         }
         return BitBoard(result)
     }
 
     pub fn from_ints(ints: Vec<u128>) -> BitBoard {
         let mut result: u128 = 0;
-        for node in ints {
-            result += 1 << node;
+        for tile in ints {
+            result += 1 << tile;
         }
         return BitBoard(result)
     }
@@ -34,13 +34,13 @@ impl BitBoard {
         return BitBoard(0)
     }
 
-    pub fn get_bit_at_node(self, node: TileIndex) -> bool {
-        let mask: u128 = 1 << node.index();
+    pub fn get_bit_at_tile(self, tile: TileIndex) -> bool {
+        let mask: u128 = 1 << tile.index();
         return (self.0 & mask) != 0
     }
 
-    pub fn flip_bit_at_node(&mut self, node: TileIndex){
-        let mask: u128 = 1 << node.index();
+    pub fn flip_bit_at_tile_index(&mut self, tile: TileIndex){
+        let mask: u128 = 1 << tile.index();
         self.0 = self.0 ^ mask
     }
 
@@ -125,49 +125,49 @@ impl Iterator for CarryRippler {
 }
 
 #[derive(Debug)]
-pub struct BitBoardNodes {
-    remaining_nodes: BitBoard
+pub struct BitBoardTiles {
+    remaining_tiles: BitBoard
 }
 
-impl BitBoardNodes {
-    pub fn new(remaining_nodes: BitBoard) -> Self {
-        Self { remaining_nodes }
+impl BitBoardTiles {
+    pub fn new(remaining_tiles: BitBoard) -> Self {
+        Self { remaining_tiles }
     }
 }
 
-impl Iterator for BitBoardNodes {
+impl Iterator for BitBoardTiles {
     type Item = TileIndex;
    
     fn next(&mut self) -> Option<Self::Item> {
-        let next_node = self.remaining_nodes.lowest_one();
-        match next_node {
-            Some(node) => self.remaining_nodes.flip_bit_at_node(node),
+        let next_tile = self.remaining_tiles.lowest_one();
+        match next_tile {
+            Some(tile) => self.remaining_tiles.flip_bit_at_tile_index(tile),
             _ => {}
         }
-        next_node
+        next_tile
     }
 }
 
 #[derive(Debug)]
 pub struct BitBoardMoves {
-    source_node: TileIndex,
+    source_tile: TileIndex,
     is_pawn: bool,
-    remaining_moves: BitBoardNodes,
+    remaining_moves: BitBoardTiles,
     next_ep_data: Option<EnPassantData>,
-    promotable_nodes: Option<Vec<TileIndex>>,
-    current_promotion_node: Option<TileIndex>,
+    promotable_tiles: Option<Vec<TileIndex>>,
+    current_promotion_tile: Option<TileIndex>,
     current_promotion_counter: u32
 }
 
 impl BitBoardMoves {
-    pub fn new(source_node: TileIndex, is_pawn: bool, remaining_move_board: BitBoard, next_ep_data: Option<EnPassantData>, promotable_nodes: Option<Vec<TileIndex>>) -> BitBoardMoves {
+    pub fn new(source_tile: TileIndex, is_pawn: bool, remaining_move_board: BitBoard, next_ep_data: Option<EnPassantData>, promotable_tiles: Option<Vec<TileIndex>>) -> BitBoardMoves {
         BitBoardMoves {
-            source_node,
+            source_tile,
             is_pawn,
-            remaining_moves: BitBoardNodes::new(remaining_move_board),
+            remaining_moves: BitBoardTiles::new(remaining_move_board),
             next_ep_data,
-            promotable_nodes,
-            current_promotion_node: None,
+            promotable_tiles,
+            current_promotion_tile: None,
             current_promotion_counter: 0
         }
     }
@@ -181,36 +181,36 @@ impl Iterator for BitBoardMoves {
         let mut en_passant_tile = None;
        
         // Need to iterate through the possible promotions if possible
-        if let Some(to_node) = self.current_promotion_node {
+        if let Some(to_tile) = self.current_promotion_tile {
             self.current_promotion_counter += 1;
             let promotion = match self.current_promotion_counter {
                 1 => Some(PieceType::Bishop), // 0 will already be handled for the Knight
                 2 => Some(PieceType::Rook),
                 _ => { // Reset after Queen
-                    self.current_promotion_node.take();
+                    self.current_promotion_tile.take();
                     self.current_promotion_counter = 0;
                     Some(PieceType::Queen)
                 }
             };
-            Some(Move::new(self.source_node, to_node, promotion, en_passant_tile))
-        } else if let Some(to_node) = self.remaining_moves.next() {
+            Some(Move::new(self.source_tile, to_tile, promotion, en_passant_tile))
+        } else if let Some(to_tile) = self.remaining_moves.next() {
             if self.is_pawn {
                 match &self.next_ep_data {
-                    Some(data) if data.piece_tile == to_node => {
+                    Some(data) if data.piece_tile == to_tile => {
                         en_passant_tile = Some(data.capturable_tile)
                     },
                     _ => {}
                 }
 
-                match &self.promotable_nodes { // Handles promotion to Knight
-                    Some(nodes) if nodes.contains(&to_node) => {
-                        self.current_promotion_node = Some(to_node);
+                match &self.promotable_tiles { // Handles promotion to Knight
+                    Some(tiles) if tiles.contains(&to_tile) => {
+                        self.current_promotion_tile = Some(to_tile);
                         promotion = Some(PieceType::Knight);
                     },
                     _ => {}
                 }
             }
-            Some(Move::new(self.source_node, to_node, promotion, en_passant_tile))
+            Some(Move::new(self.source_tile, to_tile, promotion, en_passant_tile))
         } else {
             None
         }
@@ -224,23 +224,23 @@ mod tests {
     #[test]
     fn test_generate() {
         assert_eq!(
-            BitBoard::from_node_indices(HashSet::from_iter([TileIndex::new(0), TileIndex::new(25)])),
+            BitBoard::from_tile_indices(HashSet::from_iter([TileIndex::new(0), TileIndex::new(25)])),
             BitBoard(33554433)
         )
     }
 
     #[test]
-    fn test_get_bit_at_node() {
+    fn test_get_bit_at_tile() {
         assert_eq!(
-            BitBoard(33554433).get_bit_at_node(TileIndex::new(25)),
+            BitBoard(33554433).get_bit_at_tile(TileIndex::new(25)),
             true
         )
     }
 
     #[test]
-    fn test_flip_bit_at_node() {
+    fn test_flip_bit_at_tile() {
         let mut bitboard = BitBoard::empty();
-        bitboard.flip_bit_at_node(TileIndex::new(0));
+        bitboard.flip_bit_at_tile_index(TileIndex::new(0));
         assert_eq!(
             bitboard,
             BitBoard::new(1)
@@ -302,49 +302,49 @@ mod tests {
     }
 
     #[test]
-    fn test_bitboard_nodes() {
+    fn test_bitboard_tiles() {
         let bitboard = BitBoard::from_ints(vec![1, 3, 4]);
-        let mut bitboard_nodes = BitBoardNodes::new(bitboard);
+        let mut bitboard_tiles = BitBoardTiles::new(bitboard);
         assert_eq!(
-            bitboard_nodes.next().unwrap(),
+            bitboard_tiles.next().unwrap(),
             TileIndex::new(1)
         );
         assert_eq!(
-            bitboard_nodes.next().unwrap(),
+            bitboard_tiles.next().unwrap(),
             TileIndex::new(3)
         );
         assert_eq!(
-            bitboard_nodes.next().unwrap(),
+            bitboard_tiles.next().unwrap(),
             TileIndex::new(4)
         );
         assert_eq!(
-            bitboard_nodes.next(),
+            bitboard_tiles.next(),
             None
         );
     }
 
     #[test]
-    fn test_bitboard_nodes_empty() {
+    fn test_bitboard_tiles_empty() {
         assert_eq!(
-            BitBoardNodes::new(BitBoard::empty()).next(),
+            BitBoardTiles::new(BitBoard::empty()).next(),
             None
         )
     }
 
     #[test]
     fn test_bitboard_moves_knight() {
-        let source_node = TileIndex::new(0);
+        let source_tile = TileIndex::new(0);
         let remaining_moves = BitBoard::from_ints(vec![10, 17]);
         let mut bitboard_moves = BitBoardMoves::new(
-            source_node, false, remaining_moves, None, None
+            source_tile, false, remaining_moves, None, None
         );
         assert_eq!(
             bitboard_moves.next().unwrap(),
-            Move::new(source_node, TileIndex::new(10), None, None)
+            Move::new(source_tile, TileIndex::new(10), None, None)
         );
         assert_eq!(
             bitboard_moves.next().unwrap(),
-            Move::new(source_node, TileIndex::new(17), None, None)
+            Move::new(source_tile, TileIndex::new(17), None, None)
         );
         assert_eq!(
             bitboard_moves.next(),
@@ -354,22 +354,22 @@ mod tests {
 
     #[test]
     fn test_bitboard_moves_rook() {
-        let source_node = TileIndex::new(63);
+        let source_tile = TileIndex::new(63);
         let remaining_moves = BitBoard::from_ints(vec![60, 61, 62]);
         let mut bitboard_moves = BitBoardMoves::new(
-            source_node, false, remaining_moves, None, None
+            source_tile, false, remaining_moves, None, None
         );
         assert_eq!(
             bitboard_moves.next().unwrap(),
-            Move::new(source_node, TileIndex::new(60), None, None)
+            Move::new(source_tile, TileIndex::new(60), None, None)
         );
         assert_eq!(
             bitboard_moves.next().unwrap(),
-            Move::new(source_node, TileIndex::new(61), None, None)
+            Move::new(source_tile, TileIndex::new(61), None, None)
         );
         assert_eq!(
             bitboard_moves.next().unwrap(),
-            Move::new(source_node, TileIndex::new(62), None, None)
+            Move::new(source_tile, TileIndex::new(62), None, None)
         );
         assert_eq!(
             bitboard_moves.next(),
@@ -379,26 +379,26 @@ mod tests {
 
     #[test]
     fn test_bitboard_moves_pawn_no_promotion() {
-        let source_node = TileIndex::new(8);
+        let source_tile = TileIndex::new(8);
         let remaining_moves = BitBoard::from_ints(vec![16, 17, 24]);
         let en_passant_data = Some(EnPassantData { 
             capturable_tile: TileIndex::new(16),
             piece_tile: TileIndex::new(24) 
         });
         let mut bitboard_moves = BitBoardMoves::new(
-            source_node, true, remaining_moves, en_passant_data, None
+            source_tile, true, remaining_moves, en_passant_data, None
         );
         assert_eq!(
             bitboard_moves.next().unwrap(),
-            Move::new(source_node, TileIndex::new(16), None, None)
+            Move::new(source_tile, TileIndex::new(16), None, None)
         );
         assert_eq!(
             bitboard_moves.next().unwrap(),
-            Move::new(source_node, TileIndex::new(17), None, None)
+            Move::new(source_tile, TileIndex::new(17), None, None)
         );
         assert_eq!(
             bitboard_moves.next().unwrap(),
-            Move::new(source_node, TileIndex::new(24), None, Some(TileIndex::new(16)))
+            Move::new(source_tile, TileIndex::new(24), None, Some(TileIndex::new(16)))
         );
         assert_eq!(
             bitboard_moves.next(),
@@ -408,33 +408,33 @@ mod tests {
 
     #[test]
     fn test_bitboard_moves_pawn_with_promotion() {
-        let source_node = TileIndex::new(48);
+        let source_tile = TileIndex::new(48);
         let remaining_moves = BitBoard::from_ints(vec![56, 57]);
         let mut bitboard_moves = BitBoardMoves::new(
-            source_node, true, remaining_moves, None, Some(vec![
+            source_tile, true, remaining_moves, None, Some(vec![
                 TileIndex::new(56),
                 TileIndex::new(57)
             ])
         );
         assert_eq!(
             bitboard_moves.next().unwrap(),
-            Move::new(source_node, TileIndex::new(56), Some(PieceType::Knight), None)
+            Move::new(source_tile, TileIndex::new(56), Some(PieceType::Knight), None)
         );
         assert_eq!(
             bitboard_moves.next().unwrap(),
-            Move::new(source_node, TileIndex::new(56), Some(PieceType::Bishop), None)
+            Move::new(source_tile, TileIndex::new(56), Some(PieceType::Bishop), None)
         );
         assert_eq!(
             bitboard_moves.next().unwrap(),
-            Move::new(source_node, TileIndex::new(56), Some(PieceType::Rook), None)
+            Move::new(source_tile, TileIndex::new(56), Some(PieceType::Rook), None)
         );
         assert_eq!(
             bitboard_moves.next().unwrap(),
-            Move::new(source_node, TileIndex::new(56), Some(PieceType::Queen), None)
+            Move::new(source_tile, TileIndex::new(56), Some(PieceType::Queen), None)
         );
         assert_eq!(
             bitboard_moves.next().unwrap(),
-            Move::new(source_node, TileIndex::new(57), Some(PieceType::Knight), None)
+            Move::new(source_tile, TileIndex::new(57), Some(PieceType::Knight), None)
         );
     }
 }

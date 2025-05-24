@@ -22,10 +22,10 @@ impl PositionRecord {
     }
 
     pub fn from_string(fen: String) -> PositionRecord {
-        let nodes: Vec<&str> = fen.split(",").collect();
+        let tile_indices: Vec<&str> = fen.split(",").collect();
         let en_passant_data = Some(EnPassantData {
-            capturable_tile: TileIndex::new(nodes[0].parse().unwrap()),
-            piece_tile: TileIndex::new(nodes[1].parse().unwrap())
+            capturable_tile: TileIndex::new(tile_indices[0].parse().unwrap()),
+            piece_tile: TileIndex::new(tile_indices[1].parse().unwrap())
         });
         PositionRecord { en_passant_data, captured_piece: None, previous_record: None }
     }
@@ -47,44 +47,44 @@ pub struct Position {
 
 impl Position {
     pub fn from_string(fen: String) -> Self {
-        // fen format: <piece_info> <active_player> <EP capturable_node,piece_node>
+        // fen format: <piece_info> <active_player> <EP capturable_tile_index,piece_tile_index>
         let components: Vec<&str> = fen.split(" ").collect();
         let mut pieces = [
             PieceSet::empty(),
             PieceSet::empty()
         ];
-        let mut node_counter = 0;
-        let mut skip_nodes = "".to_string();
+        let mut tile_counter = 0;
+        let mut skip_tiles = "".to_string();
 
         for symbol in components[0].chars() {
             match symbol.is_numeric() {
                 true => {
-                    skip_nodes.push(symbol);
+                    skip_tiles.push(symbol);
                 },
                 false => {
-                    if skip_nodes.len() > 0 {
-                        node_counter += skip_nodes.parse::<usize>().unwrap();
-                        skip_nodes = "".to_string();
+                    if skip_tiles.len() > 0 {
+                        tile_counter += skip_tiles.parse::<usize>().unwrap();
+                        skip_tiles = "".to_string();
                     }
-                    let current_node = TileIndex::new(node_counter);
+                    let tile_index = TileIndex::new(tile_counter);
                     match symbol {
-                        'K' => pieces[0].king.flip_bit_at_node(current_node),
-                        'Q' => pieces[0].queen.flip_bit_at_node(current_node),
-                        'R' => pieces[0].rook.flip_bit_at_node(current_node),
-                        'B' => pieces[0].bishop.flip_bit_at_node(current_node),
-                        'N' => pieces[0].knight.flip_bit_at_node(current_node),
-                        'P' => pieces[0].pawn.flip_bit_at_node(current_node),
-                        'k' => pieces[1].king.flip_bit_at_node(current_node),
-                        'q' => pieces[1].queen.flip_bit_at_node(current_node),
-                        'r' => pieces[1].rook.flip_bit_at_node(current_node),
-                        'b' => pieces[1].bishop.flip_bit_at_node(current_node),
-                        'n' => pieces[1].knight.flip_bit_at_node(current_node),
+                        'K' => pieces[0].king.flip_bit_at_tile_index(tile_index),
+                        'Q' => pieces[0].queen.flip_bit_at_tile_index(tile_index),
+                        'R' => pieces[0].rook.flip_bit_at_tile_index(tile_index),
+                        'B' => pieces[0].bishop.flip_bit_at_tile_index(tile_index),
+                        'N' => pieces[0].knight.flip_bit_at_tile_index(tile_index),
+                        'P' => pieces[0].pawn.flip_bit_at_tile_index(tile_index),
+                        'k' => pieces[1].king.flip_bit_at_tile_index(tile_index),
+                        'q' => pieces[1].queen.flip_bit_at_tile_index(tile_index),
+                        'r' => pieces[1].rook.flip_bit_at_tile_index(tile_index),
+                        'b' => pieces[1].bishop.flip_bit_at_tile_index(tile_index),
+                        'n' => pieces[1].knight.flip_bit_at_tile_index(tile_index),
                         'p' => {
-                            pieces[1].pawn.flip_bit_at_node(current_node)
+                            pieces[1].pawn.flip_bit_at_tile_index(tile_index)
                         },
                         _ => {}
                     };
-                    node_counter += 1;
+                    tile_counter += 1;
                 }
             }
         }
@@ -114,26 +114,26 @@ impl Position {
         let player_idx = self.active_player.as_idx();
         let opponent_idx = self.active_player.opponent().as_idx();
 
-        let from_node = legal_move.from_node;
-        let to_node = legal_move.to_node;
+        let from_tile = legal_move.from_tile;
+        let to_tile = legal_move.to_tile;
 
-        let moving_piece = self.pieces[player_idx].get_piece_at(from_node).unwrap();
-        self.pieces[player_idx].move_piece(from_node, to_node);
+        let moving_piece = self.pieces[player_idx].get_piece_at(from_tile).unwrap();
+        self.pieces[player_idx].move_piece(from_tile, to_tile);
 
-        let mut target_piece = self.pieces[opponent_idx].get_piece_at(to_node);
+        let mut target_piece = self.pieces[opponent_idx].get_piece_at(to_tile);
         match target_piece {
-            Some(ref _t) => self.pieces[opponent_idx].capture_piece(to_node),
+            Some(ref _t) => self.pieces[opponent_idx].capture_piece(to_tile),
             None => {}
         }
 
         match &legal_move.promotion {
-            Some(promotion_target) => self.pieces[player_idx].promote_piece(to_node, promotion_target),
+            Some(promotion_target) => self.pieces[player_idx].promote_piece(to_tile, promotion_target),
             None => {}
         }
 
         if moving_piece == PieceType::Pawn {
             match &self.record.en_passant_data {
-                Some(en_passant_data) if to_node == en_passant_data.capturable_tile => {
+                Some(en_passant_data) if to_tile == en_passant_data.capturable_tile => {
                     target_piece = Some(PieceType::Pawn);
                     self.pieces[opponent_idx].capture_piece(en_passant_data.piece_tile)
                 },
@@ -158,17 +158,17 @@ impl Position {
         let player_idx = self.active_player.as_idx();
         let opponent_idx = self.active_player.opponent().as_idx();
        
-        let from_node = legal_move.from_node;
-        let to_node = legal_move.to_node;
+        let from_tile = legal_move.from_tile;
+        let to_tile = legal_move.to_tile;
        
-        self.pieces[player_idx].move_piece(to_node, from_node);
+        self.pieces[player_idx].move_piece(to_tile, from_tile);
 
         let captured_piece = self.record.captured_piece.to_owned();
         if let Some(ref piece_type) = captured_piece {
-            self.pieces[opponent_idx].return_piece(to_node, &piece_type)
+            self.pieces[opponent_idx].return_piece(to_tile, &piece_type)
         }
         match &legal_move.promotion {
-            Some(_t) => self.pieces[player_idx].demote_piece(from_node),
+            Some(_t) => self.pieces[player_idx].demote_piece(from_tile),
             None => {} // TODO: Use better syntax for cases like this, if Some(_t) = legal_move.promotion {}
         }
         if let Some(prev_record) = self.record.get_previous_record() {
@@ -178,8 +178,8 @@ impl Position {
         }
         if captured_piece == Some(PieceType::Pawn) {
             if let Some(en_passant_data) = &self.record.en_passant_data {
-                if to_node == en_passant_data.capturable_tile {
-                    self.pieces[opponent_idx].capture_piece(to_node);
+                if to_tile == en_passant_data.capturable_tile {
+                    self.pieces[opponent_idx].capture_piece(to_tile);
                     self.pieces[opponent_idx].return_piece(en_passant_data.piece_tile, &PieceType::Pawn)
                 }
             }
@@ -224,9 +224,9 @@ mod tests {
     #[test]
     fn test_make_legal_move() {
         let mut position = Position::new_traditional();
-        let from_node = TileIndex::new(1);
-        let to_node = TileIndex::new(18);
-        let legal_move = Move::new(from_node, to_node, None, None);
+        let from_tile = TileIndex::new(1);
+        let to_tile = TileIndex::new(18);
+        let legal_move = Move::new(from_tile, to_tile, None, None);
         position.make_legal_move(&legal_move);
         assert_eq!(
             position.pieces[0].knight,
@@ -237,45 +237,45 @@ mod tests {
     #[test]
     fn test_en_passant_move() {
         let mut position = Position::new_traditional();
-        let to_node = TileIndex::new(24);
+        let to_tile = TileIndex::new(24);
         let legal_move = Move::new(
             TileIndex::new(8),
-            to_node,
+            to_tile,
             None,
             Some(TileIndex::new(16))
         );
         position.make_legal_move(&legal_move);
         assert_eq!(
             *position.record.en_passant_data.as_ref().unwrap(),
-            EnPassantData::new(TileIndex::new(16), to_node)
+            EnPassantData::new(TileIndex::new(16), to_tile)
         )
     }
 
     #[test]
     fn test_en_passant_capture() {
         let mut position = Position::new_traditional();
-        let en_passant_node = TileIndex::new(16);
-        let captured_node = TileIndex::new(24);
+        let en_passant_tile = TileIndex::new(16);
+        let captured_tile = TileIndex::new(24);
         let first_move = Move::new(
             TileIndex::new(8),
-            captured_node,
+            captured_tile,
             None,
-            Some(en_passant_node)
+            Some(en_passant_tile)
         );
         position.make_legal_move(&first_move);
         let capturing_move = Move::new(
             TileIndex::new(48),
-            en_passant_node,
+            en_passant_tile,
             None,
             None
         );
         position.make_legal_move(&capturing_move);
         assert_eq!(
-            position.pieces[0].pawn.get_bit_at_node(TileIndex::new(24)),
+            position.pieces[0].pawn.get_bit_at_tile(TileIndex::new(24)),
             false
         );
         assert_eq!(
-            position.pieces[1].pawn.get_bit_at_node(TileIndex::new(16)),
+            position.pieces[1].pawn.get_bit_at_tile(TileIndex::new(16)),
             true
         )
     }
@@ -322,9 +322,9 @@ mod tests {
     fn test_unmake_legal_move() {
         let mut position = Position::from_string("RNBQKBNRPPPPPPP16P16pppppppprnbqkbnr w 23,31".to_string());
         
-        let from_node = TileIndex::new(1);
-        let to_node = TileIndex::new(18);
-        let legal_move = Move::new(from_node, to_node, None, None);
+        let from_tile = TileIndex::new(1);
+        let to_tile = TileIndex::new(18);
+        let legal_move = Move::new(from_tile, to_tile, None, None);
         position.make_legal_move(&legal_move);
         position.unmake_legal_move(&legal_move);
         assert_eq!(
@@ -336,9 +336,9 @@ mod tests {
             Some(EnPassantData { capturable_tile: TileIndex::new(23), piece_tile: TileIndex::new(31) })
         );
 
-        let from_node = TileIndex::new(8);
-        let to_node = TileIndex::new(16);
-        let demotion_move = Move::new(from_node, to_node, Some(PieceType::Knight), None);
+        let from_tile = TileIndex::new(8);
+        let to_tile = TileIndex::new(16);
+        let demotion_move = Move::new(from_tile, to_tile, Some(PieceType::Knight), None);
         position.make_legal_move(&demotion_move);
         position.unmake_legal_move(&demotion_move);
         assert_eq!(
@@ -350,9 +350,9 @@ mod tests {
             BitBoard::from_ints(vec![8, 9, 10, 11, 12, 13, 14, 31])
         );
 
-        let from_node = TileIndex::new(0);
-        let to_node = TileIndex::new(56);
-        let capture_move = Move::new(from_node, to_node, None, None);
+        let from_tile = TileIndex::new(0);
+        let to_tile = TileIndex::new(56);
+        let capture_move = Move::new(from_tile, to_tile, None, None);
         position.make_legal_move(&capture_move);
         assert_eq!(
             position.record.captured_piece,

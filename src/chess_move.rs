@@ -17,18 +17,18 @@ impl EnPassantData {
 
 #[derive(Debug, PartialEq)]
 pub struct Move {
-    pub from_node: TileIndex,
-    pub to_node: TileIndex,
+    pub from_tile: TileIndex,
+    pub to_tile: TileIndex,
     pub promotion: Option<PieceType>,
     pub en_passant_data: Option<EnPassantData>
 }
 
 impl Move {
-    pub fn new(from_node: TileIndex, to_node: TileIndex, promotion: Option<PieceType>, en_passant_tile: Option<TileIndex>) -> Self {
+    pub fn new(from_tile: TileIndex, to_tile: TileIndex, promotion: Option<PieceType>, en_passant_tile: Option<TileIndex>) -> Self {
         let en_passant_data = match en_passant_tile {
-            Some(node) => Some(EnPassantData::new(node, to_node)),
+            Some(tile) => Some(EnPassantData::new(tile, to_tile)),
             None => None
         };
-        return Self { from_node, to_node, promotion, en_passant_data }
+        return Self { from_tile, to_tile, promotion, en_passant_data }
     }
 }
