@@ -1,6 +1,5 @@
-use petgraph::graph::NodeIndex;
 
-use crate::{bit_board::{BitBoard, BitBoardMoves, BitBoardNodes}, chess_move::{EnPassantData, Move}, graph_board::{Color, JumpTable, SlideTables, PawnTables}, position::Position, piece_set::PieceType};
+use crate::{bit_board::{BitBoard, BitBoardMoves, BitBoardNodes}, chess_move::{EnPassantData, Move}, graph_board::{Color, JumpTable, SlideTables, PawnTables, TileIndex}, position::Position, piece_set::PieceType};
 
 pub struct MoveTables {
     pub king_table: JumpTable, // king_table is it's own reverse
@@ -15,7 +14,7 @@ pub struct MoveTables {
 }
 
 impl MoveTables {
-    fn query_piece(&self, piece_type: &PieceType, source_node: NodeIndex, occupied: BitBoard) -> BitBoard {
+    fn query_piece(&self, piece_type: &PieceType, source_node: TileIndex, occupied: BitBoard) -> BitBoard {
         return match piece_type {
             PieceType::King => self.king_table[source_node],
             PieceType::Queen => self.slide_tables.query(&source_node, &occupied, true, true),
@@ -26,7 +25,7 @@ impl MoveTables {
         }
     }
 
-    fn query_pawn(&self, color: Color, source_node: NodeIndex, enemies: &BitBoard, occupied: BitBoard, current_ep_data: &Option<EnPassantData>) -> BitBoard {
+    fn query_pawn(&self, color: Color, source_node: TileIndex, enemies: &BitBoard, occupied: BitBoard, current_ep_data: &Option<EnPassantData>) -> BitBoard {
         let pawn_tables = match color {
             Color::White => &self.white_pawn_tables,
             Color::Black => &self.black_pawn_tables
@@ -45,7 +44,7 @@ impl MoveTables {
         all_moves
     }
 
-    fn check_en_passantable(&self, color: Color, source_node: NodeIndex) -> Option<EnPassantData> {
+    fn check_en_passantable(&self, color: Color, source_node: TileIndex) -> Option<EnPassantData> {
         let pawn_tables = match color {
             Color::White => &self.white_pawn_tables,
             Color::Black => &self.black_pawn_tables
@@ -59,7 +58,7 @@ impl MoveTables {
         }
     }
 
-    fn check_promotable(&self, color: Color, source_node: NodeIndex) -> Option<Vec<NodeIndex>> {
+    fn check_promotable(&self, color: Color, source_node: TileIndex) -> Option<Vec<TileIndex>> {
         let pawn_tables = match color {
             Color::White => &self.white_pawn_tables,
             Color::Black => &self.black_pawn_tables
@@ -246,7 +245,7 @@ mod tests {
     fn test_query_pawn_white() {
         let move_tables = test_move_tables();
         let color = Color::White;
-        let source_node = NodeIndex::new(9);
+        let source_node = TileIndex::new(9);
         let enemies = BitBoard::empty();
         let occupied = BitBoard::empty();
         assert_eq!( // Double and single
@@ -266,20 +265,20 @@ mod tests {
             BitBoard::empty()
         );
         assert_eq!( // Single move, no doubles
-            move_tables.query_pawn(color, NodeIndex::new(17), &enemies, occupied, &None),
+            move_tables.query_pawn(color, TileIndex::new(17), &enemies, occupied, &None),
             BitBoard::from_ints(vec![25])
         );
         assert_eq!( // En Passant Capture
             move_tables.query_pawn(
                 color, source_node, &enemies, occupied, 
-                &Some(EnPassantData { capturable_tile: NodeIndex::new(16), piece_tile: NodeIndex::new(8) })
+                &Some(EnPassantData { capturable_tile: TileIndex::new(16), piece_tile: TileIndex::new(8) })
             ),
             BitBoard::from_ints(vec![16, 17, 25])
         );
         assert_eq!( // Irrelevant En Passant
             move_tables.query_pawn(
                 color, source_node, &enemies, occupied, 
-                &Some(EnPassantData { capturable_tile: NodeIndex::new(19), piece_tile: NodeIndex::new(11) })
+                &Some(EnPassantData { capturable_tile: TileIndex::new(19), piece_tile: TileIndex::new(11) })
             ),
             BitBoard::from_ints(vec![17, 25])
         )
@@ -289,7 +288,7 @@ mod tests {
     fn test_query_pawn_black() {
         let move_tables = test_move_tables();
         let color = Color::Black;
-        let source_node = NodeIndex::new(49);
+        let source_node = TileIndex::new(49);
         let enemies = BitBoard::empty();
         let occupied = BitBoard::empty();
         assert_eq!( // Double and single
@@ -309,20 +308,20 @@ mod tests {
             BitBoard::empty()
         );
         assert_eq!(
-            move_tables.query_pawn(color, NodeIndex::new(41), &enemies, occupied, &None),
+            move_tables.query_pawn(color, TileIndex::new(41), &enemies, occupied, &None),
             BitBoard::from_ints(vec![33])
         );
         assert_eq!( // En Passant Capture
             move_tables.query_pawn(
                 color, source_node, &enemies, occupied, 
-                &Some(EnPassantData { capturable_tile: NodeIndex::new(40), piece_tile: NodeIndex::new(48) })
+                &Some(EnPassantData { capturable_tile: TileIndex::new(40), piece_tile: TileIndex::new(48) })
             ),
             BitBoard::from_ints(vec![40, 41, 33])
         );
         assert_eq!( // Irrelevant En Passant
             move_tables.query_pawn(
                 color, source_node, &enemies, occupied, 
-                &Some(EnPassantData { capturable_tile: NodeIndex::new(43), piece_tile: NodeIndex::new(51) })
+                &Some(EnPassantData { capturable_tile: TileIndex::new(43), piece_tile: TileIndex::new(51) })
             ),
             BitBoard::from_ints(vec![41, 33])
         )
@@ -342,8 +341,8 @@ mod tests {
             false
         ); // Initial position, not in check for black
         position.make_legal_move(&Move::new(
-            NodeIndex::new(1),
-            NodeIndex::new(43),
+            TileIndex::new(1),
+            TileIndex::new(43),
             None, None
         ));
         assert_eq!(
@@ -351,8 +350,8 @@ mod tests {
             true
         ); // Black in check by Knight
         position.make_legal_move(&Move::new(
-            NodeIndex::new(59),
-            NodeIndex::new(20),
+            TileIndex::new(59),
+            TileIndex::new(20),
             None, None
         ));
         assert_eq!(
@@ -360,8 +359,8 @@ mod tests {
             false
         ); // White not in check by blocked orthogonal queen
         position.make_legal_move(&Move::new(
-            NodeIndex::new(12),
-            NodeIndex::new(28),
+            TileIndex::new(12),
+            TileIndex::new(28),
             None, None
         ));
         assert_eq!(
@@ -369,8 +368,8 @@ mod tests {
             true
         ); // White in check by unblocked orthogonal queen
         position.make_legal_move(&Move::new(
-            NodeIndex::new(20),
-            NodeIndex::new(18),
+            TileIndex::new(20),
+            TileIndex::new(18),
             None, None
         ));
         assert_eq!(
@@ -378,8 +377,8 @@ mod tests {
             false
         ); // White not in check by blocked diagonal queen
         position.make_legal_move(&Move::new(
-            NodeIndex::new(11),
-            NodeIndex::new(19),
+            TileIndex::new(11),
+            TileIndex::new(19),
             None, None
         ));
         assert_eq!(
@@ -393,10 +392,10 @@ mod tests {
         let move_tables = test_move_tables();
         let mut position = Position::new_traditional();
        
-        position.pieces[0].pawn.flip_bit_at_node(NodeIndex::new(12));
-        position.pieces[1].queen.flip_bit_at_node(NodeIndex::new(28));
-        position.pieces[0].pawn.flip_bit_at_node(NodeIndex::new(13));
-        position.pieces[0].pawn.flip_bit_at_node(NodeIndex::new(21));
+        position.pieces[0].pawn.flip_bit_at_node(TileIndex::new(12));
+        position.pieces[1].queen.flip_bit_at_node(TileIndex::new(28));
+        position.pieces[0].pawn.flip_bit_at_node(TileIndex::new(13));
+        position.pieces[0].pawn.flip_bit_at_node(TileIndex::new(21));
         position.pieces[0].update_occupied();
         position.pieces[1].update_occupied();
        
@@ -404,23 +403,23 @@ mod tests {
        
         assert_eq!(
             legal_moves.get(0).unwrap(),
-            &Move::new(NodeIndex::new(4), NodeIndex::new(13), None, None)
+            &Move::new(TileIndex::new(4), TileIndex::new(13), None, None)
         ); // Evading with King
         assert_eq!(
             legal_moves.get(1).unwrap(),
-            &Move::new(NodeIndex::new(3), NodeIndex::new(12), None, None)
+            &Move::new(TileIndex::new(3), TileIndex::new(12), None, None)
         ); // Blocking with Queen
         assert_eq!(
             legal_moves.get(2).unwrap(),
-            &Move::new(NodeIndex::new(5), NodeIndex::new(12), None, None)
+            &Move::new(TileIndex::new(5), TileIndex::new(12), None, None)
         ); // Blocking with Bishop
         assert_eq!(
             legal_moves.get(3).unwrap(),
-            &Move::new(NodeIndex::new(6), NodeIndex::new(12), None, None)
+            &Move::new(TileIndex::new(6), TileIndex::new(12), None, None)
         ); // Blocking with Knight
         assert_eq!(
             legal_moves.get(4).unwrap(),
-            &Move::new(NodeIndex::new(21), NodeIndex::new(28), None, None)
+            &Move::new(TileIndex::new(21), TileIndex::new(28), None, None)
         ); // Capturing with Pawn
         assert_eq!(
             legal_moves.len(),

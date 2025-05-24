@@ -1,6 +1,6 @@
-use petgraph::graph::NodeIndex;
 
 use crate::bit_board::BitBoard;
+use crate::graph_board::TileIndex;
 
 
 #[derive(Debug, Clone, PartialEq)]
@@ -49,7 +49,7 @@ impl PieceSet {
         self.occupied = occupied
     }
 
-    pub fn get_piece_at(&self, node: NodeIndex) -> Option<PieceType> {
+    pub fn get_piece_at(&self, node: TileIndex) -> Option<PieceType> {
         if self.king.get_bit_at_node(node) == true {
             return Some(PieceType::King)
         } else if self.queen.get_bit_at_node(node) == true {
@@ -78,32 +78,32 @@ impl PieceSet {
         };
     }
 
-    pub fn move_piece(&mut self, from_node: NodeIndex, to_node: NodeIndex) {
+    pub fn move_piece(&mut self, from_node: TileIndex, to_node: TileIndex) {
         let piece_type = self.get_piece_at(from_node).unwrap();
         let bitboard = self.get_bitboard_for_piece(&piece_type);
         bitboard.flip_bit_at_node(from_node);
         bitboard.flip_bit_at_node(to_node);
     }
 
-    pub fn capture_piece(&mut self, capture_node: NodeIndex) {
+    pub fn capture_piece(&mut self, capture_node: TileIndex) {
         let piece_type = self.get_piece_at(capture_node).unwrap();
         let bitboard = self.get_bitboard_for_piece(&piece_type);
         bitboard.flip_bit_at_node(capture_node);
     }
 
-    pub fn promote_piece(&mut self, promotion_node: NodeIndex, promotion_target: &PieceType) {
+    pub fn promote_piece(&mut self, promotion_node: TileIndex, promotion_target: &PieceType) {
         // This assumes the move has been registered before applying the promotion
         self.pawn.flip_bit_at_node(promotion_node);
         let bitboard = self.get_bitboard_for_piece(promotion_target);
         bitboard.flip_bit_at_node(promotion_node);
     }
 
-    pub fn return_piece(&mut self, captured_node: NodeIndex, captured_piece: &PieceType) {
+    pub fn return_piece(&mut self, captured_node: TileIndex, captured_piece: &PieceType) {
         let bitboard = self.get_bitboard_for_piece(captured_piece);
         bitboard.flip_bit_at_node(captured_node);
     } // Inverse of capture_piece
     
-    pub fn demote_piece(&mut self, demotion_node: NodeIndex) {
+    pub fn demote_piece(&mut self, demotion_node: TileIndex) {
         let piece_type = self.get_piece_at(demotion_node).unwrap();
         let bitboard = self.get_bitboard_for_piece(&piece_type);
         bitboard.flip_bit_at_node(demotion_node);
@@ -121,11 +121,11 @@ mod tests {
     fn test_get_piece_at_node() {
         let piece_set = &Position::new_traditional().pieces[0];
         assert_eq!(
-            piece_set.get_piece_at(NodeIndex::new(0)).unwrap(),
+            piece_set.get_piece_at(TileIndex::new(0)).unwrap(),
             PieceType::Rook
         );
         assert_eq!(
-            piece_set.get_piece_at(NodeIndex::new(17)),
+            piece_set.get_piece_at(TileIndex::new(17)),
             None
         )
     }
@@ -142,8 +142,8 @@ mod tests {
     #[test]
     fn test_move_piece() {
         let piece_set = &mut Position::new_traditional().pieces[0];
-        let from_node = NodeIndex::new(1);
-        let to_node = NodeIndex::new(18);
+        let from_node = TileIndex::new(1);
+        let to_node = TileIndex::new(18);
         piece_set.move_piece(from_node, to_node);
         assert_eq!(
             piece_set.knight,
@@ -154,7 +154,7 @@ mod tests {
     #[test]
     fn test_capture_piece() {
         let piece_set = &mut Position::new_traditional().pieces[0];
-        let capture_node = NodeIndex::new(0);
+        let capture_node = TileIndex::new(0);
         piece_set.capture_piece(capture_node);
         assert_eq!(
             piece_set.rook,
@@ -165,7 +165,7 @@ mod tests {
     #[test]
     fn test_promote_piece() {
         let piece_set = &mut Position::new_traditional().pieces[0];
-        let promotion_node = NodeIndex::new(8);
+        let promotion_node = TileIndex::new(8);
         piece_set.promote_piece(promotion_node, &PieceType::Queen);
         assert_eq!(
             piece_set.pawn,
@@ -180,7 +180,7 @@ mod tests {
     #[test]
     fn test_return_piece() {
         let piece_set = &mut Position::new_traditional().pieces[0];
-        let captured_node = NodeIndex::new(16);
+        let captured_node = TileIndex::new(16);
         piece_set.return_piece(captured_node, &PieceType::Rook);
         assert_eq!(
             piece_set.rook,
@@ -191,7 +191,7 @@ mod tests {
     #[test]
     fn test_demote_piece() {
         let piece_set = &mut Position::new_traditional().pieces[0];
-        let demotion_node = NodeIndex::new(0);
+        let demotion_node = TileIndex::new(0);
         piece_set.demote_piece(demotion_node);
         assert_eq!(
             piece_set.rook,
@@ -206,7 +206,7 @@ mod tests {
     #[test]
     fn test_update_occupied() {
         let piece_set = &mut Position::new_traditional().pieces[0];
-        piece_set.capture_piece(NodeIndex::new(0));
+        piece_set.capture_piece(TileIndex::new(0));
         piece_set.update_occupied();
         assert_eq!(
             piece_set.occupied,

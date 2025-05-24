@@ -1,5 +1,4 @@
-use graph_board::{TraditionalBoardGraph, Color};
-use move_generator::MoveTables;
+use graph_board::TraditionalBoardGraph;
 use position::Position;
 
 mod graph_board;

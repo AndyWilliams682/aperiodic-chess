@@ -1,7 +1,6 @@
 use std::sync::Arc;
-use petgraph::graph::NodeIndex;
 
-use crate::graph_board::Color;
+use crate::graph_board::{Color, TileIndex};
 use crate::chess_move::{EnPassantData, Move};
 use crate::piece_set::{PieceType, PieceSet};
 
@@ -25,8 +24,8 @@ impl PositionRecord {
     pub fn from_string(fen: String) -> PositionRecord {
         let nodes: Vec<&str> = fen.split(",").collect();
         let en_passant_data = Some(EnPassantData {
-            capturable_tile: NodeIndex::new(nodes[0].parse().unwrap()),
-            piece_tile: NodeIndex::new(nodes[1].parse().unwrap())
+            capturable_tile: TileIndex::new(nodes[0].parse().unwrap()),
+            piece_tile: TileIndex::new(nodes[1].parse().unwrap())
         });
         PositionRecord { en_passant_data, captured_piece: None, previous_record: None }
     }
@@ -67,7 +66,7 @@ impl Position {
                         node_counter += skip_nodes.parse::<usize>().unwrap();
                         skip_nodes = "".to_string();
                     }
-                    let current_node = NodeIndex::new(node_counter);
+                    let current_node = TileIndex::new(node_counter);
                     match symbol {
                         'K' => pieces[0].king.flip_bit_at_node(current_node),
                         'Q' => pieces[0].queen.flip_bit_at_node(current_node),
@@ -225,8 +224,8 @@ mod tests {
     #[test]
     fn test_make_legal_move() {
         let mut position = Position::new_traditional();
-        let from_node = NodeIndex::new(1);
-        let to_node = NodeIndex::new(18);
+        let from_node = TileIndex::new(1);
+        let to_node = TileIndex::new(18);
         let legal_move = Move::new(from_node, to_node, None, None);
         position.make_legal_move(&legal_move);
         assert_eq!(
@@ -238,45 +237,45 @@ mod tests {
     #[test]
     fn test_en_passant_move() {
         let mut position = Position::new_traditional();
-        let to_node = NodeIndex::new(24);
+        let to_node = TileIndex::new(24);
         let legal_move = Move::new(
-            NodeIndex::new(8),
+            TileIndex::new(8),
             to_node,
             None,
-            Some(NodeIndex::new(16))
+            Some(TileIndex::new(16))
         );
         position.make_legal_move(&legal_move);
         assert_eq!(
             *position.record.en_passant_data.as_ref().unwrap(),
-            EnPassantData::new(NodeIndex::new(16), to_node)
+            EnPassantData::new(TileIndex::new(16), to_node)
         )
     }
 
     #[test]
     fn test_en_passant_capture() {
         let mut position = Position::new_traditional();
-        let en_passant_node = NodeIndex::new(16);
-        let captured_node = NodeIndex::new(24);
+        let en_passant_node = TileIndex::new(16);
+        let captured_node = TileIndex::new(24);
         let first_move = Move::new(
-            NodeIndex::new(8),
+            TileIndex::new(8),
             captured_node,
             None,
             Some(en_passant_node)
         );
         position.make_legal_move(&first_move);
         let capturing_move = Move::new(
-            NodeIndex::new(48),
+            TileIndex::new(48),
             en_passant_node,
             None,
             None
         );
         position.make_legal_move(&capturing_move);
         assert_eq!(
-            position.pieces[0].pawn.get_bit_at_node(NodeIndex::new(24)),
+            position.pieces[0].pawn.get_bit_at_node(TileIndex::new(24)),
             false
         );
         assert_eq!(
-            position.pieces[1].pawn.get_bit_at_node(NodeIndex::new(16)),
+            position.pieces[1].pawn.get_bit_at_node(TileIndex::new(16)),
             true
         )
     }
@@ -285,20 +284,20 @@ mod tests {
     fn test_sequential_moves() {
         let mut position = Position::new_traditional();
         let first_move = Move::new(
-            NodeIndex::new(12),
-            NodeIndex::new(28),
+            TileIndex::new(12),
+            TileIndex::new(28),
             None,
-            Some(NodeIndex::new(20))
+            Some(TileIndex::new(20))
         );
         let second_move = Move::new(
-            NodeIndex::new(51),
-            NodeIndex::new(35),
+            TileIndex::new(51),
+            TileIndex::new(35),
             None,
-            Some(NodeIndex::new(43))
+            Some(TileIndex::new(43))
         );
         let third_move = Move::new(
-            NodeIndex::new(28),
-            NodeIndex::new(35),
+            TileIndex::new(28),
+            TileIndex::new(35),
             None,
             None
         );
@@ -306,7 +305,7 @@ mod tests {
         position.make_legal_move(&second_move);
         assert_eq!(
             *position.record.en_passant_data.as_ref().unwrap(),
-            EnPassantData { capturable_tile: NodeIndex::new(43), piece_tile: NodeIndex::new(35) }
+            EnPassantData { capturable_tile: TileIndex::new(43), piece_tile: TileIndex::new(35) }
         );
         position.make_legal_move(&third_move);
         assert_eq!(
@@ -323,8 +322,8 @@ mod tests {
     fn test_unmake_legal_move() {
         let mut position = Position::from_string("RNBQKBNRPPPPPPP16P16pppppppprnbqkbnr w 23,31".to_string());
         
-        let from_node = NodeIndex::new(1);
-        let to_node = NodeIndex::new(18);
+        let from_node = TileIndex::new(1);
+        let to_node = TileIndex::new(18);
         let legal_move = Move::new(from_node, to_node, None, None);
         position.make_legal_move(&legal_move);
         position.unmake_legal_move(&legal_move);
@@ -334,11 +333,11 @@ mod tests {
         );
         assert_eq!(
             position.record.en_passant_data,
-            Some(EnPassantData { capturable_tile: NodeIndex::new(23), piece_tile: NodeIndex::new(31) })
+            Some(EnPassantData { capturable_tile: TileIndex::new(23), piece_tile: TileIndex::new(31) })
         );
 
-        let from_node = NodeIndex::new(8);
-        let to_node = NodeIndex::new(16);
+        let from_node = TileIndex::new(8);
+        let to_node = TileIndex::new(16);
         let demotion_move = Move::new(from_node, to_node, Some(PieceType::Knight), None);
         position.make_legal_move(&demotion_move);
         position.unmake_legal_move(&demotion_move);
@@ -351,8 +350,8 @@ mod tests {
             BitBoard::from_ints(vec![8, 9, 10, 11, 12, 13, 14, 31])
         );
 
-        let from_node = NodeIndex::new(0);
-        let to_node = NodeIndex::new(56);
+        let from_node = TileIndex::new(0);
+        let to_node = TileIndex::new(56);
         let capture_move = Move::new(from_node, to_node, None, None);
         position.make_legal_move(&capture_move);
         assert_eq!(
