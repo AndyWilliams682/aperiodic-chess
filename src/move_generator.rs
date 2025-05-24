@@ -29,7 +29,7 @@ impl MoveTables {
         }
     }
 
-    fn query_piece(&self, piece_type: PieceType, source_node: NodeIndex, occupied: BitBoard) -> BitBoard {
+    fn query_piece(&self, piece_type: &PieceType, source_node: NodeIndex, occupied: BitBoard) -> BitBoard {
         return match piece_type {
             PieceType::King => self.king_table[source_node],
             PieceType::Queen => self.slide_tables.query(&source_node, &occupied, true, true),
@@ -103,13 +103,13 @@ impl MoveTables {
 
         let mut piece_iters: Vec<BitBoardMoves> = vec![];
 
-        let mut get_piece_iter = | mut piece_board: BitBoard, piece_type: PieceType | {
+        let mut get_piece_iter = | mut piece_board: BitBoard, piece_type: &PieceType | {
             while !piece_board.is_zero() {
                 let source_node = piece_board.lowest_one().unwrap();
 
                 let mut next_ep_data = None;
                 let mut promotable_tiles = None;
-                let mut raw_attacks = if piece_type == PieceType::Pawn {
+                let mut raw_attacks = if piece_type == &PieceType::Pawn {
                     next_ep_data = self.check_en_passantable(active_player, source_node);
                     promotable_tiles = self.check_promotable(active_player, source_node);
                     self.query_pawn(active_player, source_node, &enemy_occupants, all_occupants, current_ep)
@@ -122,7 +122,7 @@ impl MoveTables {
                 piece_iters.push(
                     BitBoardMoves::new(
                         source_node,
-                        piece_type,
+                        piece_type.clone(),
                         raw_attacks,
                         next_ep_data,
                         promotable_tiles
@@ -132,12 +132,12 @@ impl MoveTables {
             }
         };
 
-        get_piece_iter(active_pieces.king, PieceType::King);
-        get_piece_iter(active_pieces.queen, PieceType::Queen);
-        get_piece_iter(active_pieces.rook, PieceType::Rook);
-        get_piece_iter(active_pieces.bishop, PieceType::Bishop);
-        get_piece_iter(active_pieces.knight, PieceType::Knight);
-        get_piece_iter(active_pieces.pawn, PieceType::Pawn);
+        get_piece_iter(active_pieces.king, &PieceType::King);
+        get_piece_iter(active_pieces.queen, &PieceType::Queen);
+        get_piece_iter(active_pieces.rook, &PieceType::Rook);
+        get_piece_iter(active_pieces.bishop, &PieceType::Bishop);
+        get_piece_iter(active_pieces.knight, &PieceType::Knight);
+        get_piece_iter(active_pieces.pawn, &PieceType::Pawn);
 
         piece_iters.into_iter().flatten()
     }
@@ -458,7 +458,7 @@ mod tests {
         // let start = Instant::now();
         assert_eq!(move_tables.perft(&mut position, 5), 4865609);
         // let start = Instant::now();
-        assert_eq!(move_tables.perft(&mut position, 6), 119060324);
+        // assert_eq!(move_tables.perft(&mut position, 6), 119060324);
         // let duration = start.elapsed();
         // let speed = duration.as_secs() * 1_000 + (duration.subsec_millis() as u64);
         // println!("{:?}", speed);

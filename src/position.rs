@@ -6,7 +6,7 @@ use crate::bit_board::BitBoard;
 use crate::chess_move::{EnPassantData, Move};
 
 
-#[derive(Debug, Clone, Copy, PartialEq)] // TODO: Candidate 3
+#[derive(Debug, Clone, PartialEq)]
 pub enum PieceType {
     King,
     Queen,
@@ -82,7 +82,7 @@ impl PieceSet {
         }
     }
 
-    pub fn get_bitboard_for_piece(&mut self, piece_type: PieceType) -> &mut BitBoard {
+    pub fn get_bitboard_for_piece(&mut self, piece_type: &PieceType) -> &mut BitBoard {
         return match piece_type {
             PieceType::King => &mut self.king,
             PieceType::Queen => &mut self.queen,
@@ -95,32 +95,32 @@ impl PieceSet {
 
     fn move_piece(&mut self, from_node: NodeIndex, to_node: NodeIndex) {
         let piece_type = self.get_piece_at(from_node).unwrap();
-        let bitboard = self.get_bitboard_for_piece(piece_type);
+        let bitboard = self.get_bitboard_for_piece(&piece_type);
         bitboard.flip_bit_at_node(from_node);
         bitboard.flip_bit_at_node(to_node);
     }
 
     fn capture_piece(&mut self, capture_node: NodeIndex) {
         let piece_type = self.get_piece_at(capture_node).unwrap();
-        let bitboard = self.get_bitboard_for_piece(piece_type);
+        let bitboard = self.get_bitboard_for_piece(&piece_type);
         bitboard.flip_bit_at_node(capture_node);
     }
 
-    fn promote_piece(&mut self, promotion_node: NodeIndex, promotion_target: PieceType) {
+    fn promote_piece(&mut self, promotion_node: NodeIndex, promotion_target: &PieceType) {
         // This assumes the move has been registered before applying the promotion
         self.pawn.flip_bit_at_node(promotion_node);
         let bitboard = self.get_bitboard_for_piece(promotion_target);
         bitboard.flip_bit_at_node(promotion_node);
     }
 
-    fn return_piece(&mut self, captured_node: NodeIndex, captured_piece: PieceType) {
+    fn return_piece(&mut self, captured_node: NodeIndex, captured_piece: &PieceType) {
         let bitboard = self.get_bitboard_for_piece(captured_piece);
         bitboard.flip_bit_at_node(captured_node);
     } // Inverse of capture_piece
     
     fn demote_piece(&mut self, demotion_node: NodeIndex) {
         let piece_type = self.get_piece_at(demotion_node).unwrap();
-        let bitboard = self.get_bitboard_for_piece(piece_type);
+        let bitboard = self.get_bitboard_for_piece(&piece_type);
         bitboard.flip_bit_at_node(demotion_node);
         self.pawn.flip_bit_at_node(demotion_node);
     } // inverse of promote_piece
@@ -245,11 +245,11 @@ impl Position {
 
         let mut target_piece = self.pieces[opponent_idx].get_piece_at(to_node);
         match target_piece {
-            Some(_t) => self.pieces[opponent_idx].capture_piece(to_node),
+            Some(ref _t) => self.pieces[opponent_idx].capture_piece(to_node),
             None => {}
         }
 
-        match legal_move.promotion {
+        match &legal_move.promotion {
             Some(promotion_target) => self.pieces[player_idx].promote_piece(to_node, promotion_target),
             None => {}
         }
@@ -287,10 +287,10 @@ impl Position {
         self.pieces[player_idx].move_piece(to_node, from_node);
        
         let captured_piece = self.record.captured_piece.to_owned();
-        if let Some(piece_type) = captured_piece {
-            self.pieces[opponent_idx].return_piece(to_node, piece_type)
+        if let Some(ref piece_type) = captured_piece {
+            self.pieces[opponent_idx].return_piece(to_node, &piece_type)
         }
-        match legal_move.promotion {
+        match &legal_move.promotion {
             Some(_t) => self.pieces[player_idx].demote_piece(from_node),
             None => {} // TODO: Use better syntax for cases like this, if Some(_t) = legal_move.promotion {}
         }
@@ -303,7 +303,7 @@ impl Position {
             if let Some(en_passant_data) = &self.record.en_passant_data {
                 if to_node == en_passant_data.capturable_tile {
                     self.pieces[opponent_idx].capture_piece(to_node);
-                    self.pieces[opponent_idx].return_piece(en_passant_data.piece_tile, PieceType::Pawn)
+                    self.pieces[opponent_idx].return_piece(en_passant_data.piece_tile, &PieceType::Pawn)
                 }
             }
         }
@@ -358,9 +358,8 @@ mod tests {
     #[test]
     fn test_get_bitboard_for_piece() {
         let piece_set = &mut Position::new_traditional().pieces[0];
-        let piece_type = PieceType::King;
         assert_eq!(
-            *piece_set.get_bitboard_for_piece(piece_type),
+            *piece_set.get_bitboard_for_piece(&PieceType::King),
             BitBoard::new(16)
         )
     }
@@ -405,7 +404,7 @@ mod tests {
     fn test_promote_piece() {
         let piece_set = &mut Position::new_traditional().pieces[0];
         let promotion_node = NodeIndex::new(8);
-        piece_set.promote_piece(promotion_node, PieceType::Queen);
+        piece_set.promote_piece(promotion_node, &PieceType::Queen);
         assert_eq!(
             piece_set.pawn,
             BitBoard::from_ints(vec![9, 10, 11, 12, 13, 14, 15])
@@ -420,8 +419,7 @@ mod tests {
     fn test_return_piece() {
         let piece_set = &mut Position::new_traditional().pieces[0];
         let captured_node = NodeIndex::new(16);
-        let captured_piece = PieceType::Rook;
-        piece_set.return_piece(captured_node, captured_piece);
+        piece_set.return_piece(captured_node, &PieceType::Rook);
         assert_eq!(
             piece_set.rook,
             BitBoard::from_ints(vec![0, 7, 16])
