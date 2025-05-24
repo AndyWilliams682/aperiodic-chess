@@ -29,7 +29,7 @@ impl PieceType {
     }
 }
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone)]
 pub struct PieceSet {
     pub king: BitBoard,
     pub queen: BitBoard,
@@ -344,7 +344,7 @@ mod tests {
 
     #[test]
     fn test_get_piece_at_node() {
-        let piece_set = Position::new_traditional().pieces[0];;
+        let piece_set = &Position::new_traditional().pieces[0];
         assert_eq!(
             piece_set.get_piece_at(NodeIndex::new(0)).unwrap(),
             PieceType::Rook
@@ -357,7 +357,7 @@ mod tests {
 
     #[test]
     fn test_get_bitboard_for_piece() {
-        let mut piece_set = Position::new_traditional().pieces[0];;
+        let piece_set = &mut Position::new_traditional().pieces[0];
         let piece_type = PieceType::King;
         assert_eq!(
             *piece_set.get_bitboard_for_piece(piece_type),
@@ -367,7 +367,7 @@ mod tests {
 
     #[test]
     fn test_move_piece() {
-        let mut piece_set = Position::new_traditional().pieces[0];;
+        let piece_set = &mut Position::new_traditional().pieces[0];
         let from_node = NodeIndex::new(1);
         let to_node = NodeIndex::new(18);
         piece_set.move_piece(from_node, to_node);
@@ -392,7 +392,7 @@ mod tests {
 
     #[test]
     fn test_capture_piece() {
-        let mut piece_set = Position::new_traditional().pieces[0];;
+        let piece_set = &mut Position::new_traditional().pieces[0];
         let capture_node = NodeIndex::new(0);
         piece_set.capture_piece(capture_node);
         assert_eq!(
@@ -403,7 +403,7 @@ mod tests {
 
     #[test]
     fn test_promote_piece() {
-        let mut piece_set = Position::new_traditional().pieces[0];;
+        let piece_set = &mut Position::new_traditional().pieces[0];
         let promotion_node = NodeIndex::new(8);
         piece_set.promote_piece(promotion_node, PieceType::Queen);
         assert_eq!(
@@ -418,7 +418,7 @@ mod tests {
 
     #[test]
     fn test_return_piece() {
-        let mut piece_set = Position::new_traditional().pieces[0];;
+        let piece_set = &mut Position::new_traditional().pieces[0];
         let captured_node = NodeIndex::new(16);
         let captured_piece = PieceType::Rook;
         piece_set.return_piece(captured_node, captured_piece);
@@ -430,7 +430,7 @@ mod tests {
 
     #[test]
     fn test_demote_piece() {
-        let mut piece_set = Position::new_traditional().pieces[0];;
+        let piece_set = &mut Position::new_traditional().pieces[0];
         let demotion_node = NodeIndex::new(0);
         piece_set.demote_piece(demotion_node);
         assert_eq!(
@@ -445,7 +445,7 @@ mod tests {
 
     #[test]
     fn test_update_occupied() {
-        let mut piece_set = Position::new_traditional().pieces[0];;
+        let piece_set = &mut Position::new_traditional().pieces[0];
         piece_set.capture_piece(NodeIndex::new(0));
         piece_set.update_occupied();
         assert_eq!(
