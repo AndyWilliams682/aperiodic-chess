@@ -4,10 +4,15 @@
 // use petgraph::visit::EdgeRef;
 use std::collections::HashSet;
 
+use graph_board::HexagonalBoardGraph;
+
 mod graph_board;
-mod piece;
 mod bit_board;
 mod limited_int;
+mod position;
+mod chess_move;
+mod move_generator;
+mod piece_set;
 // mod limited_int {
 //     macro_rules! create_limited_int {
 //         () => ()
@@ -63,6 +68,7 @@ impl Space {
 
 
 fn main() {
+    let test = HexagonalBoardGraph::new();
     // let test = GraphBoard::empty_traditional();
     // println!("{:?}", Dot::new(&test.board_graph));
     // let mut board = Graph::<Space, i32>::new();

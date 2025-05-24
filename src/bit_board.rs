@@ -2,7 +2,7 @@ use petgraph::graph::NodeIndex;
 use std::collections::HashSet;
 use std::ops::{Sub, BitAnd, BitOr, Not};
 
-use crate::position::PieceType;
+use crate::piece_set::PieceType;
 use crate::chess_move::{EnPassantData, Move};
 
 

@@ -1,6 +1,6 @@
 use petgraph::graph::NodeIndex;
 
-use crate::position::PieceType;
+use crate::piece_set::PieceType;
 
 
 #[derive(Debug, PartialEq, Clone)]

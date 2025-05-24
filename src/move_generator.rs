@@ -1,6 +1,6 @@
 use petgraph::graph::NodeIndex;
 
-use crate::{bit_board::{BitBoard, BitBoardMoves, BitBoardNodes}, chess_move::{EnPassantData, Move}, graph_board::{Color, JumpTable, SlideTables, PawnTables}, piece, position::{PieceSet, PieceType, Position}};
+use crate::{bit_board::{BitBoard, BitBoardMoves, BitBoardNodes}, chess_move::{EnPassantData, Move}, graph_board::{Color, JumpTable, SlideTables, PawnTables}, position::Position, piece_set::{PieceType, PieceSet}};
 
 pub struct MoveTables {
     pub king_table: JumpTable, // king_table is it's own reverse
