@@ -1,6 +1,6 @@
 use petgraph::graph::NodeIndex;
 
-use crate::{bit_board::{BitBoard, BitBoardMoves, BitBoardNodes}, chess_move::{EnPassantData, Move}, graph_board::{Color, JumpTable, SlideTables, PawnTables}, position::Position, piece_set::{PieceType, PieceSet}};
+use crate::{bit_board::{BitBoard, BitBoardMoves, BitBoardNodes}, chess_move::{EnPassantData, Move}, graph_board::{Color, JumpTable, SlideTables, PawnTables}, position::Position, piece_set::PieceType};
 
 pub struct MoveTables {
     pub king_table: JumpTable, // king_table is it's own reverse
@@ -15,7 +15,7 @@ pub struct MoveTables {
 }
 
 impl MoveTables {
-    fn new(king: JumpTable, slide: SlideTables, knight: JumpTable, white_pawn: PawnTables, black_pawn: PawnTables) -> Self {
+    pub fn new(king: JumpTable, slide: SlideTables, knight: JumpTable, white_pawn: PawnTables, black_pawn: PawnTables) -> Self {
         Self {
             king_table: king,
             slide_tables: slide.clone(),
@@ -214,7 +214,7 @@ impl MoveTables {
         legal_moves
     }
 
-    fn perft(&self, position: &mut Position, depth: u8) -> u64 {
+    pub fn perft(&self, position: &mut Position, depth: u8) -> u64 {
         // TODO: May want to move to a separate Engine object?
         let mut output = 0;
        
@@ -237,7 +237,6 @@ impl MoveTables {
 mod tests {
     use super::*;
     use crate::graph_board::TraditionalBoardGraph;
-    use std::time::Instant;
 
     fn test_move_tables() -> MoveTables {
         let board = TraditionalBoardGraph::new();
@@ -457,16 +456,7 @@ mod tests {
         assert_eq!(move_tables.perft(&mut position, 2), 400);
         assert_eq!(move_tables.perft(&mut position, 3), 8902);
         assert_eq!(move_tables.perft(&mut position, 4), 197281);
-        // let start = Instant::now();
         assert_eq!(move_tables.perft(&mut position, 5), 4865609);
-        // let start = Instant::now();
         assert_eq!(move_tables.perft(&mut position, 6), 119060324);
-        // let duration = start.elapsed();
-        // let speed = duration.as_secs() * 1_000 + (duration.subsec_millis() as u64);
-        // println!("{:?}", speed);
-        // assert_eq!(
-        //     speed < 1,
-        //     true
-        // )
     }
 }

@@ -13,18 +13,6 @@ pub enum PieceType {
     Pawn
 }
 
-impl PieceType {
-    fn all_variants() -> &'static [PieceType] {
-        &[
-            PieceType::King,
-            PieceType::Queen,
-            PieceType::Rook,
-            PieceType::Bishop,
-            PieceType::Knight,
-            PieceType::Pawn
-        ]
-    }
-}
 
 #[derive(Debug)]
 pub struct PieceSet {
