@@ -285,7 +285,7 @@ impl Position {
         let to_node = legal_move.to_node;
        
         self.pieces[player_idx].move_piece(to_node, from_node);
-       
+
         let captured_piece = self.record.captured_piece.to_owned();
         if let Some(ref piece_type) = captured_piece {
             self.pieces[opponent_idx].return_piece(to_node, &piece_type)

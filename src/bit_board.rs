@@ -151,7 +151,7 @@ impl Iterator for BitBoardNodes {
 #[derive(Debug)]
 pub struct BitBoardMoves {
     source_node: NodeIndex,
-    piece_type: PieceType,
+    is_pawn: bool,
     remaining_moves: BitBoardNodes,
     next_ep_data: Option<EnPassantData>,
     promotable_nodes: Option<Vec<NodeIndex>>,
@@ -160,10 +160,10 @@ pub struct BitBoardMoves {
 }
 
 impl BitBoardMoves {
-    pub fn new(source_node: NodeIndex, piece_type: PieceType, remaining_move_board: BitBoard, next_ep_data: Option<EnPassantData>, promotable_nodes: Option<Vec<NodeIndex>>) -> BitBoardMoves {
+    pub fn new(source_node: NodeIndex, is_pawn: bool, remaining_move_board: BitBoard, next_ep_data: Option<EnPassantData>, promotable_nodes: Option<Vec<NodeIndex>>) -> BitBoardMoves {
         BitBoardMoves {
             source_node,
-            piece_type,
+            is_pawn,
             remaining_moves: BitBoardNodes::new(remaining_move_board),
             next_ep_data,
             promotable_nodes,
@@ -194,7 +194,7 @@ impl Iterator for BitBoardMoves {
             };
             Some(Move::new(self.source_node, to_node, promotion, en_passant_tile))
         } else if let Some(to_node) = self.remaining_moves.next() {
-            if self.piece_type == PieceType::Pawn {
+            if self.is_pawn {
                 match &self.next_ep_data {
                     Some(data) if data.piece_tile == to_node => {
                         en_passant_tile = Some(data.capturable_tile)
@@ -334,10 +334,9 @@ mod tests {
     #[test]
     fn test_bitboard_moves_knight() {
         let source_node = NodeIndex::new(0);
-        let piece_type = PieceType::Knight;
         let remaining_moves = BitBoard::from_ints(vec![10, 17]);
         let mut bitboard_moves = BitBoardMoves::new(
-            source_node, piece_type, remaining_moves, None, None
+            source_node, false, remaining_moves, None, None
         );
         assert_eq!(
             bitboard_moves.next().unwrap(),
@@ -356,10 +355,9 @@ mod tests {
     #[test]
     fn test_bitboard_moves_rook() {
         let source_node = NodeIndex::new(63);
-        let piece_type = PieceType::Rook;
         let remaining_moves = BitBoard::from_ints(vec![60, 61, 62]);
         let mut bitboard_moves = BitBoardMoves::new(
-            source_node, piece_type, remaining_moves, None, None
+            source_node, false, remaining_moves, None, None
         );
         assert_eq!(
             bitboard_moves.next().unwrap(),
@@ -382,14 +380,13 @@ mod tests {
     #[test]
     fn test_bitboard_moves_pawn_no_promotion() {
         let source_node = NodeIndex::new(8);
-        let piece_type = PieceType::Pawn;
         let remaining_moves = BitBoard::from_ints(vec![16, 17, 24]);
         let en_passant_data = Some(EnPassantData { 
             capturable_tile: NodeIndex::new(16),
             piece_tile: NodeIndex::new(24) 
         });
         let mut bitboard_moves = BitBoardMoves::new(
-            source_node, piece_type, remaining_moves, en_passant_data, None
+            source_node, true, remaining_moves, en_passant_data, None
         );
         assert_eq!(
             bitboard_moves.next().unwrap(),
@@ -412,10 +409,9 @@ mod tests {
     #[test]
     fn test_bitboard_moves_pawn_with_promotion() {
         let source_node = NodeIndex::new(48);
-        let piece_type = PieceType::Pawn;
         let remaining_moves = BitBoard::from_ints(vec![56, 57]);
         let mut bitboard_moves = BitBoardMoves::new(
-            source_node, piece_type, remaining_moves, None, Some(vec![
+            source_node, true, remaining_moves, None, Some(vec![
                 NodeIndex::new(56),
                 NodeIndex::new(57)
             ])

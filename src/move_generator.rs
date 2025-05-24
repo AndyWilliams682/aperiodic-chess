@@ -104,12 +104,14 @@ impl MoveTables {
         let mut piece_iters: Vec<BitBoardMoves> = vec![];
 
         let mut get_piece_iter = | mut piece_board: BitBoard, piece_type: &PieceType | {
+            let mut is_pawn = false;
             while !piece_board.is_zero() {
                 let source_node = piece_board.lowest_one().unwrap();
 
                 let mut next_ep_data = None;
                 let mut promotable_tiles = None;
                 let mut raw_attacks = if piece_type == &PieceType::Pawn {
+                    is_pawn = true;
                     next_ep_data = self.check_en_passantable(active_player, source_node);
                     promotable_tiles = self.check_promotable(active_player, source_node);
                     self.query_pawn(active_player, source_node, &enemy_occupants, all_occupants, current_ep)
@@ -122,7 +124,7 @@ impl MoveTables {
                 piece_iters.push(
                     BitBoardMoves::new(
                         source_node,
-                        piece_type.clone(),
+                        is_pawn,
                         raw_attacks,
                         next_ep_data,
                         promotable_tiles
@@ -458,7 +460,7 @@ mod tests {
         // let start = Instant::now();
         assert_eq!(move_tables.perft(&mut position, 5), 4865609);
         // let start = Instant::now();
-        // assert_eq!(move_tables.perft(&mut position, 6), 119060324);
+        assert_eq!(move_tables.perft(&mut position, 6), 119060324);
         // let duration = start.elapsed();
         // let speed = duration.as_secs() * 1_000 + (duration.subsec_millis() as u64);
         // println!("{:?}", speed);
