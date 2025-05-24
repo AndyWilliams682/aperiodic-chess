@@ -127,7 +127,7 @@ impl PieceSet {
 }
 
 
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct PositionRecord {
     pub en_passant_data: Option<EnPassantData>,
     pub captured_piece: Option<PieceType>,
