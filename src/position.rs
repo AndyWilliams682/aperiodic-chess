@@ -1,5 +1,4 @@
 use std::sync::Arc;
-use itertools::WithPosition;
 use petgraph::graph::NodeIndex;
 
 use crate::graph_board::Color;
@@ -32,7 +31,6 @@ impl PieceType {
 
 #[derive(Debug, Clone, Copy)]
 pub struct PieceSet {
-    pub player: Color,
     pub king: BitBoard,
     pub queen: BitBoard,
     pub rook: BitBoard,
@@ -43,61 +41,15 @@ pub struct PieceSet {
 }
 
 impl PieceSet {
-    fn new_traditional(color: Color) -> Self {
-        return match color {
-            Color::White => Self {
-                player: color,
-                king: BitBoard::from_ints(vec![4]),
-                queen: BitBoard::from_ints(vec![3]),
-                rook: BitBoard::from_ints(vec![0, 7]),
-                bishop: BitBoard::from_ints(vec![2, 5]),
-                knight: BitBoard::from_ints(vec![1, 6]),
-                pawn: BitBoard::from_ints(vec![8, 9, 10, 11, 12, 13, 14, 15]), // 2 ** 16 - 1 (2 ** 8 - 1)
-                occupied: BitBoard::from_ints(vec![
-                    0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15
-                ])
-            },
-            Color::Black => Self {
-                player: color,
-                king: BitBoard::from_ints(vec![60]),
-                queen: BitBoard::from_ints(vec![59]),
-                rook: BitBoard::from_ints(vec![56, 63]),
-                bishop: BitBoard::from_ints(vec![58, 61]),
-                knight: BitBoard::from_ints(vec![57, 62]),
-                pawn: BitBoard::from_ints(vec![48, 49, 50, 51, 52, 53, 54, 55]),
-                occupied: BitBoard::from_ints(vec![
-                    63, 62, 61, 60, 59, 58, 57, 56, 55, 54, 53, 52, 51, 50, 49, 48
-                ])
-            }
-        }
-    }
-
-    fn new_hexagonal(color: Color) -> Self {
-        return match color {
-            Color::White => Self {
-                player: color,
-                king: BitBoard::from_ints(vec![1]),
-                queen: BitBoard::from_ints(vec![6]),
-                rook: BitBoard::from_ints(vec![3, 21]),
-                bishop: BitBoard::from_ints(vec![0, 7, 15]),
-                knight: BitBoard::from_ints(vec![2, 13]),
-                pawn: BitBoard::from_ints(vec![30, 31, 32, 33, 34, 4, 10, 17, 25]), // 2 ** 16 - 1 (2 ** 8 - 1)
-                occupied: BitBoard::from_ints(vec![
-                    0, 1, 2, 3, 4, 6, 7, 10, 13, 15, 17, 21, 25, 30, 31, 32, 33, 34
-                ])
-            },
-            Color::Black => Self {
-                player: color,
-                king: BitBoard::from_ints(vec![84]),
-                queen: BitBoard::from_ints(vec![89]),
-                rook: BitBoard::from_ints(vec![69, 87]),
-                bishop: BitBoard::from_ints(vec![75, 83, 90]),
-                knight: BitBoard::from_ints(vec![77, 88]),
-                pawn: BitBoard::from_ints(vec![86, 80, 73, 65, 56, 57, 58, 59, 60]),
-                occupied: BitBoard::from_ints(vec![
-                    56, 57, 58, 59, 60, 65, 69, 73, 75, 77, 80, 83, 84, 86, 87, 88, 89, 90
-                ])
-            }
+    fn empty() -> Self {
+        Self {
+            king: BitBoard::empty(),
+            queen: BitBoard::empty(),
+            rook: BitBoard::empty(),
+            bishop: BitBoard::empty(),
+            knight: BitBoard::empty(),
+            pawn: BitBoard::empty(),
+            occupied: BitBoard::empty()
         }
     }
 
@@ -191,6 +143,15 @@ impl PositionRecord {
             previous_record: None
         }
     }
+
+    pub fn from_string(fen: String) -> PositionRecord {
+        let nodes: Vec<&str> = fen.split(",").collect();
+        let en_passant_data = Some(EnPassantData {
+            capturable_tile: NodeIndex::new(nodes[0].parse().unwrap()),
+            piece_tile: NodeIndex::new(nodes[1].parse().unwrap())
+        });
+        PositionRecord { en_passant_data, captured_piece: None, previous_record: None }
+    }
    
     pub fn get_previous_record(&self) -> Option<Arc<PositionRecord>> {
         self.previous_record.as_ref().cloned()
@@ -208,26 +169,67 @@ pub struct Position {
 }
 
 impl Position {
-    pub fn new_traditional() -> Self {
-        return Self {
-            active_player: Color::White,
-            pieces: [
-                PieceSet::new_traditional(Color::White),
-                PieceSet::new_traditional(Color::Black)
-            ],
-            record: PositionRecord::default().into()
+    pub fn from_string(fen: String) -> Self {
+        // fen format: <piece_info> <active_player> <EP capturable_node,piece_node>
+        let components: Vec<&str> = fen.split(" ").collect();
+        let mut pieces = [
+            PieceSet::empty(),
+            PieceSet::empty()
+        ];
+        let mut node_counter = 0;
+        let mut skip_nodes = "".to_string();
+
+        for symbol in components[0].chars() {
+            match symbol.is_numeric() {
+                true => {
+                    skip_nodes.push(symbol);
+                },
+                false => {
+                    if skip_nodes.len() > 0 {
+                        node_counter += skip_nodes.parse::<usize>().unwrap();
+                        skip_nodes = "".to_string();
+                    }
+                    let current_node = NodeIndex::new(node_counter);
+                    match symbol {
+                        'K' => pieces[0].king.flip_bit_at_node(current_node),
+                        'Q' => pieces[0].queen.flip_bit_at_node(current_node),
+                        'R' => pieces[0].rook.flip_bit_at_node(current_node),
+                        'B' => pieces[0].bishop.flip_bit_at_node(current_node),
+                        'N' => pieces[0].knight.flip_bit_at_node(current_node),
+                        'P' => pieces[0].pawn.flip_bit_at_node(current_node),
+                        'k' => pieces[1].king.flip_bit_at_node(current_node),
+                        'q' => pieces[1].queen.flip_bit_at_node(current_node),
+                        'r' => pieces[1].rook.flip_bit_at_node(current_node),
+                        'b' => pieces[1].bishop.flip_bit_at_node(current_node),
+                        'n' => pieces[1].knight.flip_bit_at_node(current_node),
+                        'p' => {
+                            pieces[1].pawn.flip_bit_at_node(current_node)
+                        },
+                        _ => {}
+                    };
+                    node_counter += 1;
+                }
+            }
         }
+        pieces[0].update_occupied();
+        pieces[1].update_occupied();
+        let active_player = match components[1] {
+            "w" => Color::White,
+            _ => Color::Black
+        };
+        let record = match components[2] {
+            "-" => PositionRecord::default(),
+            _ => PositionRecord::from_string(components[2].to_string())
+        };
+        Self { active_player, pieces, record: record.into() }
+    }
+
+    pub fn new_traditional() -> Self {
+        return Position::from_string("RNBQKBNRPPPPPPPP32pppppppprnbqkbnr w -".to_string())
     }
 
     pub fn new_hexagonal() -> Self {
-        return Self {
-            active_player: Color::White,
-            pieces: [
-                PieceSet::new_hexagonal(Color::White),
-                PieceSet::new_hexagonal(Color::Black)
-            ],
-            record: PositionRecord::default().into()
-        }
+        return Position::from_string("BKNRP1QB2P2N1B1P3R3P4PPPPP21ppppp4p3r3p1b1n2p2bq1prnkb w -".to_string())
     }
 
     pub fn make_legal_move(&mut self, legal_move: &Move) {
@@ -315,11 +317,15 @@ mod tests {
     use super::*;
 
     fn test_traditional_position() -> Position {
-        return Position::new_traditional()
+        return Position::new_traditional();
+    }
+
+    fn test_hexagonal_board() -> Position {
+        return Position::new_hexagonal();
     }
 
     fn test_traditional_piece_set() -> PieceSet {
-        return PieceSet::new_traditional(Color::White);
+        return test_traditional_position().pieces[0];
     }
 
     #[test]
@@ -354,6 +360,10 @@ mod tests {
         assert_eq!(
             piece_set.get_piece_at(NodeIndex::new(0)).unwrap(),
             PieceType::Rook
+        );
+        assert_eq!(
+            piece_set.get_piece_at(NodeIndex::new(17)),
+            None
         )
     }
 
@@ -372,28 +382,34 @@ mod tests {
         let mut piece_set = test_traditional_piece_set();
         let from_node = NodeIndex::new(1);
         let to_node = NodeIndex::new(18);
-        println!("{:?}", piece_set.knight);
         piece_set.move_piece(from_node, to_node);
         assert_eq!(
-            piece_set.knight.get_bit_at_node(from_node),
-            false
+            piece_set.knight,
+            BitBoard::from_ints(vec![6, 18])
         );
+    }
+
+    #[test]
+    fn test_make_legal_move() {
+        let mut position = test_traditional_position();
+        let from_node = NodeIndex::new(1);
+        let to_node = NodeIndex::new(18);
+        let legal_move = Move::new(from_node, to_node, None, None);
+        position.make_legal_move(&legal_move);
         assert_eq!(
-            piece_set.knight.get_bit_at_node(to_node),
-            true
-        )
+            position.pieces[0].knight,
+            BitBoard::from_ints(vec![6, 18])
+        );
     }
 
     #[test]
     fn test_capture_piece() {
         let mut piece_set = test_traditional_piece_set();
-        println!("{:?}", piece_set.rook);
         let capture_node = NodeIndex::new(0);
         piece_set.capture_piece(capture_node);
-        println!("{:?}", piece_set.rook);
         assert_eq!(
-            piece_set.rook.get_bit_at_node(capture_node),
-            false
+            piece_set.rook,
+            BitBoard::from_ints(vec![7])
         )
     }
 
@@ -403,12 +419,12 @@ mod tests {
         let promotion_node = NodeIndex::new(8);
         piece_set.promote_piece(promotion_node, PieceType::Queen);
         assert_eq!(
-            piece_set.pawn.get_bit_at_node(promotion_node),
-            false
+            piece_set.pawn,
+            BitBoard::from_ints(vec![9, 10, 11, 12, 13, 14, 15])
         );
         assert_eq!(
-            piece_set.queen.get_bit_at_node(promotion_node),
-            true
+            piece_set.queen,
+            BitBoard::from_ints(vec![3, 8])
         )
     }
 
@@ -419,8 +435,8 @@ mod tests {
         let captured_piece = PieceType::Rook;
         piece_set.return_piece(captured_node, captured_piece);
         assert_eq!(
-            piece_set.rook.get_bit_at_node(captured_node),
-            true
+            piece_set.rook,
+            BitBoard::from_ints(vec![0, 7, 16])
         )
     }
 
@@ -430,12 +446,12 @@ mod tests {
         let demotion_node = NodeIndex::new(0);
         piece_set.demote_piece(demotion_node);
         assert_eq!(
-            piece_set.rook.get_bit_at_node(demotion_node),
-            false
+            piece_set.rook,
+            BitBoard::from_ints(vec![7])
         );
         assert_eq!(
-            piece_set.pawn.get_bit_at_node(demotion_node),
-            true
+            piece_set.pawn,
+            BitBoard::from_ints(vec![0, 8, 9, 10, 11, 12, 13, 14, 15])
         )
     }
 
@@ -492,23 +508,6 @@ mod tests {
         );
         assert_eq!(
             position.pieces[1].pawn.get_bit_at_node(NodeIndex::new(16)),
-            true
-        )
-    }
-
-    #[test]
-    fn test_make_legal_move() {
-        let mut position = test_traditional_position();
-        let from_node = NodeIndex::new(1);
-        let to_node = NodeIndex::new(18);
-        let legal_move = Move::new(from_node, to_node, None, None);
-        position.make_legal_move(&legal_move);
-        assert_eq!(
-            position.pieces[0].knight.get_bit_at_node(from_node),
-            false
-        );
-        assert_eq!(
-            position.pieces[0].knight.get_bit_at_node(to_node),
             true
         )
     }
@@ -583,8 +582,12 @@ mod tests {
         let demotion_move = Move::new(from_node, to_node, Some(PieceType::Knight), None);
         position.unmake_legal_move(&demotion_move);
         assert_eq!(
-            position.pieces[0].knight.get_bit_at_node(from_node) & position.pieces[0].knight.get_bit_at_node(to_node),
-            false
+            position.pieces[0].knight,
+            BitBoard::from_ints(vec![1, 6])
+        );
+        assert_eq!(
+            position.pieces[0].pawn,
+            BitBoard::from_ints(vec![8, 9, 10, 11, 12, 13, 14, 31])
         );
         assert_eq!(
             position.pieces[0].pawn.get_bit_at_node(from_node),
@@ -601,16 +604,12 @@ mod tests {
         let capture_move = Move::new(from_node, to_node, None, None);
         position.unmake_legal_move(&capture_move);
         assert_eq!(
-            position.pieces[0].rook.get_bit_at_node(from_node),
-            true
+            position.pieces[0].rook,
+            BitBoard::from_ints(vec![0, 7])
         );
         assert_eq!(
-            position.pieces[0].rook.get_bit_at_node(to_node),
-            false
-        );
-        assert_eq!(
-            position.pieces[1].rook.get_bit_at_node(to_node),
-            true
+            position.pieces[1].rook,
+            BitBoard::from_ints(vec![56, 63])
         );
     }
 }
