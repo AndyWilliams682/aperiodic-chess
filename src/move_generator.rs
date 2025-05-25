@@ -1,5 +1,5 @@
 
-use crate::{bit_board::{BitBoard, BitBoardMoves, BitBoardTiles}, chess_move::{EnPassantData, Move}, graph_board::{Color, JumpTable, SlideTables, PawnTables, TileIndex}, position::Position, piece_set::PieceType};
+use crate::{bit_board::{BitBoard, BitBoardMoves, BitBoardTiles}, chess_move::{EnPassantData, Move}, graph_board::{JumpTable, SlideTables, PawnTables, TileIndex}, position::Position, piece_set::{Color, PieceType}};
 
 pub struct MoveTables {
     pub king_table: JumpTable, // king_table is it's own reverse

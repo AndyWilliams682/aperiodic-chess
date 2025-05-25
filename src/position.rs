@@ -1,8 +1,8 @@
 use std::sync::Arc;
 
-use crate::graph_board::{Color, TileIndex};
+use crate::graph_board::{TileIndex};
 use crate::chess_move::{EnPassantData, Move};
-use crate::piece_set::{PieceType, PieceSet};
+use crate::piece_set::{Color, PieceType, PieceSet};
 
 #[derive(Debug)]
 pub struct PositionRecord {

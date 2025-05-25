@@ -7,31 +7,9 @@ use crate::bit_board::{BitBoard, CarryRippler, BitBoardTiles};
 use crate::create_limited_int;
 use crate::limited_int::LimitedIntTrait;
 use crate::move_generator::MoveTables;
+use crate::piece_set::Color;
 
 pub type TileIndex = NodeIndex;
-
-
-#[derive(Debug, PartialEq, Clone, Copy)]
-pub enum Color {
-    White,
-    Black
-}
-
-impl Color {
-    pub fn as_idx(&self) -> usize {
-        return match self {
-            Color::White => 0,
-            Color::Black => 1
-        }
-    }
-
-    pub fn opponent(&self) -> Self {
-        return match self {
-            Color::White => Color::Black,
-            Color::Black => Color::White
-        }
-    }
-}
 
 #[derive(Debug)]
 pub struct Tile<N: LimitedIntTrait> {
