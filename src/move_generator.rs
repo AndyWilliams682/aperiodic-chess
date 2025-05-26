@@ -32,7 +32,7 @@ impl MoveTables {
         }
     }
 
-    fn query_pawn(&self, color: Color, source_tile: TileIndex, enemies: &BitBoard, occupied: BitBoard, current_ep_data: &Option<EnPassantData>) -> BitBoard {
+    fn query_pawn(&self, color: &Color, source_tile: TileIndex, enemies: &BitBoard, occupied: BitBoard, current_ep_data: &Option<EnPassantData>) -> BitBoard {
         let pawn_tables = match color {
             Color::White => &self.white_pawn_tables,
             Color::Black => &self.black_pawn_tables
@@ -51,7 +51,7 @@ impl MoveTables {
         all_moves
     }
 
-    fn check_en_passantable(&self, color: Color, source_tile: TileIndex) -> Option<EnPassantData> {
+    fn check_en_passantable(&self, color: &Color, source_tile: TileIndex) -> Option<EnPassantData> {
         let pawn_tables = match color {
             Color::White => &self.white_pawn_tables,
             Color::Black => &self.black_pawn_tables
@@ -65,7 +65,7 @@ impl MoveTables {
         }
     }
 
-    fn check_promotable(&self, color: Color, source_tile: TileIndex) -> Option<Vec<TileIndex>> {
+    fn check_promotable(&self, color: &Color, source_tile: TileIndex) -> Option<Vec<TileIndex>> {
         let pawn_tables = match color {
             Color::White => &self.white_pawn_tables,
             Color::Black => &self.black_pawn_tables
@@ -86,7 +86,7 @@ impl MoveTables {
     }
 
     fn get_pseudo_moves(&self, position: &Position) -> impl Iterator<Item=Move> {
-        let active_player = position.active_player;
+        let active_player = &position.active_player;
         let active_pieces = &position.pieces[active_player.as_idx()];
 
         let enemy_occupants = position.pieces[position.active_player.opponent().as_idx()].occupied;
@@ -136,7 +136,7 @@ impl MoveTables {
         piece_iters.into_iter().flatten()
     }
 
-    fn is_in_check(&self, position: &Position, color: Color) -> bool {
+    fn is_in_check(&self, position: &Position, color: &Color) -> bool {
         let opponent_idx = color.opponent().as_idx();
         let king_tile = position.pieces[color.as_idx()].king.lowest_one().unwrap();
        
@@ -188,9 +188,9 @@ impl MoveTables {
         // Could check other parameters:
         // Kings cannot be captured, allies cannot be captured
         // Could check the validity of the move wrt the move tables
-        let moving_player = position.active_player;
+        let moving_player = position.active_player.clone();
         position.make_legal_move(chess_move);
-        let legality = !self.is_in_check(position, moving_player);
+        let legality = !self.is_in_check(position, &moving_player);
         position.unmake_legal_move(chess_move);
         return legality
     }
@@ -251,7 +251,7 @@ mod tests {
     #[test]
     fn test_query_pawn_white() {
         let move_tables = test_move_tables();
-        let color = Color::White;
+        let color = &Color::White;
         let source_tile = TileIndex::new(9);
         let enemies = BitBoard::empty();
         let occupied = BitBoard::empty();
@@ -294,7 +294,7 @@ mod tests {
     #[test]
     fn test_query_pawn_black() {
         let move_tables = test_move_tables();
-        let color = Color::Black;
+        let color = &Color::Black;
         let source_tile = TileIndex::new(49);
         let enemies = BitBoard::empty();
         let occupied = BitBoard::empty();
@@ -340,11 +340,11 @@ mod tests {
         let mut position = Position::new_traditional();
         let move_tables = test_move_tables();
         assert_eq!(
-            move_tables.is_in_check(&position, Color::White),
+            move_tables.is_in_check(&position, &Color::White),
             false
         ); // Initial position, not in check for white
         assert_eq!(
-            move_tables.is_in_check(&position, Color::Black),
+            move_tables.is_in_check(&position, &Color::Black),
             false
         ); // Initial position, not in check for black
         position.make_legal_move(&Move::new(
@@ -353,7 +353,7 @@ mod tests {
             None, None
         ));
         assert_eq!(
-            move_tables.is_in_check(&position, Color::Black),
+            move_tables.is_in_check(&position, &Color::Black),
             true
         ); // Black in check by Knight
         position.make_legal_move(&Move::new(
@@ -362,7 +362,7 @@ mod tests {
             None, None
         ));
         assert_eq!(
-            move_tables.is_in_check(&position, Color::White),
+            move_tables.is_in_check(&position, &Color::White),
             false
         ); // White not in check by blocked orthogonal queen
         position.make_legal_move(&Move::new(
@@ -371,7 +371,7 @@ mod tests {
             None, None
         ));
         assert_eq!(
-            move_tables.is_in_check(&position, Color::White),
+            move_tables.is_in_check(&position, &Color::White),
             true
         ); // White in check by unblocked orthogonal queen
         position.make_legal_move(&Move::new(
@@ -380,7 +380,7 @@ mod tests {
             None, None
         ));
         assert_eq!(
-            move_tables.is_in_check(&position, Color::White),
+            move_tables.is_in_check(&position, &Color::White),
             false
         ); // White not in check by blocked diagonal queen
         position.make_legal_move(&Move::new(
@@ -389,7 +389,7 @@ mod tests {
             None, None
         ));
         assert_eq!(
-            move_tables.is_in_check(&position, Color::White),
+            move_tables.is_in_check(&position, &Color::White),
             true
         ); // White in check by unblocked diagonal queen
     }

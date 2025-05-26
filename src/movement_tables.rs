@@ -235,11 +235,11 @@ mod tests {
         let board = test_traditional_board();
         let source_tile = TileIndex::new(8);
         assert_eq!(
-            *board.0.pawn_double_table(Color::White)[source_tile].get(&BitBoard::empty()).unwrap(),
+            *board.0.pawn_double_table(&Color::White)[source_tile].get(&BitBoard::empty()).unwrap(),
             BitBoard::from_ints(vec![24])
         );
         assert_eq!(
-            *board.0.pawn_double_table(Color::White)[source_tile].get(&BitBoard::from_ints(vec![16])).unwrap(),
+            *board.0.pawn_double_table(&Color::White)[source_tile].get(&BitBoard::from_ints(vec![16])).unwrap(),
             BitBoard::empty()
         );
     }
@@ -249,11 +249,11 @@ mod tests {
         let board = test_traditional_board();
         let source_tile = TileIndex::new(48);
         assert_eq!(
-            *board.0.pawn_double_table(Color::Black)[source_tile].get(&BitBoard::empty()).unwrap(),
+            *board.0.pawn_double_table(&Color::Black)[source_tile].get(&BitBoard::empty()).unwrap(),
             BitBoard::from_ints(vec![32])
         );
         assert_eq!(
-            *board.0.pawn_double_table(Color::Black)[source_tile].get(&BitBoard::from_ints(vec![40])).unwrap(),
+            *board.0.pawn_double_table(&Color::Black)[source_tile].get(&BitBoard::from_ints(vec![40])).unwrap(),
             BitBoard::empty()
         );
     }
@@ -263,11 +263,11 @@ mod tests {
         let board = test_traditional_board();
         let source_tile = TileIndex::new(48);
         assert_eq!(
-            board.0.pawn_single_table(Color::White)[source_tile],
+            board.0.pawn_single_table(&Color::White)[source_tile],
             BitBoard::from_ints(vec![56])
         );
         assert_eq!(
-            board.0.pawn_single_table(Color::White)[TileIndex::new(56)],
+            board.0.pawn_single_table(&Color::White)[TileIndex::new(56)],
             BitBoard::empty()
         );
     }
@@ -277,7 +277,7 @@ mod tests {
         let board = test_traditional_board();
         let source_tile = TileIndex::new(49);
         assert_eq!(
-            board.0.pawn_attack_table(Color::White)[source_tile],
+            board.0.pawn_attack_table(&Color::White)[source_tile],
             BitBoard::from_ints(vec![56, 58])
         )
     }
@@ -287,7 +287,7 @@ mod tests {
         let board = test_traditional_board();
         let source_tile = TileIndex::new(48);
         assert_eq!(
-            board.0.pawn_attack_table(Color::Black)[source_tile],
+            board.0.pawn_attack_table(&Color::Black)[source_tile],
             BitBoard::from_ints(vec![41])
         )
     }
@@ -332,7 +332,7 @@ mod tests {
         let board = test_hexagonal_board();
         let source_tile = TileIndex::new(56);
         assert_eq!(
-            *board.0.pawn_double_table(Color::Black)[source_tile].get(&BitBoard::empty()).unwrap(),
+            *board.0.pawn_double_table(&Color::Black)[source_tile].get(&BitBoard::empty()).unwrap(),
             BitBoard::from_ints(vec![34])
         )
     }
@@ -354,8 +354,8 @@ mod tests {
         let board = test_traditional_board();
         // For traditional/hexagonal boards, rev(White)=Black
         assert_eq!(
-            board.0.pawn_attack_table(Color::White).reverse(),
-            board.0.pawn_attack_table(Color::Black)
+            board.0.pawn_attack_table(&Color::White).reverse(),
+            board.0.pawn_attack_table(&Color::Black)
         )
     }
 

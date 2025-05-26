@@ -164,7 +164,7 @@ impl<
         return JumpTable::new(result)
     }
 
-    pub fn pawn_single_table(&self, color: Color) -> JumpTable {
+    pub fn pawn_single_table(&self, color: &Color) -> JumpTable {
         let mut result: Vec<BitBoard> = vec![];
 
         let forward_or_backward = match color {
@@ -189,7 +189,7 @@ impl<
         return JumpTable::new(result)
     }
 
-    pub fn pawn_attack_table(&self, color: Color) -> JumpTable {
+    pub fn pawn_attack_table(&self, color: &Color) -> JumpTable {
         let mut result: Vec<BitBoard> = vec![];
 
         let forward_or_backward = match color {
@@ -219,7 +219,7 @@ impl<
         return JumpTable::new(result)
     }
 
-    pub fn pawn_double_table(&self, color: Color) -> DirectionalSlideTable {
+    pub fn pawn_double_table(&self, color: &Color) -> DirectionalSlideTable {
         let mut attack_table: Vec<HashMap<BitBoard, BitBoard>> = vec![];
         
         let single_table = self.pawn_single_table(color); // A double move is two single moves
@@ -228,7 +228,7 @@ impl<
             let tile = &self.0[source_tile];
 
             let unobstructed_attacks = match &tile.pawn_start {
-                Some(pawn_start_color) if pawn_start_color == &color => {
+                Some(pawn_start_color) if pawn_start_color == color => {
                     let intermediate_tile = single_table[source_tile].lowest_one().unwrap();
                         single_table[intermediate_tile]
                 },
@@ -246,7 +246,7 @@ impl<
         return DirectionalSlideTable::new(attack_table)
     }
 
-    pub fn pawn_tables(&self, color: Color) -> PawnTables {
+    pub fn pawn_tables(&self, color: &Color) -> PawnTables {
         PawnTables::new(
             self.pawn_single_table(color),
             self.pawn_double_table(color),
@@ -259,12 +259,12 @@ impl<
             king_table: self.king_move_table(),
             slide_tables: self.all_slide_tables(),
             knight_table: self.knight_jumps_table(),
-            white_pawn_tables: self.pawn_tables(Color::White),
-            black_pawn_tables: self.pawn_tables(Color::Black),
+            white_pawn_tables: self.pawn_tables(&Color::White),
+            black_pawn_tables: self.pawn_tables(&Color::Black),
             reverse_slide_tables: self.all_slide_tables().reverse(),
             reverse_knight_table: self.knight_jumps_table().reverse(),
-            reverse_white_pawn_table: self.pawn_attack_table(Color::White).reverse(),
-            reverse_black_pawn_table: self.pawn_attack_table(Color::Black).reverse()
+            reverse_white_pawn_table: self.pawn_attack_table(&Color::White).reverse(),
+            reverse_black_pawn_table: self.pawn_attack_table(&Color::Black).reverse()
         }
     }
 }
