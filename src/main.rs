@@ -8,7 +8,7 @@ mod position;
 mod chess_move;
 mod move_generator;
 mod piece_set;
-mod jump_table;
+mod movement_tables;
 
 fn main() {
     let board = TraditionalBoardGraph::new();

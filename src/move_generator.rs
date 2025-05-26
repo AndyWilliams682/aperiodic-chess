@@ -2,10 +2,10 @@
 use crate::{
     bit_board::{BitBoard, BitBoardMoves, BitBoardTiles},
     chess_move::{EnPassantData, Move},
-    graph_board::{SlideTables, PawnTables, TileIndex},
+    graph_board::TileIndex,
     position::Position,
     piece_set::{Color, PieceType},
-    jump_table::JumpTable,
+    movement_tables::{JumpTable, SlideTables, PawnTables},
 };
 
 pub struct MoveTables {
