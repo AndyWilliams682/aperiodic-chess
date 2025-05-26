@@ -1,4 +1,4 @@
-use graph_board::TraditionalBoardGraph;
+use graph_board::{HexagonalBoardGraph, TraditionalBoardGraph};
 use position::Position;
 
 mod graph_board;
@@ -14,5 +14,10 @@ fn main() {
     let board = TraditionalBoardGraph::new();
     let move_tables = board.0.move_tables();
     let mut position = Position::new_traditional();
-    println!("{:?}", move_tables.perft(&mut position, 5));
+    println!("Square: {:?}", move_tables.perft(&mut position, 5));
+
+    let board = HexagonalBoardGraph::new();
+    let move_tables = board.0.move_tables();
+    let mut position = Position::new_hexagonal();
+    println!("Hex: {:?}", move_tables.perft(&mut position, 5));
 }

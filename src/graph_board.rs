@@ -545,10 +545,6 @@ mod tests {
         return TraditionalBoardGraph::new();
     }
 
-    fn test_hexagonal_board() -> HexagonalBoardGraph {
-        return HexagonalBoardGraph::new();
-    }
-
     #[test]
     fn test_get_next_tile_in_direction_returns_tile() {
         let board = test_traditional_board();
