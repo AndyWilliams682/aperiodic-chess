@@ -1,13 +1,14 @@
 use petgraph::graph::{Graph, NodeIndex};
 use petgraph::visit::EdgeRef;
 use std::collections::{HashSet, HashMap};
-use std::ops::{Deref, DerefMut, Index, IndexMut};
+use std::ops::{Deref, DerefMut, Index};
 
 use crate::bit_board::{BitBoard, CarryRippler, BitBoardTiles};
 use crate::create_limited_int;
 use crate::limited_int::LimitedIntTrait;
 use crate::move_generator::MoveTables;
 use crate::piece_set::Color;
+use crate::jump_table::JumpTable;
 
 pub type TileIndex = NodeIndex;
 
@@ -17,50 +18,6 @@ pub struct Tile<N: LimitedIntTrait> {
     pawn_start: Option<Color>
 }
 
-#[derive(Debug, PartialEq, Clone)]
-pub struct JumpTable(pub Vec<BitBoard>);
-
-impl JumpTable {
-    pub fn new(val: Vec<BitBoard>) -> Self {
-        Self(val)
-    }
-
-    pub fn empty(num_tiles: usize) -> Self {
-        Self::new(vec![BitBoard::empty(); num_tiles])
-    }
-
-    pub fn num_tiles(&self) -> usize {
-        return self.0.len()
-    }
-
-    pub fn reverse(&self) -> Self {
-        let num_tiles = self.num_tiles();
-        let mut output = Self::empty(num_tiles);
-
-        let mut source_tile = 0;
-        for source_tile_moves in &self.0 {
-            for to_tile in BitBoardTiles::new(*source_tile_moves) {
-                output[to_tile].flip_bit_at_tile_index(TileIndex::new(source_tile));
-            }
-            source_tile += 1;
-        }
-        output
-    }
-}
-
-impl Index<TileIndex> for JumpTable {
-    type Output = BitBoard;
-   
-    fn index(&self, index: TileIndex) -> &Self::Output {
-        &self.0[index.index()]
-    }
-}
-
-impl IndexMut<TileIndex> for JumpTable {
-    fn index_mut(&mut self, index: TileIndex) -> &mut Self::Output {
-        &mut self.0[index.index()]
-    }
-}
 
 #[derive(Debug, Clone)]
 pub struct DirectionalSlideTable(Vec<HashMap<BitBoard, BitBoard>>);
@@ -1055,15 +1012,6 @@ mod tests {
         assert_eq!(
             *board.0.pawn_double_table(Color::Black)[source_tile].get(&BitBoard::empty()).unwrap(),
             BitBoard::from_ints(vec![34])
-        )
-    }
-
-    #[test]
-    fn test_jump_table_empty_and_len() {
-        let test = JumpTable::empty(64);
-        assert_eq!(
-            test.num_tiles(),
-            64
         )
     }
 
