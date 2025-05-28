@@ -7,7 +7,7 @@ use crate::graph_board::TileIndex;
 
 
 #[derive(Debug, PartialEq, Eq, Clone, Copy, Hash)]
-pub struct BitBoard(u128);
+pub struct BitBoard(pub u128);
 
 impl BitBoard {
     pub fn from_tile_indices(tile_indices: HashSet<TileIndex>) -> BitBoard {

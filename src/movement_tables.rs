@@ -52,7 +52,7 @@ impl IndexMut<TileIndex> for JumpTable {
 }
 
 #[derive(Debug, Clone)]
-pub struct DirectionalSlideTable(Vec<HashMap<BitBoard, BitBoard>>);
+pub struct DirectionalSlideTable(pub Vec<HashMap<BitBoard, BitBoard>>);
 
 impl DirectionalSlideTable {
     pub fn new(val: Vec<HashMap<BitBoard, BitBoard>>) -> Self {
@@ -85,7 +85,7 @@ impl Index<TileIndex> for DirectionalSlideTable {
 }
 
 #[derive(Debug, Clone)]
-pub struct SlideTables(Vec<DirectionalSlideTable>);
+pub struct SlideTables(pub Vec<DirectionalSlideTable>);
 
 impl SlideTables {
     pub fn new(val: Vec<DirectionalSlideTable>) -> Self {
