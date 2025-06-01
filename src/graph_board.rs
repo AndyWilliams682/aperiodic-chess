@@ -364,7 +364,7 @@ impl TraditionalBoardGraph {
         return shift * sign
     }
     
-    pub fn display(&self, position: Position, selected_tile: TileIndex, move_tables: MoveTables, showing_indices: bool) -> String {
+    pub fn display(&self, position: &Position, selected_tile: TileIndex, move_tables: &MoveTables, showing_indices: bool) -> String {
         let mut output: Vec<char> = " ____ ____ ____ ____ ____ ____ ____ ____\n|    |    |    |    |    |    |    |    |\n|____|____|____|____|____|____|____|____|\n|    |    |    |    |    |    |    |    |\n|____|____|____|____|____|____|____|____|\n|    |    |    |    |    |    |    |    |\n|____|____|____|____|____|____|____|____|\n|    |    |    |    |    |    |    |    |\n|____|____|____|____|____|____|____|____|\n|    |    |    |    |    |    |    |    |\n|____|____|____|____|____|____|____|____|\n|    |    |    |    |    |    |    |    |\n|____|____|____|____|____|____|____|____|\n|    |    |    |    |    |    |    |    |\n|____|____|____|____|____|____|____|____|\n|    |    |    |    |    |    |    |    |\n|____|____|____|____|____|____|____|____|"
             .chars().collect();
         let mut display_piece = | piece_board, piece_char: char | {
