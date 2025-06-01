@@ -21,7 +21,7 @@ pub struct MoveTables {
 }
 
 impl MoveTables {
-    fn query_piece(&self, piece_type: &PieceType, source_tile: TileIndex, occupied: BitBoard) -> BitBoard {
+    pub fn query_piece(&self, piece_type: &PieceType, source_tile: TileIndex, occupied: BitBoard) -> BitBoard {
         return match piece_type {
             PieceType::King => self.king_table[source_tile],
             PieceType::Queen => self.slide_tables.query(&source_tile, &occupied, true, true),
@@ -32,7 +32,7 @@ impl MoveTables {
         }
     }
 
-    fn query_pawn(&self, color: &Color, source_tile: TileIndex, enemies: &BitBoard, occupied: BitBoard, current_ep_data: &Option<EnPassantData>) -> BitBoard {
+    pub fn query_pawn(&self, color: &Color, source_tile: TileIndex, enemies: &BitBoard, occupied: BitBoard, current_ep_data: &Option<EnPassantData>) -> BitBoard {
         let pawn_tables = match color {
             Color::White => &self.white_pawn_tables,
             Color::Black => &self.black_pawn_tables

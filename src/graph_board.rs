@@ -3,12 +3,13 @@ use petgraph::visit::EdgeRef;
 use std::collections::{HashSet, HashMap};
 use std::ops::{Deref, DerefMut};
 
-use crate::bit_board::{BitBoard, CarryRippler};
-use crate::create_limited_int;
+use crate::bit_board::{BitBoard, CarryRippler, BitBoardTiles};
+use crate::{create_limited_int, piece_set};
 use crate::limited_int::LimitedIntTrait;
 use crate::move_generator::MoveTables;
-use crate::piece_set::Color;
+use crate::piece_set::{Color, PieceType};
 use crate::movement_tables::{JumpTable, DirectionalSlideTable, SlideTables, PawnTables};
+use crate::position::Position;
 
 pub type TileIndex = NodeIndex;
 
@@ -361,6 +362,71 @@ impl TraditionalBoardGraph {
             _ => 0
         };
         return shift * sign
+    }
+    
+    pub fn display(&self, position: Position, selected_tile: TileIndex, move_tables: MoveTables, showing_indices: bool) -> String {
+        let mut output: Vec<char> = " ____ ____ ____ ____ ____ ____ ____ ____\n|    |    |    |    |    |    |    |    |\n|____|____|____|____|____|____|____|____|\n|    |    |    |    |    |    |    |    |\n|____|____|____|____|____|____|____|____|\n|    |    |    |    |    |    |    |    |\n|____|____|____|____|____|____|____|____|\n|    |    |    |    |    |    |    |    |\n|____|____|____|____|____|____|____|____|\n|    |    |    |    |    |    |    |    |\n|____|____|____|____|____|____|____|____|\n|    |    |    |    |    |    |    |    |\n|____|____|____|____|____|____|____|____|\n|    |    |    |    |    |    |    |    |\n|____|____|____|____|____|____|____|____|\n|    |    |    |    |    |    |    |    |\n|____|____|____|____|____|____|____|____|"
+            .chars().collect();
+        let mut display_piece = | piece_board, piece_char: char | {
+            for tile_idx in BitBoardTiles::new(piece_board) {
+                let display_idx = 631 - 84 * (tile_idx.index() / 8) + 5 * (tile_idx.index() % 8);
+                output[display_idx] = piece_char;
+            }
+        };
+        let white_pieces = &position.pieces[0];
+        let black_pieces = &position.pieces[1];
+        let selected_white = white_pieces.get_piece_at(selected_tile);
+        let selected_black = black_pieces.get_piece_at(selected_tile);
+        let selected_piece = selected_white.or(selected_black);
+        let allied_occupied = match black_pieces.get_piece_at(selected_tile) {
+            Some(_t) => black_pieces.occupied,
+            _ => white_pieces.occupied
+        };
+        let occupied = white_pieces.occupied | black_pieces.occupied;
+
+        display_piece(white_pieces.king, 'K');
+        display_piece(white_pieces.queen, 'Q');
+        display_piece(white_pieces.rook, 'R');
+        display_piece(white_pieces.bishop, 'B');
+        display_piece(white_pieces.knight, 'N');
+        display_piece(white_pieces.pawn, 'P');
+
+        display_piece(black_pieces.king, 'k');
+        display_piece(black_pieces.queen, 'q');
+        display_piece(black_pieces.rook, 'r');
+        display_piece(black_pieces.bishop, 'b');
+        display_piece(black_pieces.knight, 'n');
+        display_piece(black_pieces.pawn, 'p');
+
+        let move_options = match selected_piece {
+            Some(PieceType::Pawn) => BitBoard::empty(),
+            None => BitBoard::empty(),
+            _ => { // All non-Pawn PieceTypes
+                let display_idx = 631 - 84 * (selected_tile.index() / 8) + 5 * (selected_tile.index() % 8);
+                output[display_idx + 1] = '?';
+                move_tables.query_piece(&selected_piece.unwrap(), selected_tile, occupied) & !allied_occupied
+            }
+        };
+
+        for tile_idx in BitBoardTiles::new(move_options) {
+            let display_idx = 631 - 84 * (tile_idx.index() / 8) + 5 * (tile_idx.index() % 8);
+            match white_pieces.get_piece_at(tile_idx).or(black_pieces.get_piece_at(tile_idx)) {
+                Some(_t) => output[display_idx + 1] = '!',
+                None => output[display_idx + 1] = '.'
+            }
+        }
+
+        if showing_indices {
+            for tile_idx in 0..=63 {
+                let ones_digit = ((tile_idx % 10) as u8 + b'0') as char;
+                let tens_digit = (((tile_idx / 10) % 10) as u8 + b'0') as char;
+                let display_idx = 631 - 84 * (tile_idx / 8) + 5 * (tile_idx % 8);
+                output[display_idx + 42] = tens_digit;
+                output[display_idx + 43] = ones_digit;
+            }
+        }
+
+        output.iter().collect()
     }
 }
 
