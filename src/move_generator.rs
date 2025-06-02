@@ -136,69 +136,13 @@ impl MoveTables {
         piece_iters.into_iter().flatten()
     }
 
-    fn is_in_check(&self, position: &Position, color: &Color) -> bool {
-        let opponent_idx = color.opponent().as_idx();
-        let king_tile = position.pieces[color.as_idx()].king.lowest_one().unwrap();
-       
-        let enemy_occupants = position.pieces[opponent_idx].occupied;
-        let all_occupants = enemy_occupants | position.pieces[color.as_idx()].occupied;
-       
-        // Orthogonals
-        for rev_direction_table in self.reverse_slide_tables.iter().step_by(2) {
-            let candidates = rev_direction_table[king_tile] & (
-                position.pieces[opponent_idx].rook | position.pieces[opponent_idx].queen
-            );
-            for candidate in BitBoardTiles::new(candidates) {
-                if self.slide_tables.query(&candidate, &all_occupants, true, false).get_bit_at_tile(king_tile) {
-                    return true
-                }
-            }
-        }
-       
-        // Diagonals
-        for rev_direction_table in self.reverse_slide_tables.iter().skip(1).step_by(2) {
-            let candidates = rev_direction_table[king_tile] & (
-                position.pieces[opponent_idx].bishop | position.pieces[opponent_idx].queen
-            );
-            for candidate in BitBoardTiles::new(candidates) {
-                if self.slide_tables.query(&candidate, &all_occupants, false, true).get_bit_at_tile(king_tile) {
-                    return true
-                }
-            }
-        }
-       
-        // Knights
-        if !(self.reverse_knight_table[king_tile] & position.pieces[opponent_idx].knight).is_zero() {
-            return true
-        }
-
-        // Pawns
-        let pawn_threats = match color {
-            Color::White => &self.reverse_black_pawn_table,
-            Color::Black => &self.reverse_white_pawn_table
-        };
-        if !(pawn_threats[king_tile] & position.pieces[opponent_idx].pawn).is_zero() {
-            return true
-        };
-
-        false // Don't need to check for King-to-King threats
-    }
-
-    fn is_legal_move(&self, chess_move: &Move, position: &mut Position) -> bool {
-        // Could check other parameters:
-        // Kings cannot be captured, allies cannot be captured
-        // Could check the validity of the move wrt the move tables
-        let moving_player = position.active_player.clone();
-        position.make_legal_move(chess_move);
-        let legality = !self.is_in_check(position, &moving_player);
-        position.unmake_legal_move(chess_move);
-        return legality
-    }
-   
     fn get_legal_moves(&self, position: &mut Position) -> Vec<Move> {
         let mut legal_moves = Vec::new();
         for chess_move in self.get_pseudo_moves(&position) {
-            if !self.is_legal_move(&chess_move, position) {
+            // if !self.is_legal_move(&chess_move, position) {
+            //     continue;
+            // }
+            if !position.is_legal_move(&chess_move, &self) {
                 continue;
             }
             legal_moves.push(chess_move);

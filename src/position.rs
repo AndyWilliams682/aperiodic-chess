@@ -1,7 +1,9 @@
 use std::sync::Arc;
 
+use crate::bit_board::BitBoardTiles;
 use crate::graph_board::{TileIndex};
 use crate::chess_move::{EnPassantData, Move};
+use crate::move_generator::MoveTables;
 use crate::piece_set::{Color, PieceType, PieceSet};
 
 #[derive(Debug)]
@@ -107,6 +109,66 @@ impl Position {
 
     pub fn new_hexagonal() -> Self {
         return Position::from_string("BKNRP1QB2P2N1B1P3R3P4PPPPP21ppppp4p3r3p1b1n2p2bq1prnkb w -".to_string())
+    }
+
+    fn is_in_check(&self, move_tables: &MoveTables, color: &Color) -> bool {
+        let opponent_idx = color.opponent().as_idx();
+        let king_tile = self.pieces[color.as_idx()].king.lowest_one().unwrap();
+       
+        let enemy_occupants = self.pieces[opponent_idx].occupied;
+        let all_occupants = enemy_occupants | self.pieces[color.as_idx()].occupied;
+       
+        // Orthogonals
+        // TODO: Possibly consolidate with Diagonals into a single for loop
+        for rev_direction_table in move_tables.reverse_slide_tables.iter().step_by(2) {
+            let candidates = rev_direction_table[king_tile] & (
+                self.pieces[opponent_idx].rook | self.pieces[opponent_idx].queen
+            );
+            for candidate in BitBoardTiles::new(candidates) {
+                if move_tables.slide_tables.query(&candidate, &all_occupants, true, false).get_bit_at_tile(king_tile) {
+                    return true
+                }
+            }
+        }
+       
+        // Diagonals
+        for rev_direction_table in move_tables.reverse_slide_tables.iter().skip(1).step_by(2) {
+            let candidates = rev_direction_table[king_tile] & (
+                self.pieces[opponent_idx].bishop | self.pieces[opponent_idx].queen
+            );
+            for candidate in BitBoardTiles::new(candidates) {
+                if move_tables.slide_tables.query(&candidate, &all_occupants, false, true).get_bit_at_tile(king_tile) {
+                    return true
+                }
+            }
+        }
+       
+        // Knights
+        if !(move_tables.reverse_knight_table[king_tile] & self.pieces[opponent_idx].knight).is_zero() {
+            return true
+        }
+
+        // Pawns
+        let pawn_threats = match color {
+            Color::White => &move_tables.reverse_black_pawn_table,
+            Color::Black => &move_tables.reverse_white_pawn_table
+        };
+        if !(pawn_threats[king_tile] & self.pieces[opponent_idx].pawn).is_zero() {
+            return true
+        };
+
+        false // Don't need to check for King-to-King threats
+    }
+
+    pub fn is_legal_move(&mut self, chess_move: &Move, move_tables: &MoveTables) -> bool {
+        // Could check other parameters:
+        // Kings cannot be captured, allies cannot be captured
+        // Could check the validity of the move wrt the move tables
+        let moving_player = self.active_player.clone();
+        self.make_legal_move(chess_move);
+        let legality = !self.is_in_check(move_tables, &moving_player);
+        self.unmake_legal_move(chess_move);
+        return legality
     }
 
     pub fn make_legal_move(&mut self, legal_move: &Move) {
