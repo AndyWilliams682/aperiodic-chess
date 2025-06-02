@@ -256,6 +256,7 @@ impl Position {
 mod tests {
     use super::*;
     use crate::bit_board::BitBoard;
+    use crate::graph_board::TraditionalBoardGraph;
 
     #[test]
     fn test_new_traditional_occupied() {
@@ -268,6 +269,11 @@ mod tests {
                 48, 49, 50, 51, 52, 53, 54, 55, 56, 57, 58, 59, 60, 61, 62, 63
             ])
         )
+    }
+
+    fn test_move_tables() -> MoveTables {
+        let board = TraditionalBoardGraph::new();
+        board.0.move_tables()
     }
 
     #[test]
@@ -429,5 +435,64 @@ mod tests {
             position.pieces[1].rook,
             BitBoard::from_ints(vec![56, 63])
         );
+    }
+
+    #[test]
+    fn test_is_in_check() {
+        let mut position = Position::new_traditional();
+        let move_tables = test_move_tables();
+        assert_eq!(
+            position.is_in_check(&move_tables, &Color::White),
+            false
+        ); // Initial position, not in check for white
+        assert_eq!(
+            position.is_in_check(&move_tables, &Color::Black),
+            false
+        ); // Initial position, not in check for black
+        position.make_legal_move(&Move::new(
+            TileIndex::new(1),
+            TileIndex::new(43),
+            None, None
+        ));
+        assert_eq!(
+            position.is_in_check(&move_tables, &Color::Black),
+            true
+        ); // Black in check by Knight
+        position.make_legal_move(&Move::new(
+            TileIndex::new(59),
+            TileIndex::new(20),
+            None, None
+        ));
+        assert_eq!(
+            position.is_in_check(&move_tables, &Color::White),
+            false
+        ); // White not in check by blocked orthogonal queen
+        position.make_legal_move(&Move::new(
+            TileIndex::new(12),
+            TileIndex::new(28),
+            None, None
+        ));
+        assert_eq!(
+            position.is_in_check(&move_tables, &Color::White),
+            true
+        ); // White in check by unblocked orthogonal queen
+        position.make_legal_move(&Move::new(
+            TileIndex::new(20),
+            TileIndex::new(18),
+            None, None
+        ));
+        assert_eq!(
+            position.is_in_check(&move_tables, &Color::White),
+            false
+        ); // White not in check by blocked diagonal queen
+        position.make_legal_move(&Move::new(
+            TileIndex::new(11),
+            TileIndex::new(19),
+            None, None
+        ));
+        assert_eq!(
+            position.is_in_check(&move_tables, &Color::White),
+            true
+        ); // White in check by unblocked diagonal queen
     }
 }
