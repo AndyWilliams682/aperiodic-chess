@@ -154,13 +154,13 @@ pub struct BitBoardMoves {
     is_pawn: bool,
     remaining_moves: BitBoardTiles,
     next_ep_data: Option<EnPassantData>,
-    promotable_tiles: Option<Vec<TileIndex>>,
+    promotable_tiles: BitBoard,
     current_promotion_tile: Option<TileIndex>,
     current_promotion_counter: u32
 }
 
 impl BitBoardMoves {
-    pub fn new(source_tile: TileIndex, is_pawn: bool, remaining_move_board: BitBoard, next_ep_data: Option<EnPassantData>, promotable_tiles: Option<Vec<TileIndex>>) -> BitBoardMoves {
+    pub fn new(source_tile: TileIndex, is_pawn: bool, remaining_move_board: BitBoard, next_ep_data: Option<EnPassantData>, promotable_tiles: BitBoard) -> BitBoardMoves {
         BitBoardMoves {
             source_tile,
             is_pawn,
@@ -202,12 +202,9 @@ impl Iterator for BitBoardMoves {
                     _ => {}
                 }
 
-                match &self.promotable_tiles { // Handles promotion to Knight
-                    Some(tiles) if tiles.contains(&to_tile) => {
-                        self.current_promotion_tile = Some(to_tile);
-                        promotion = Some(PieceType::Knight);
-                    },
-                    _ => {}
+                if self.promotable_tiles.get_bit_at_tile(to_tile) { // Handles promotion to Knight
+                    self.current_promotion_tile = Some(to_tile);
+                    promotion = Some(PieceType::Knight);
                 }
             }
             Some(Move::new(self.source_tile, to_tile, promotion, en_passant_tile))
@@ -336,7 +333,7 @@ mod tests {
         let source_tile = TileIndex::new(0);
         let remaining_moves = BitBoard::from_ints(vec![10, 17]);
         let mut bitboard_moves = BitBoardMoves::new(
-            source_tile, false, remaining_moves, None, None
+            source_tile, false, remaining_moves, None, BitBoard::empty()
         );
         assert_eq!(
             bitboard_moves.next().unwrap(),
@@ -357,7 +354,7 @@ mod tests {
         let source_tile = TileIndex::new(63);
         let remaining_moves = BitBoard::from_ints(vec![60, 61, 62]);
         let mut bitboard_moves = BitBoardMoves::new(
-            source_tile, false, remaining_moves, None, None
+            source_tile, false, remaining_moves, None, BitBoard::empty()
         );
         assert_eq!(
             bitboard_moves.next().unwrap(),
@@ -386,7 +383,7 @@ mod tests {
             piece_tile: TileIndex::new(24) 
         });
         let mut bitboard_moves = BitBoardMoves::new(
-            source_tile, true, remaining_moves, en_passant_data, None
+            source_tile, true, remaining_moves, en_passant_data, BitBoard::empty()
         );
         assert_eq!(
             bitboard_moves.next().unwrap(),
@@ -411,9 +408,9 @@ mod tests {
         let source_tile = TileIndex::new(48);
         let remaining_moves = BitBoard::from_ints(vec![56, 57]);
         let mut bitboard_moves = BitBoardMoves::new(
-            source_tile, true, remaining_moves, None, Some(vec![
-                TileIndex::new(56),
-                TileIndex::new(57)
+            source_tile, true, remaining_moves, None, BitBoard::from_ints(vec![
+                56,
+                57
             ])
         );
         assert_eq!(

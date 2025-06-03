@@ -1,7 +1,8 @@
 use std::ops::{Index, IndexMut};
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 
 use crate::bit_board::{BitBoard, BitBoardTiles};
+use crate::chess_move::EnPassantData;
 use crate::graph_board::TileIndex;
 
 
@@ -133,11 +134,48 @@ pub struct PawnTables {
     pub single_table: JumpTable,
     pub double_table: DirectionalSlideTable,
     pub attack_table: JumpTable,
+    pub en_passant_table: Vec<Option<EnPassantData>>,
+    pub promotion_board: BitBoard
 }
 
 impl PawnTables {
     pub fn new(single_table: JumpTable, double_table: DirectionalSlideTable, attack_table: JumpTable) -> Self {
-        Self { single_table, double_table, attack_table }
+        let en_passant_table = PawnTables::create_en_passant_table(&single_table, &double_table);
+        let promotion_board = PawnTables::create_promotion_board(&single_table);
+        Self {
+            single_table,
+            double_table,
+            attack_table,
+            en_passant_table,
+            promotion_board
+        }
+    }
+   
+    fn create_en_passant_table(single_table: &JumpTable, double_table: &DirectionalSlideTable) -> Vec<Option<EnPassantData>> {
+        let mut output = vec![];
+        for source_tile in 0..single_table.num_tiles() {
+            let tile_idx = TileIndex::new(source_tile); // TODO: Make/USE TileIndex iterator?
+            let en_passant_data = match double_table[tile_idx].get(&BitBoard::empty()).unwrap().lowest_one() {
+                Some(piece_tile) => {
+                    let capturable_tile = single_table[tile_idx].lowest_one().unwrap();
+                    Some(EnPassantData { capturable_tile, piece_tile })
+                },
+                _ => None
+            };
+            output.push(en_passant_data)
+        }
+        output
+    }
+   
+    fn create_promotion_board(single_table: &JumpTable) -> BitBoard {
+        let mut promotable: HashSet<TileIndex> = HashSet::new();
+        for to_tile in 0..single_table.num_tiles() {
+            let tile_idx = TileIndex::new(to_tile);
+            if single_table[tile_idx].is_zero() {
+                promotable.insert(tile_idx);
+            }
+        }
+        BitBoard::from_tile_indices(promotable)
     }
 }
 

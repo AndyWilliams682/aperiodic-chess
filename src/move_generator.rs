@@ -1,6 +1,6 @@
 
 use crate::{
-    bit_board::{BitBoard, BitBoardMoves, BitBoardTiles},
+    bit_board::{BitBoard, BitBoardMoves},
     chess_move::{EnPassantData, Move},
     graph_board::TileIndex,
     position::Position,
@@ -51,40 +51,6 @@ impl MoveTables {
         all_moves
     }
 
-    fn check_en_passantable(&self, color: &Color, source_tile: TileIndex) -> Option<EnPassantData> {
-        let pawn_tables = match color {
-            Color::White => &self.white_pawn_tables,
-            Color::Black => &self.black_pawn_tables
-        };
-        match pawn_tables.double_table[source_tile].get(&BitBoard::empty()).unwrap().lowest_one() {
-            Some(piece_tile) => {
-                let capturable_tile = pawn_tables.single_table[source_tile].lowest_one().unwrap();
-                Some(EnPassantData { capturable_tile, piece_tile })
-            },
-            _ => None
-        }
-    }
-
-    fn check_promotable(&self, color: &Color, source_tile: TileIndex) -> Option<Vec<TileIndex>> {
-        let pawn_tables = match color {
-            Color::White => &self.white_pawn_tables,
-            Color::Black => &self.black_pawn_tables
-        };
-        let total_moves = pawn_tables.single_table[source_tile] & pawn_tables.attack_table[source_tile];
-        let mut output = vec![];
-        while !total_moves.is_zero() {
-            let to_tile = total_moves.lowest_one().unwrap();
-            if pawn_tables.single_table[to_tile].is_zero() {
-                output.push(to_tile)
-            }
-        }
-        if output.len() > 0 {
-            Some(output)
-        } else {
-            None
-        }
-    }
-
     fn get_pseudo_moves(&self, position: &Position) -> impl Iterator<Item=Move> {
         let active_player = &position.active_player;
         let active_pieces = &position.pieces[active_player.as_idx()];
@@ -101,11 +67,15 @@ impl MoveTables {
                 let source_tile = piece_board.lowest_one().unwrap();
 
                 let mut next_ep_data = None;
-                let mut promotable_tiles = None;
+                let mut promotable_tiles = BitBoard::empty();
                 let mut raw_attacks = if piece_type == &PieceType::Pawn {
                     is_pawn = true;
-                    next_ep_data = self.check_en_passantable(active_player, source_tile);
-                    promotable_tiles = self.check_promotable(active_player, source_tile);
+                    let pawn_tables = match active_player {
+                        Color::White => &self.white_pawn_tables,
+                        Color::Black => &self.black_pawn_tables
+                    };
+                    next_ep_data = pawn_tables.en_passant_table[source_tile.index()].clone();
+                    promotable_tiles = pawn_tables.promotion_board;
                     self.query_pawn(active_player, source_tile, &enemy_occupants, all_occupants, current_ep)
                 } else {
                     self.query_piece(piece_type, source_tile, all_occupants)
