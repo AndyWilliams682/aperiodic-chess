@@ -44,9 +44,8 @@ impl MoveTables {
             all_moves = all_moves | (*pawn_tables.double_table[source_tile].get(&BitBoard::empty()).unwrap() & !occupied);
         }
         all_moves = all_moves | (pawn_tables.attack_table[source_tile] & *enemies);
-        match current_ep_data { // Can capture via EP even if no enemy is present
-            Some(data) => all_moves = all_moves | (pawn_tables.attack_table[source_tile] & BitBoard::from_ints(vec![data.capturable_tile.index() as u128])),
-            None => {}
+        if let Some(data) = current_ep_data { // Can capture via EP even if no enemy is present
+            all_moves = all_moves | (pawn_tables.attack_table[source_tile] & BitBoard::from_ints(vec![data.capturable_tile.index() as u128]))
         }
         all_moves
     }

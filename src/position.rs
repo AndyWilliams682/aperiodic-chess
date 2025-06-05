@@ -81,9 +81,7 @@ impl Position {
                         'r' => pieces[1].rook.flip_bit_at_tile_index(tile_index),
                         'b' => pieces[1].bishop.flip_bit_at_tile_index(tile_index),
                         'n' => pieces[1].knight.flip_bit_at_tile_index(tile_index),
-                        'p' => {
-                            pieces[1].pawn.flip_bit_at_tile_index(tile_index)
-                        },
+                        'p' => pieces[1].pawn.flip_bit_at_tile_index(tile_index),
                         _ => {}
                     };
                     tile_counter += 1;
@@ -183,23 +181,20 @@ impl Position {
         self.pieces[player_idx].move_piece(from_tile, to_tile);
 
         let mut target_piece = self.pieces[opponent_idx].get_piece_at(to_tile);
-        match target_piece {
-            Some(ref _t) => self.pieces[opponent_idx].capture_piece(to_tile),
-            None => {}
-        }
+        if let Some(ref _t) = target_piece {
+            self.pieces[opponent_idx].capture_piece(to_tile)
+        };
 
-        match &legal_move.promotion {
-            Some(promotion_target) => self.pieces[player_idx].promote_piece(to_tile, promotion_target),
-            None => {}
+        if let Some(promotion_target) =  &legal_move.promotion {
+            self.pieces[player_idx].promote_piece(to_tile, promotion_target)
         }
 
         if moving_piece == PieceType::Pawn {
-            match &self.record.en_passant_data {
-                Some(en_passant_data) if to_tile == en_passant_data.capturable_tile => {
+            if let Some(en_passant_data) = &self.record.en_passant_data {
+                if to_tile == en_passant_data.capturable_tile {
                     target_piece = Some(PieceType::Pawn);
                     self.pieces[opponent_idx].capture_piece(en_passant_data.piece_tile)
-                },
-                _ => {}
+                }
             }
         }
 
@@ -229,9 +224,8 @@ impl Position {
         if let Some(ref piece_type) = captured_piece {
             self.pieces[opponent_idx].return_piece(to_tile, &piece_type)
         }
-        match &legal_move.promotion {
-            Some(_t) => self.pieces[player_idx].demote_piece(from_tile),
-            None => {} // TODO: Use better syntax for cases like this, if Some(_t) = legal_move.promotion {}
+        if let Some(_t) = &legal_move.promotion {
+            self.pieces[player_idx].demote_piece(from_tile)
         }
         if let Some(prev_record) = self.record.get_previous_record() {
             self.record = prev_record

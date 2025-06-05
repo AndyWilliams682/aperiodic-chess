@@ -140,9 +140,8 @@ impl Iterator for BitBoardTiles {
    
     fn next(&mut self) -> Option<Self::Item> {
         let next_tile = self.remaining_tiles.lowest_one();
-        match next_tile {
-            Some(tile) => self.remaining_tiles.flip_bit_at_tile_index(tile),
-            _ => {}
+        if let Some(tile) = next_tile {
+            self.remaining_tiles.flip_bit_at_tile_index(tile)
         }
         next_tile
     }
@@ -195,13 +194,11 @@ impl Iterator for BitBoardMoves {
             Some(Move::new(self.source_tile, to_tile, promotion, en_passant_tile))
         } else if let Some(to_tile) = self.remaining_moves.next() {
             if self.is_pawn {
-                match &self.next_ep_data {
-                    Some(data) if data.piece_tile == to_tile => {
+                if let Some(data) = &self.next_ep_data {
+                    if data.piece_tile == to_tile {
                         en_passant_tile = Some(data.capturable_tile)
-                    },
-                    _ => {}
+                    }
                 }
-
                 if self.promotable_tiles.get_bit_at_tile(to_tile) { // Handles promotion to Knight
                     self.current_promotion_tile = Some(to_tile);
                     promotion = Some(PieceType::Knight);
