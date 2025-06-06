@@ -181,7 +181,7 @@ impl Position {
         self.pieces[player_idx].move_piece(from_tile, to_tile);
 
         let mut target_piece = self.pieces[opponent_idx].get_piece_at(to_tile);
-        if let Some(ref _t) = target_piece {
+        if let Some(_) = target_piece {
             self.pieces[opponent_idx].capture_piece(to_tile)
         };
 
