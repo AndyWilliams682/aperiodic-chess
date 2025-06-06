@@ -63,12 +63,12 @@ impl PieceSet {
 
     pub fn update_occupied(&mut self) {
         let mut occupied = BitBoard::empty();
-        occupied = occupied | self.king;
-        occupied = occupied | self.queen;
-        occupied = occupied | self.rook;
-        occupied = occupied | self.bishop;
-        occupied = occupied | self.knight;
-        occupied = occupied | self.pawn;
+        occupied |= self.king;
+        occupied |= self.queen;
+        occupied |= self.rook;
+        occupied |= self.bishop;
+        occupied |= self.knight;
+        occupied |= self.pawn;
         self.occupied = occupied
     }
 

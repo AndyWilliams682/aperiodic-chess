@@ -4,7 +4,7 @@ use std::collections::{HashSet, HashMap};
 use std::ops::{Deref, DerefMut};
 
 use crate::bit_board::{BitBoard, CarryRippler, BitBoardTiles};
-use crate::{create_limited_int, piece_set};
+use crate::create_limited_int;
 use crate::limited_int::LimitedIntTrait;
 use crate::move_generator::MoveTables;
 use crate::piece_set::{Color, Piece};
@@ -208,7 +208,7 @@ impl<
             let mut attacks = BitBoard::empty();
 
             for direction in attack_directions {
-                attacks = attacks | BitBoard::from_tile_indices(self.slides_from_in_direction(
+                attacks |= BitBoard::from_tile_indices(self.slides_from_in_direction(
                     source_tile,
                     &direction,
                     1, 

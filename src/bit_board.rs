@@ -1,5 +1,5 @@
 use std::collections::HashSet;
-use std::ops::{Sub, BitAnd, BitOr, Not};
+use std::ops::{Sub, BitAnd, BitOr, Not, BitAndAssign, BitOrAssign};
 
 use crate::piece_set::Piece;
 use crate::chess_move::{EnPassantData, Move};
@@ -80,6 +80,12 @@ impl BitAnd for BitBoard {
     }
 }
 
+impl BitAndAssign<BitBoard> for BitBoard {
+    fn bitand_assign(&mut self, rhs: BitBoard) {
+        self.0 &= rhs.0
+    }
+}
+
 impl BitOr for BitBoard {
     type Output = Self;
    
@@ -87,6 +93,12 @@ impl BitOr for BitBoard {
         BitBoard(
             self.0 | rhs.0
         )
+    }
+}
+
+impl BitOrAssign<BitBoard> for BitBoard {
+    fn bitor_assign(&mut self, rhs: BitBoard) {
+        self.0 |= rhs.0
     }
 }
 
