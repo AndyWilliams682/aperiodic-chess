@@ -21,14 +21,14 @@ pub struct Tile<N: LimitedIntTrait> {
 
 // Generic graph that uses LimitedIntTrait for the edges
 #[derive(Debug)]
-pub struct BoardGraph<N: LimitedIntTrait, E: LimitedIntTrait>(Graph<Tile<N>, E>);
+pub struct GraphBoard<N: LimitedIntTrait, E: LimitedIntTrait>(Graph<Tile<N>, E>);
 
 impl<
     N: LimitedIntTrait + std::cmp::Eq + std::hash::Hash + std::fmt::Debug,
     E: LimitedIntTrait + std::cmp::PartialEq + std::fmt::Debug + std::cmp::PartialOrd
-> BoardGraph<N, E> {
+> GraphBoard<N, E> {
     pub fn new() -> Self {
-        BoardGraph(Graph::new())
+        GraphBoard(Graph::new())
     }
    
     fn get_next_tile_in_direction(&self, source_tile: TileIndex, direction: &E) -> Option<TileIndex> {
@@ -270,7 +270,7 @@ impl<
     }
 }
 
-impl<N: LimitedIntTrait, E: LimitedIntTrait> Deref for BoardGraph<N, E> {
+impl<N: LimitedIntTrait, E: LimitedIntTrait> Deref for GraphBoard<N, E> {
     type Target = Graph<Tile<N>, E>;
    
     fn deref(&self) -> &Self::Target {
@@ -278,7 +278,7 @@ impl<N: LimitedIntTrait, E: LimitedIntTrait> Deref for BoardGraph<N, E> {
     }
 }
 
-impl<N: LimitedIntTrait, E: LimitedIntTrait> DerefMut for BoardGraph<N, E> {
+impl<N: LimitedIntTrait, E: LimitedIntTrait> DerefMut for GraphBoard<N, E> {
     fn deref_mut(&mut self) -> &mut Self::Target {
         &mut self.0
     }
@@ -293,11 +293,11 @@ create_limited_int!(TraditionalDirection, 8);
 create_limited_int!(UniformTileOrientation, 1);
 
 #[derive(Debug)]
-pub struct TraditionalBoardGraph(pub BoardGraph<UniformTileOrientation, TraditionalDirection>);
+pub struct TraditionalBoardGraph(pub GraphBoard<UniformTileOrientation, TraditionalDirection>);
 
 impl TraditionalBoardGraph {
     pub fn new() -> Self {
-        let mut board_graph = BoardGraph::new();
+        let mut board_graph = GraphBoard::new();
         for tile in 0..64 {
             board_graph.add_node(Self::new_tile(tile));
         }
@@ -434,11 +434,11 @@ impl TraditionalBoardGraph {
 create_limited_int!(HexagonalDirection, 12);
 
 #[derive(Debug)]
-pub struct HexagonalBoardGraph(pub BoardGraph<UniformTileOrientation, HexagonalDirection>);
+pub struct HexagonalBoardGraph(pub GraphBoard<UniformTileOrientation, HexagonalDirection>);
 
 impl HexagonalBoardGraph {
     pub fn new() -> Self {
-        let mut board_graph = BoardGraph::new();
+        let mut board_graph = GraphBoard::new();
         for tile in 0..91 {
             board_graph.add_node(Self::new_tile(tile));
         }
