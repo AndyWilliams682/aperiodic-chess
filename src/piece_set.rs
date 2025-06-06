@@ -27,7 +27,7 @@ impl Color {
 
 
 #[derive(Debug, Clone, PartialEq)]
-pub enum PieceType {
+pub enum Piece {
     King,
     Queen,
     Rook,
@@ -72,32 +72,32 @@ impl PieceSet {
         self.occupied = occupied
     }
 
-    pub fn get_piece_at(&self, tile_index: TileIndex) -> Option<PieceType> {
+    pub fn get_piece_at(&self, tile_index: TileIndex) -> Option<Piece> {
         if self.king.get_bit_at_tile(tile_index) == true {
-            return Some(PieceType::King)
+            return Some(Piece::King)
         } else if self.queen.get_bit_at_tile(tile_index) == true {
-            return Some(PieceType::Queen)
+            return Some(Piece::Queen)
         } else if self.rook.get_bit_at_tile(tile_index) == true {
-            return Some(PieceType::Rook)
+            return Some(Piece::Rook)
         } else if self.bishop.get_bit_at_tile(tile_index) == true {
-            return Some(PieceType::Bishop)
+            return Some(Piece::Bishop)
         } else if self.knight.get_bit_at_tile(tile_index) == true {
-            return Some(PieceType::Knight)
+            return Some(Piece::Knight)
         } else if self.pawn.get_bit_at_tile(tile_index) == true {
-            return Some(PieceType::Pawn)
+            return Some(Piece::Pawn)
         } else {
             return None
         }
     }
 
-    pub fn get_bitboard_for_piece(&mut self, piece_type: &PieceType) -> &mut BitBoard {
+    pub fn get_bitboard_for_piece(&mut self, piece_type: &Piece) -> &mut BitBoard {
         return match piece_type {
-            PieceType::King => &mut self.king,
-            PieceType::Queen => &mut self.queen,
-            PieceType::Rook => &mut self.rook,
-            PieceType::Bishop => &mut self.bishop,
-            PieceType::Knight => &mut self.knight,
-            PieceType::Pawn => &mut self.pawn,
+            Piece::King => &mut self.king,
+            Piece::Queen => &mut self.queen,
+            Piece::Rook => &mut self.rook,
+            Piece::Bishop => &mut self.bishop,
+            Piece::Knight => &mut self.knight,
+            Piece::Pawn => &mut self.pawn,
         };
     }
 
@@ -114,14 +114,14 @@ impl PieceSet {
         bitboard.flip_bit_at_tile_index(capture_tile);
     }
 
-    pub fn promote_piece(&mut self, promotion_tile: TileIndex, promotion_target: &PieceType) {
+    pub fn promote_piece(&mut self, promotion_tile: TileIndex, promotion_target: &Piece) {
         // This assumes the move has been registered before applying the promotion
         self.pawn.flip_bit_at_tile_index(promotion_tile);
         let bitboard = self.get_bitboard_for_piece(promotion_target);
         bitboard.flip_bit_at_tile_index(promotion_tile);
     }
 
-    pub fn return_piece(&mut self, captured_tile: TileIndex, captured_piece: &PieceType) {
+    pub fn return_piece(&mut self, captured_tile: TileIndex, captured_piece: &Piece) {
         let bitboard = self.get_bitboard_for_piece(captured_piece);
         bitboard.flip_bit_at_tile_index(captured_tile);
     } // Inverse of capture_piece
@@ -145,7 +145,7 @@ mod tests {
         let piece_set = &Position::new_traditional().pieces[0];
         assert_eq!(
             piece_set.get_piece_at(TileIndex::new(0)).unwrap(),
-            PieceType::Rook
+            Piece::Rook
         );
         assert_eq!(
             piece_set.get_piece_at(TileIndex::new(17)),
@@ -157,7 +157,7 @@ mod tests {
     fn test_get_bitboard_for_piece() {
         let piece_set = &mut Position::new_traditional().pieces[0];
         assert_eq!(
-            *piece_set.get_bitboard_for_piece(&PieceType::King),
+            *piece_set.get_bitboard_for_piece(&Piece::King),
             BitBoard::new(16)
         )
     }
@@ -189,7 +189,7 @@ mod tests {
     fn test_promote_piece() {
         let piece_set = &mut Position::new_traditional().pieces[0];
         let promotion_tile = TileIndex::new(8);
-        piece_set.promote_piece(promotion_tile, &PieceType::Queen);
+        piece_set.promote_piece(promotion_tile, &Piece::Queen);
         assert_eq!(
             piece_set.pawn,
             BitBoard::from_ints(vec![9, 10, 11, 12, 13, 14, 15])
@@ -204,7 +204,7 @@ mod tests {
     fn test_return_piece() {
         let piece_set = &mut Position::new_traditional().pieces[0];
         let captured_tile = TileIndex::new(16);
-        piece_set.return_piece(captured_tile, &PieceType::Rook);
+        piece_set.return_piece(captured_tile, &Piece::Rook);
         assert_eq!(
             piece_set.rook,
             BitBoard::from_ints(vec![0, 7, 16])

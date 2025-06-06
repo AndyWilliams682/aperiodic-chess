@@ -1,4 +1,4 @@
-use crate::piece_set::PieceType;
+use crate::piece_set::Piece;
 use crate::graph_board::TileIndex;
 
 
@@ -19,12 +19,12 @@ impl EnPassantData {
 pub struct Move {
     pub from_tile: TileIndex,
     pub to_tile: TileIndex,
-    pub promotion: Option<PieceType>,
+    pub promotion: Option<Piece>,
     pub en_passant_data: Option<EnPassantData>
 }
 
 impl Move {
-    pub fn new(from_tile: TileIndex, to_tile: TileIndex, promotion: Option<PieceType>, en_passant_tile: Option<TileIndex>) -> Self {
+    pub fn new(from_tile: TileIndex, to_tile: TileIndex, promotion: Option<Piece>, en_passant_tile: Option<TileIndex>) -> Self {
         let en_passant_data = match en_passant_tile {
             Some(tile) => Some(EnPassantData::new(tile, to_tile)),
             None => None

@@ -7,7 +7,7 @@ use crate::bit_board::{BitBoard, CarryRippler, BitBoardTiles};
 use crate::{create_limited_int, piece_set};
 use crate::limited_int::LimitedIntTrait;
 use crate::move_generator::MoveTables;
-use crate::piece_set::{Color, PieceType};
+use crate::piece_set::{Color, Piece};
 use crate::movement_tables::{JumpTable, DirectionalSlideTable, SlideTables, PawnTables};
 use crate::position::Position;
 
@@ -399,7 +399,7 @@ impl TraditionalBoardGraph {
         display_piece(black_pieces.pawn, 'p');
 
         let move_options = match selected_piece {
-            Some(PieceType::Pawn) => BitBoard::empty(),
+            Some(Piece::Pawn) => BitBoard::empty(),
             None => BitBoard::empty(),
             _ => { // All non-Pawn PieceTypes
                 let display_idx = 631 - 84 * (selected_tile.index() / 8) + 5 * (selected_tile.index() % 8);

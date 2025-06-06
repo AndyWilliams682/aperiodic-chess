@@ -4,12 +4,12 @@ use crate::bit_board::BitBoardTiles;
 use crate::graph_board::{TileIndex};
 use crate::chess_move::{EnPassantData, Move};
 use crate::move_generator::MoveTables;
-use crate::piece_set::{Color, PieceType, PieceSet};
+use crate::piece_set::{Color, Piece, PieceSet};
 
 #[derive(Debug)]
 pub struct PositionRecord {
     pub en_passant_data: Option<EnPassantData>,
-    pub captured_piece: Option<PieceType>,
+    pub captured_piece: Option<Piece>,
     pub previous_record: Option<Arc<PositionRecord>>,
     // previous_zobrist_key??
 }
@@ -189,10 +189,10 @@ impl Position {
             self.pieces[player_idx].promote_piece(to_tile, promotion_target)
         }
 
-        if moving_piece == PieceType::Pawn {
+        if moving_piece == Piece::Pawn {
             if let Some(en_passant_data) = &self.record.en_passant_data {
                 if to_tile == en_passant_data.capturable_tile {
-                    target_piece = Some(PieceType::Pawn);
+                    target_piece = Some(Piece::Pawn);
                     self.pieces[opponent_idx].capture_piece(en_passant_data.piece_tile)
                 }
             }
@@ -232,11 +232,11 @@ impl Position {
         } else {
             self.record = PositionRecord::default().into();
         }
-        if captured_piece == Some(PieceType::Pawn) {
+        if captured_piece == Some(Piece::Pawn) {
             if let Some(en_passant_data) = &self.record.en_passant_data {
                 if to_tile == en_passant_data.capturable_tile {
                     self.pieces[opponent_idx].capture_piece(to_tile);
-                    self.pieces[opponent_idx].return_piece(en_passant_data.piece_tile, &PieceType::Pawn)
+                    self.pieces[opponent_idx].return_piece(en_passant_data.piece_tile, &Piece::Pawn)
                 }
             }
         }
@@ -400,7 +400,7 @@ mod tests {
 
         let from_tile = TileIndex::new(8);
         let to_tile = TileIndex::new(16);
-        let demotion_move = Move::new(from_tile, to_tile, Some(PieceType::Knight), None);
+        let demotion_move = Move::new(from_tile, to_tile, Some(Piece::Knight), None);
         position.make_legal_move(&demotion_move);
         position.unmake_legal_move(&demotion_move);
         assert_eq!(
@@ -418,7 +418,7 @@ mod tests {
         position.make_legal_move(&capture_move);
         assert_eq!(
             position.record.captured_piece,
-            Some(PieceType::Rook)
+            Some(Piece::Rook)
         );
         position.unmake_legal_move(&capture_move);
         assert_eq!(

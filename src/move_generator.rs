@@ -4,7 +4,7 @@ use crate::{
     chess_move::{EnPassantData, Move},
     graph_board::TileIndex,
     position::Position,
-    piece_set::{Color, PieceType},
+    piece_set::{Color, Piece},
     movement_tables::{JumpTable, SlideTables, PawnTables},
 };
 
@@ -21,13 +21,13 @@ pub struct MoveTables {
 }
 
 impl MoveTables {
-    pub fn query_piece(&self, piece_type: &PieceType, source_tile: TileIndex, occupied: BitBoard) -> BitBoard {
+    pub fn query_piece(&self, piece_type: &Piece, source_tile: TileIndex, occupied: BitBoard) -> BitBoard {
         return match piece_type {
-            PieceType::King => self.king_table[source_tile],
-            PieceType::Queen => self.slide_tables.query(&source_tile, &occupied, true, true),
-            PieceType::Rook => self.slide_tables.query(&source_tile, &occupied, true, false),
-            PieceType::Bishop => self.slide_tables.query(&source_tile, &occupied, false, true),
-            PieceType::Knight => self.knight_table[source_tile],
+            Piece::King => self.king_table[source_tile],
+            Piece::Queen => self.slide_tables.query(&source_tile, &occupied, true, true),
+            Piece::Rook => self.slide_tables.query(&source_tile, &occupied, true, false),
+            Piece::Bishop => self.slide_tables.query(&source_tile, &occupied, false, true),
+            Piece::Knight => self.knight_table[source_tile],
             _ => BitBoard::empty() // Pawns are handled in a different function
         }
     }
@@ -60,14 +60,14 @@ impl MoveTables {
 
         let mut piece_iters: Vec<BitBoardMoves> = vec![];
 
-        let mut get_piece_iter = | mut piece_board: BitBoard, piece_type: &PieceType | {
+        let mut get_piece_iter = | mut piece_board: BitBoard, piece_type: &Piece | {
             let mut is_pawn = false;
             while !piece_board.is_zero() {
                 let source_tile = piece_board.lowest_one().unwrap();
 
                 let mut next_ep_data = None;
                 let mut promotable_tiles = BitBoard::empty();
-                let mut raw_attacks = if piece_type == &PieceType::Pawn {
+                let mut raw_attacks = if piece_type == &Piece::Pawn {
                     is_pawn = true;
                     let pawn_tables = match active_player {
                         Color::White => &self.white_pawn_tables,
@@ -95,12 +95,12 @@ impl MoveTables {
             }
         };
 
-        get_piece_iter(active_pieces.king, &PieceType::King);
-        get_piece_iter(active_pieces.queen, &PieceType::Queen);
-        get_piece_iter(active_pieces.rook, &PieceType::Rook);
-        get_piece_iter(active_pieces.bishop, &PieceType::Bishop);
-        get_piece_iter(active_pieces.knight, &PieceType::Knight);
-        get_piece_iter(active_pieces.pawn, &PieceType::Pawn);
+        get_piece_iter(active_pieces.king, &Piece::King);
+        get_piece_iter(active_pieces.queen, &Piece::Queen);
+        get_piece_iter(active_pieces.rook, &Piece::Rook);
+        get_piece_iter(active_pieces.bishop, &Piece::Bishop);
+        get_piece_iter(active_pieces.knight, &Piece::Knight);
+        get_piece_iter(active_pieces.pawn, &Piece::Pawn);
 
         piece_iters.into_iter().flatten()
     }
