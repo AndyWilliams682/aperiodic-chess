@@ -4,13 +4,13 @@ use crate::graph_board::TileIndex;
 
 #[derive(Debug, PartialEq, Clone)]
 pub struct EnPassantData {
-    pub capturable_tile: TileIndex,
-    pub piece_tile: TileIndex
+    pub passed_tile: TileIndex,
+    pub occupied_tile: TileIndex
 }
 
 impl EnPassantData {
     pub fn new(capturable_tile: TileIndex, piece_tile: TileIndex) -> Self {
-        Self { capturable_tile, piece_tile }
+        Self { passed_tile: capturable_tile, occupied_tile: piece_tile }
     }
 }
 

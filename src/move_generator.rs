@@ -45,7 +45,7 @@ impl MoveTables {
         }
         all_moves |= pawn_tables.attack_table[source_tile] & *enemies;
         if let Some(data) = current_ep_data { // Can capture via EP even if no enemy is present
-            all_moves |= pawn_tables.attack_table[source_tile] & BitBoard::from_ints(vec![data.capturable_tile.index() as u128])
+            all_moves |= pawn_tables.attack_table[source_tile] & BitBoard::from_ints(vec![data.passed_tile.index() as u128])
         }
         all_moves
     }
@@ -191,14 +191,14 @@ mod tests {
         assert_eq!( // En Passant Capture
             move_tables.query_pawn(
                 color, source_tile, &enemies, occupied, 
-                &Some(EnPassantData { capturable_tile: TileIndex::new(16), piece_tile: TileIndex::new(8) })
+                &Some(EnPassantData { passed_tile: TileIndex::new(16), occupied_tile: TileIndex::new(8) })
             ),
             BitBoard::from_ints(vec![16, 17, 25])
         );
         assert_eq!( // Irrelevant En Passant
             move_tables.query_pawn(
                 color, source_tile, &enemies, occupied, 
-                &Some(EnPassantData { capturable_tile: TileIndex::new(19), piece_tile: TileIndex::new(11) })
+                &Some(EnPassantData { passed_tile: TileIndex::new(19), occupied_tile: TileIndex::new(11) })
             ),
             BitBoard::from_ints(vec![17, 25])
         )
@@ -234,14 +234,14 @@ mod tests {
         assert_eq!( // En Passant Capture
             move_tables.query_pawn(
                 color, source_tile, &enemies, occupied, 
-                &Some(EnPassantData { capturable_tile: TileIndex::new(40), piece_tile: TileIndex::new(48) })
+                &Some(EnPassantData { passed_tile: TileIndex::new(40), occupied_tile: TileIndex::new(48) })
             ),
             BitBoard::from_ints(vec![40, 41, 33])
         );
         assert_eq!( // Irrelevant En Passant
             move_tables.query_pawn(
                 color, source_tile, &enemies, occupied, 
-                &Some(EnPassantData { capturable_tile: TileIndex::new(43), piece_tile: TileIndex::new(51) })
+                &Some(EnPassantData { passed_tile: TileIndex::new(43), occupied_tile: TileIndex::new(51) })
             ),
             BitBoard::from_ints(vec![41, 33])
         )

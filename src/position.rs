@@ -26,8 +26,8 @@ impl PositionRecord {
     pub fn from_string(fen: String) -> PositionRecord {
         let tile_indices: Vec<&str> = fen.split(",").collect();
         let en_passant_data = Some(EnPassantData {
-            capturable_tile: TileIndex::new(tile_indices[0].parse().unwrap()),
-            piece_tile: TileIndex::new(tile_indices[1].parse().unwrap())
+            passed_tile: TileIndex::new(tile_indices[0].parse().unwrap()),
+            occupied_tile: TileIndex::new(tile_indices[1].parse().unwrap())
         });
         PositionRecord { en_passant_data, captured_piece: None, previous_record: None }
     }
@@ -191,9 +191,9 @@ impl Position {
 
         if moving_piece == Piece::Pawn {
             if let Some(en_passant_data) = &self.record.en_passant_data {
-                if to_tile == en_passant_data.capturable_tile {
+                if to_tile == en_passant_data.passed_tile {
                     target_piece = Some(Piece::Pawn);
-                    self.pieces[opponent_idx].capture_piece(en_passant_data.piece_tile)
+                    self.pieces[opponent_idx].capture_piece(en_passant_data.occupied_tile)
                 }
             }
         }
@@ -234,9 +234,9 @@ impl Position {
         }
         if captured_piece == Some(Piece::Pawn) {
             if let Some(en_passant_data) = &self.record.en_passant_data {
-                if to_tile == en_passant_data.capturable_tile {
+                if to_tile == en_passant_data.passed_tile {
                     self.pieces[opponent_idx].capture_piece(to_tile);
-                    self.pieces[opponent_idx].return_piece(en_passant_data.piece_tile, &Piece::Pawn)
+                    self.pieces[opponent_idx].return_piece(en_passant_data.occupied_tile, &Piece::Pawn)
                 }
             }
         }
@@ -367,7 +367,7 @@ mod tests {
         position.make_legal_move(&second_move);
         assert_eq!(
             *position.record.en_passant_data.as_ref().unwrap(),
-            EnPassantData { capturable_tile: TileIndex::new(43), piece_tile: TileIndex::new(35) }
+            EnPassantData { passed_tile: TileIndex::new(43), occupied_tile: TileIndex::new(35) }
         );
         position.make_legal_move(&third_move);
         assert_eq!(
@@ -395,7 +395,7 @@ mod tests {
         );
         assert_eq!(
             position.record.en_passant_data,
-            Some(EnPassantData { capturable_tile: TileIndex::new(23), piece_tile: TileIndex::new(31) })
+            Some(EnPassantData { passed_tile: TileIndex::new(23), occupied_tile: TileIndex::new(31) })
         );
 
         let from_tile = TileIndex::new(8);

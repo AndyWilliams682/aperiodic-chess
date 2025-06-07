@@ -207,8 +207,8 @@ impl Iterator for BitBoardMoves {
         } else if let Some(to_tile) = self.remaining_moves.next() {
             if self.is_pawn {
                 if let Some(data) = &self.next_ep_data {
-                    if data.piece_tile == to_tile {
-                        en_passant_tile = Some(data.capturable_tile)
+                    if data.occupied_tile == to_tile {
+                        en_passant_tile = Some(data.passed_tile)
                     }
                 }
                 if self.promotable_tiles.get_bit_at_tile(to_tile) { // Handles promotion to Knight
@@ -388,8 +388,8 @@ mod tests {
         let source_tile = TileIndex::new(8);
         let remaining_moves = BitBoard::from_ints(vec![16, 17, 24]);
         let en_passant_data = Some(EnPassantData { 
-            capturable_tile: TileIndex::new(16),
-            piece_tile: TileIndex::new(24) 
+            passed_tile: TileIndex::new(16),
+            occupied_tile: TileIndex::new(24) 
         });
         let mut bitboard_moves = BitBoardMoves::new(
             source_tile, true, remaining_moves, en_passant_data, BitBoard::empty()
