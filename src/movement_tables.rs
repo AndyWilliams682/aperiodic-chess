@@ -156,9 +156,9 @@ impl PawnTables {
         for source_tile in 0..single_table.num_tiles() {
             let tile_idx = TileIndex::new(source_tile); // TODO: Make/USE TileIndex iterator?
             let en_passant_data = match double_table[tile_idx].get(&BitBoard::empty()).unwrap().lowest_one() {
-                Some(piece_tile) => {
-                    let capturable_tile = single_table[tile_idx].lowest_one().unwrap();
-                    Some(EnPassantData { passed_tile: capturable_tile, occupied_tile: piece_tile })
+                Some(occupied_tile) => {
+                    let passed_tile = single_table[tile_idx].lowest_one().unwrap();
+                    Some(EnPassantData { passed_tile, occupied_tile })
                 },
                 _ => None
             };

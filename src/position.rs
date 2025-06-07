@@ -49,7 +49,7 @@ pub struct Position {
 
 impl Position {
     pub fn from_string(fen: String) -> Self {
-        // fen format: <piece_info> <active_player> <EP capturable_tile_index,piece_tile_index>
+        // fen format: <piece_info> <active_player> <EP passed_tile_index,occupied_tile_index>
         let components: Vec<&str> = fen.split(" ").collect();
         let mut pieces = [
             PieceSet::empty(),

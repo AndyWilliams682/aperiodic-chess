@@ -9,8 +9,8 @@ pub struct EnPassantData {
 }
 
 impl EnPassantData {
-    pub fn new(capturable_tile: TileIndex, piece_tile: TileIndex) -> Self {
-        Self { passed_tile: capturable_tile, occupied_tile: piece_tile }
+    pub fn new(passed_tile: TileIndex, occupied_tile: TileIndex) -> Self {
+        Self { passed_tile, occupied_tile }
     }
 }
 
