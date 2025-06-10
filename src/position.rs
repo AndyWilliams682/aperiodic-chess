@@ -1,3 +1,4 @@
+use std::io::empty;
 use std::sync::Arc;
 
 use crate::bit_board::BitBoardTiles;
@@ -49,7 +50,7 @@ pub struct Position {
 
 impl Position {
     pub fn from_string(fen: String) -> Self {
-        // fen format: <piece_info> <active_player> <EP passed_tile_index,occupied_tile_index>
+        // fen format: <piece_info> <active_player> <passed_tile_index,occupied_tile_index>
         let components: Vec<&str> = fen.split(" ").collect();
         let mut pieces = [
             PieceSet::empty(),
@@ -99,6 +100,59 @@ impl Position {
             _ => PositionRecord::from_string(components[2].to_string())
         };
         Self { active_player, pieces, record: record.into() }
+    }
+
+    pub fn to_string(&self) -> String {
+        let mut output = "".to_string();
+        let mut empty_tile_counter = 0;
+        for tile in 0..128 { // TODO: Un-hardcode this value
+            let tile_index = TileIndex::new(tile);
+            if let Some(piece) = self.pieces[0].get_piece_at(tile_index) {
+                let symbol = match piece {
+                    Piece::King => 'K',
+                    Piece::Queen => 'Q',
+                    Piece::Rook => 'R',
+                    Piece::Bishop => 'B',
+                    Piece::Knight => 'N',
+                    Piece::Pawn => 'P',
+                };
+                if empty_tile_counter > 0 {
+                    output.push_str(&empty_tile_counter.to_string());
+                    empty_tile_counter = 0;
+                }
+                output.push(symbol);
+            } else if let Some(piece) = self.pieces[1].get_piece_at(tile_index) {
+                let symbol = match piece {
+                    Piece::King => 'k',
+                    Piece::Queen => 'q',
+                    Piece::Rook => 'r',
+                    Piece::Bishop => 'b',
+                    Piece::Knight => 'n',
+                    Piece::Pawn => 'p',
+                };
+                if empty_tile_counter > 0 {
+                    output.push_str(&empty_tile_counter.to_string());
+                    empty_tile_counter = 0;
+                }
+                output.push(symbol);
+            } else {
+                empty_tile_counter += 1;
+            }
+        }
+        output.push(' ');
+        match self.active_player {
+            Color::White => output.push('w'),
+            Color::Black => output.push('b'),
+        }
+        output.push(' ');
+        if let Some(data) = &self.record.en_passant_data {
+            output.push_str(&data.passed_tile.index().to_string());
+            output.push(',');
+            output.push_str(&data.occupied_tile.index().to_string());
+        } else {
+            output.push('-')
+        }
+        output
     }
 
     pub fn new_traditional() -> Self {
@@ -429,6 +483,15 @@ mod tests {
             position.pieces[1].rook,
             BitBoard::from_ints(vec![56, 63])
         );
+    }
+
+    #[test]
+    fn test_string_conversion() {
+        let position = Position::new_traditional();
+        assert_eq!(
+            position.to_string(),
+            "RNBQKBNRPPPPPPPP32pppppppprnbqkbnr w -".to_string()
+        )
     }
 
     #[test]
