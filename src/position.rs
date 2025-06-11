@@ -212,6 +212,10 @@ impl Position {
         false // Don't need to check for King-to-King threats
     }
 
+    pub fn is_winner(&self) -> Option<Color> {
+        None
+    }
+
     pub fn is_legal_move(&mut self, chess_move: &Move, move_tables: &MoveTables) -> bool {
         // Could check other parameters:
         // Kings cannot be captured, allies cannot be captured
