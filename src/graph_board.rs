@@ -364,7 +364,7 @@ impl TraditionalBoardGraph {
         return shift * sign
     }
     
-    pub fn display(&self, position: &Position, selected_tile: TileIndex, move_tables: &MoveTables, showing_indices: bool) -> String {
+    pub fn display(&self, position: &Position, selected_tile: Option<TileIndex>, move_tables: &MoveTables, showing_indices: bool) -> String {
         let mut output: Vec<char> = " ____ ____ ____ ____ ____ ____ ____ ____\n|    |    |    |    |    |    |    |    |\n|____|____|____|____|____|____|____|____|\n|    |    |    |    |    |    |    |    |\n|____|____|____|____|____|____|____|____|\n|    |    |    |    |    |    |    |    |\n|____|____|____|____|____|____|____|____|\n|    |    |    |    |    |    |    |    |\n|____|____|____|____|____|____|____|____|\n|    |    |    |    |    |    |    |    |\n|____|____|____|____|____|____|____|____|\n|    |    |    |    |    |    |    |    |\n|____|____|____|____|____|____|____|____|\n|    |    |    |    |    |    |    |    |\n|____|____|____|____|____|____|____|____|\n|    |    |    |    |    |    |    |    |\n|____|____|____|____|____|____|____|____|"
             .chars().collect();
         let mut display_piece = | piece_board, piece_char: char | {
@@ -373,15 +373,9 @@ impl TraditionalBoardGraph {
                 output[display_idx] = piece_char;
             }
         };
+
         let white_pieces = &position.pieces[0];
         let black_pieces = &position.pieces[1];
-        let selected_white = white_pieces.get_piece_at(selected_tile);
-        let selected_black = black_pieces.get_piece_at(selected_tile);
-        let selected_piece = selected_white.or(selected_black);
-        let allied_occupied = match black_pieces.get_piece_at(selected_tile) {
-            Some(_t) => black_pieces.occupied,
-            _ => white_pieces.occupied
-        };
         let occupied = white_pieces.occupied | black_pieces.occupied;
 
         display_piece(white_pieces.king, 'K');
@@ -398,15 +392,25 @@ impl TraditionalBoardGraph {
         display_piece(black_pieces.knight, 'n');
         display_piece(black_pieces.pawn, 'p');
 
-        let move_options = match selected_piece {
-            Some(Piece::Pawn) => BitBoard::empty(),
-            None => BitBoard::empty(),
-            _ => { // All non-Pawn PieceTypes
-                let display_idx = 631 - 84 * (selected_tile.index() / 8) + 5 * (selected_tile.index() % 8);
-                output[display_idx + 1] = '?';
-                move_tables.query_piece(&selected_piece.unwrap(), selected_tile, occupied) & !allied_occupied
-            }
-        };
+        let mut move_options = BitBoard::empty();
+        if let Some(tile) = selected_tile {
+            let selected_white = white_pieces.get_piece_at(tile);
+            let selected_black = black_pieces.get_piece_at(tile);
+            let selected_piece = selected_white.or(selected_black);
+            let allied_occupied = match black_pieces.get_piece_at(tile) {
+                Some(_t) => black_pieces.occupied,
+                _ => white_pieces.occupied
+            };
+            move_options = match selected_piece {
+                Some(Piece::Pawn) => BitBoard::empty(), // TODO: Add pawn movement stuff here, depends on color
+                None => BitBoard::empty(),
+                _ => { // All non-Pawn PieceTypes
+                    let display_idx = 631 - 84 * (tile.index() / 8) + 5 * (tile.index() % 8);
+                    output[display_idx + 1] = '?';
+                    move_tables.query_piece(&selected_piece.unwrap(), tile, occupied) & !allied_occupied
+                }
+            };
+        }
 
         for tile_idx in BitBoardTiles::new(move_options) {
             let display_idx = 631 - 84 * (tile_idx.index() / 8) + 5 * (tile_idx.index() % 8);
