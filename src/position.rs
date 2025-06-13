@@ -1,7 +1,6 @@
-use std::io::empty;
 use std::sync::Arc;
 
-use crate::bit_board::BitBoardTiles;
+use crate::bit_board::{BitBoard, BitBoardTiles};
 use crate::graph_board::{TileIndex};
 use crate::chess_move::{EnPassantData, Move};
 use crate::move_generator::MoveTables;
@@ -225,6 +224,50 @@ impl Position {
         let legality = !self.is_in_check(move_tables, &moving_player);
         self.unmake_legal_move(chess_move);
         return legality
+    }
+
+    // TODO: Rewrite using Result and a custom error type
+    pub fn is_playable_move(&mut self, chess_move: &Move, move_tables: &MoveTables) -> bool {
+        let player_idx = self.active_player.as_idx();
+        let opponent_idx = self.active_player.opponent().as_idx();
+        let selected_piece = self.pieces[player_idx].get_piece_at(chess_move.from_tile);
+        
+        let movement_options = match selected_piece {
+            None => return false, // The moving player must have a piece at from_tile
+            Some(Piece::Pawn) => move_tables.query_pawn(
+                &self.active_player,
+                chess_move.from_tile,
+                &self.pieces[opponent_idx].occupied,
+                self.get_occupied(),
+                &self.record.en_passant_data
+            ),
+            _ => move_tables.query_piece(&selected_piece.unwrap(), chess_move.from_tile, self.get_occupied())
+        };
+
+        if movement_options.get_bit_at_tile(chess_move.to_tile) == false {
+            return false // The selected piece must be able to move to to_tile
+        }
+        println!("{:?}", 2);
+
+        if self.is_legal_move(chess_move, move_tables) == false {
+            return false // The selected move must be legal
+        }
+        println!("{:?}", 3);
+
+        let promotion_board = match player_idx {
+            0 => move_tables.white_pawn_tables.promotion_board,
+            _ => move_tables.black_pawn_tables.promotion_board
+        };
+
+        if promotion_board.get_bit_at_tile(chess_move.to_tile) && self.pieces[player_idx].get_piece_at(chess_move.from_tile) == Some(Piece::Pawn) && chess_move.promotion == None {
+            return false // Promotion must be provided if a pawn is moving to a promotion tile
+        }
+        println!("{:?}", 4);
+        return true
+    }
+
+    fn get_occupied(&self) -> BitBoard {
+        return self.pieces[0].occupied | self.pieces[1].occupied
     }
 
     pub fn make_legal_move(&mut self, legal_move: &Move) {
