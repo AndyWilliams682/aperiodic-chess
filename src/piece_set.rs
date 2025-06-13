@@ -1,3 +1,4 @@
+use std::fmt;
 
 use crate::bit_board::BitBoard;
 use crate::graph_board::TileIndex;
@@ -22,6 +23,16 @@ impl Color {
             Color::White => Color::Black,
             Color::Black => Color::White
         }
+    }
+}
+
+impl fmt::Display for Color {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        let color_str = match self {
+            Color::White => "White",
+            Color::Black => "Black"
+        };
+        write!(f, "{}", color_str)
     }
 }
 
