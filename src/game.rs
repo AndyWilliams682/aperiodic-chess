@@ -42,7 +42,7 @@ impl Game {
         let mut to_tile = None;
         let mut promotion = None;
         while to_tile == None {
-            clearscreen::clear().expect("failed to clear screen");
+            // clearscreen::clear().expect("failed to clear screen");
             println!("{}", self.board.display(&self.current_position, selected_tile, &self.engine.move_tables, true));
             println!("{} to move", self.current_position.active_player);
 
@@ -77,11 +77,34 @@ impl Game {
                 }
             }
         }
-        Move::new(
+
+        let selected_idx = selected_tile.unwrap().index();
+
+        let mut en_passant_data = match self.current_position.pieces[self.current_position.active_player.as_idx()].get_piece_at(selected_tile.unwrap()) {
+            Some(Piece::Pawn) => {
+                self.engine.move_tables.white_pawn_tables.en_passant_table[selected_idx].clone().or(
+                    self.engine.move_tables.black_pawn_tables.en_passant_table[selected_idx].clone()
+                )
+            },
+            _ => None
+        };
+
+        let en_passant_data = match en_passant_data {
+            Some(epd) => {
+                if epd.occupied_tile != to_tile.unwrap() {
+                    None
+                } else {
+                    Some(epd)
+                }
+            },
+            None => None
+        };
+
+        Move::from_input(
             selected_tile.unwrap(),
             to_tile.unwrap(),
             promotion,
-            None // TODO: This needs to be constructed somehow
+            en_passant_data
         )
     }
 

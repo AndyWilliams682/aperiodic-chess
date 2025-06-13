@@ -31,4 +31,8 @@ impl Move {
         };
         return Self { from_tile, to_tile, promotion, en_passant_data }
     }
+
+    pub fn from_input(from_tile: TileIndex, to_tile: TileIndex, promotion: Option<Piece>, en_passant_data: Option<EnPassantData>) -> Self {
+        return Self { from_tile, to_tile, promotion, en_passant_data }
+    }
 }
