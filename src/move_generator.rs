@@ -119,6 +119,17 @@ impl MoveTables {
         legal_moves
     }
 
+    // TODO: Rewrite to reduce code
+    // I assume that get_legal_moves could be an iterator and .next() would handle this?
+    fn has_legal_moves(&self, position: &mut Position) -> bool {
+        for chess_move in self.get_pseudo_moves(&position) {
+            if position.is_legal_move(&chess_move, &self) {
+                return true
+            }
+        }
+        return false
+    }
+
     pub fn perft(&self, position: &mut Position, depth: u8) -> u64 {
         // TODO: May want to move to a separate Engine object?
         let mut output = 0;
