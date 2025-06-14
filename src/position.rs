@@ -6,11 +6,18 @@ use crate::chess_move::{EnPassantData, Move};
 use crate::move_generator::MoveTables;
 use crate::piece_set::{Color, Piece, PieceSet};
 
+#[derive(Debug, PartialEq)]
+pub enum GameOver {
+    Checkmate,
+    Draw
+}
+
 #[derive(Debug)]
 pub struct PositionRecord {
     pub en_passant_data: Option<EnPassantData>,
     pub captured_piece: Option<Piece>,
     pub previous_record: Option<Arc<PositionRecord>>,
+    pub fifty_move_counter: u32,
     // previous_zobrist_key??
 }
 
@@ -19,7 +26,8 @@ impl PositionRecord {
         PositionRecord {
             en_passant_data: None,
             captured_piece: None,
-            previous_record: None
+            previous_record: None,
+            fifty_move_counter: 0,
         }
     }
 
@@ -29,7 +37,7 @@ impl PositionRecord {
             passed_tile: TileIndex::new(tile_indices[0].parse().unwrap()),
             occupied_tile: TileIndex::new(tile_indices[1].parse().unwrap())
         });
-        PositionRecord { en_passant_data, captured_piece: None, previous_record: None }
+        PositionRecord { en_passant_data, captured_piece: None, previous_record: None, fifty_move_counter: 0 }
     }
    
     pub fn get_previous_record(&self) -> Option<Arc<PositionRecord>> {
@@ -162,7 +170,7 @@ impl Position {
         return Position::from_string("BKNRP1QB2P2N1B1P3R3P4PPPPP21ppppp4p3r3p1b1n2p2bq1prnkb w -".to_string())
     }
 
-    fn is_in_check(&self, move_tables: &MoveTables, color: &Color) -> bool {
+    pub fn is_in_check(&self, move_tables: &MoveTables, color: &Color) -> bool {
         let opponent_idx = color.opponent().as_idx();
         let king_tile = self.pieces[color.as_idx()].king.lowest_one().unwrap();
        
@@ -211,8 +219,26 @@ impl Position {
         false // Don't need to check for King-to-King threats
     }
 
-    pub fn is_winner(&self) -> Option<Color> {
-        None
+    fn is_checkmate(&mut self, move_tables: &MoveTables) -> bool {
+        self.is_in_check(move_tables, &self.active_player) && !move_tables.has_legal_moves( self)
+    }
+
+    fn is_stalemate(&mut self, move_tables: &MoveTables) -> bool {
+        !self.is_in_check(move_tables, &self.active_player) && !move_tables.has_legal_moves(self)
+    }
+
+    fn fifty_move_draw(&self) -> bool {
+        self.record.fifty_move_counter >= 50
+    }
+
+    pub fn is_over(&mut self, move_tables: &MoveTables) -> Option<GameOver> {
+        if self.is_checkmate(move_tables) {
+            return Some(GameOver::Checkmate)
+        } else if self.is_stalemate(move_tables) || self.fifty_move_draw() { // TODO: Add more draw conditions here
+            return Some(GameOver::Draw)
+        } else {
+            None
+        }
     }
 
     pub fn is_legal_move(&mut self, chess_move: &Move, move_tables: &MoveTables) -> bool {
@@ -247,13 +273,9 @@ impl Position {
         if movement_options.get_bit_at_tile(chess_move.to_tile) == false {
             return false // The selected piece must be able to move to to_tile
         }
-        println!("{:?}", 2);
-
         if self.is_legal_move(chess_move, move_tables) == false {
             return false // The selected move must be legal
         }
-        println!("{:?}", 3);
-
         let promotion_board = match player_idx {
             0 => move_tables.white_pawn_tables.promotion_board,
             _ => move_tables.black_pawn_tables.promotion_board
@@ -262,7 +284,6 @@ impl Position {
         if promotion_board.get_bit_at_tile(chess_move.to_tile) && self.pieces[player_idx].get_piece_at(chess_move.from_tile) == Some(Piece::Pawn) && chess_move.promotion == None {
             return false // Promotion must be provided if a pawn is moving to a promotion tile
         }
-        println!("{:?}", 4);
         return true
     }
 
@@ -278,11 +299,14 @@ impl Position {
         let from_tile = legal_move.from_tile;
         let to_tile = legal_move.to_tile;
 
+        let mut fifty_move_counter = self.record.fifty_move_counter + 1;
+
         let moving_piece = self.pieces[player_idx].get_piece_at(from_tile).unwrap();
         self.pieces[player_idx].move_piece(from_tile, to_tile);
 
         let mut target_piece = self.pieces[opponent_idx].get_piece_at(to_tile);
         if let Some(_) = target_piece {
+            fifty_move_counter = 0;
             self.pieces[opponent_idx].capture_piece(to_tile)
         };
 
@@ -291,6 +315,7 @@ impl Position {
         }
 
         if moving_piece == Piece::Pawn {
+            fifty_move_counter = 0;
             if let Some(en_passant_data) = &self.record.en_passant_data {
                 if to_tile == en_passant_data.passed_tile {
                     target_piece = Some(Piece::Pawn);
@@ -302,7 +327,8 @@ impl Position {
         self.record = PositionRecord {
             en_passant_data: legal_move.en_passant_data.clone(), // TODO: Candidate 1
             captured_piece: target_piece,
-            previous_record: Some(self.record.clone()) // TODO: Candidate 2
+            previous_record: Some(self.record.clone()), // TODO: Candidate 2
+            fifty_move_counter: fifty_move_counter
         }.into();
 
         self.pieces[player_idx].update_occupied();

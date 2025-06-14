@@ -1,6 +1,6 @@
 use std::io;
 
-use crate::{chess_move::Move, engine::Engine, graph_board::{TileIndex, TraditionalBoardGraph}, piece_set::Piece, position::Position};
+use crate::{chess_move::Move, engine::Engine, graph_board::{TileIndex, TraditionalBoardGraph}, piece_set::Piece, position::{GameOver, Position}};
 
 
 
@@ -15,17 +15,18 @@ impl Game {
     pub fn play_game(&mut self) {
         let mut turn_count = 0;
         let active_player = self.current_position.active_player.as_idx();
-        while self.current_position.is_winner() == None {
+        while self.current_position.is_over(&self.engine.move_tables) == None {
             clearscreen::clear().expect("failed to clear screen");
             println!("{}", self.board.display(&self.current_position, None, &self.engine.move_tables, true));
             println!("Turn {}, {} to move", turn_count, self.current_position.active_player);
+            if self.current_position.is_in_check(&self.engine.move_tables, &self.current_position.active_player) {
+                println!("You are in check!")
+            }
 
             let selected_move = match self.are_players_cpu[active_player] {
                 true => Move::new(TileIndex::new(0), TileIndex::new(0), None, None), // TODO: Add Engine call here
-                false => self.get_human_move() // Request move info here
+                false => self.get_human_move()
             };
-
-            println!("{:?}", selected_move);
 
             match self.current_position.is_playable_move(&selected_move, &self.engine.move_tables) {
                 true => {
@@ -35,6 +36,10 @@ impl Game {
                 false => continue
             }
         }
+        match self.current_position.is_over(&self.engine.move_tables).unwrap() {
+            GameOver::Draw => println!("Game ended in a draw!"),
+            GameOver::Checkmate => println!("{} wins by checkmate!", self.current_position.active_player.opponent())
+        }
     }
 
     fn get_human_move(&mut self) -> Move {
@@ -42,9 +47,12 @@ impl Game {
         let mut to_tile = None;
         let mut promotion = None;
         while to_tile == None {
-            // clearscreen::clear().expect("failed to clear screen");
+            clearscreen::clear().expect("failed to clear screen");
             println!("{}", self.board.display(&self.current_position, selected_tile, &self.engine.move_tables, true));
             println!("{} to move", self.current_position.active_player);
+            if self.current_position.is_in_check(&self.engine.move_tables, &self.current_position.active_player) {
+                println!("You ({}) are in check!", self.current_position.active_player)
+            }
 
             let mut player_input = String::new();
             io::stdin().read_line(&mut player_input)
@@ -80,7 +88,7 @@ impl Game {
 
         let selected_idx = selected_tile.unwrap().index();
 
-        let mut en_passant_data = match self.current_position.pieces[self.current_position.active_player.as_idx()].get_piece_at(selected_tile.unwrap()) {
+        let en_passant_data = match self.current_position.pieces[self.current_position.active_player.as_idx()].get_piece_at(selected_tile.unwrap()) {
             Some(Piece::Pawn) => {
                 self.engine.move_tables.white_pawn_tables.en_passant_table[selected_idx].clone().or(
                     self.engine.move_tables.black_pawn_tables.en_passant_table[selected_idx].clone()

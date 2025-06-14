@@ -108,15 +108,21 @@ impl MoveTables {
     fn get_legal_moves(&self, position: &mut Position) -> Vec<Move> {
         let mut legal_moves = Vec::new();
         for chess_move in self.get_pseudo_moves(&position) {
-            // if !self.is_legal_move(&chess_move, position) {
-            //     continue;
-            // }
             if !position.is_legal_move(&chess_move, &self) {
                 continue;
             }
             legal_moves.push(chess_move);
         }
         legal_moves
+    }
+
+    pub fn has_legal_moves(&self, position: &mut Position) -> bool {
+        for chess_move in self.get_pseudo_moves(&position) {
+            if position.is_legal_move(&chess_move, &self) {
+                return true;
+            }
+        }
+        false
     }
 
     pub fn perft(&self, position: &mut Position, depth: u8) -> u64 {
