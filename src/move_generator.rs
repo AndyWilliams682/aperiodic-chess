@@ -105,7 +105,7 @@ impl MoveTables {
         piece_iters.into_iter().flatten()
     }
 
-    fn get_legal_moves(&self, position: &mut Position) -> Vec<Move> {
+    pub fn get_legal_moves(&self, position: &mut Position) -> Vec<Move> {
         let mut legal_moves = Vec::new();
         for chess_move in self.get_pseudo_moves(&position) {
             if !position.is_legal_move(&chess_move, &self) {

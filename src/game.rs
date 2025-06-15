@@ -14,8 +14,8 @@ pub struct Game {
 impl Game {
     pub fn play_game(&mut self) {
         let mut turn_count = 0;
-        let active_player = self.current_position.active_player.as_idx();
         while self.current_position.is_over(&self.engine.move_tables) == None {
+            let active_player = self.current_position.active_player.as_idx();
             clearscreen::clear().expect("failed to clear screen");
             println!("{}", self.board.display(&self.current_position, None, &self.engine.move_tables, true));
             println!("Turn {}, {} to move", turn_count, self.current_position.active_player);
@@ -24,7 +24,7 @@ impl Game {
             }
 
             let selected_move = match self.are_players_cpu[active_player] {
-                true => Move::new(TileIndex::new(0), TileIndex::new(0), None, None), // TODO: Add Engine call here
+                true => self.engine.search_for_move(&mut self.current_position),
                 false => self.get_human_move()
             };
 

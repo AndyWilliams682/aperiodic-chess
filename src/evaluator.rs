@@ -37,7 +37,7 @@ impl MobilityTable {
             true => 1,
             false => 2
         };
-        let mut output: Vec<u32> = Vec::with_capacity(128);
+        let mut output: Vec<u32> = vec![0; 128];
         for direction in (initial_direction..table.0.len()).step_by(direction_step) {
             let mut tile_idx = 0;
             for tile in &table[direction].0 {
@@ -53,7 +53,7 @@ impl MobilityTable {
     }
 }
 
-struct Evaluator {
+pub struct Evaluator {
     king: MobilityTable,
     queen: MobilityTable,
     rook: MobilityTable,
@@ -64,7 +64,7 @@ struct Evaluator {
 }
 
 impl Evaluator {
-    pub fn new(move_tables: MoveTables) -> Self {
+    pub fn new(move_tables: &MoveTables) -> Self {
         Self {
             king: MobilityTable::from_jumps(&move_tables.king_table),
             queen: MobilityTable::from_slides(&move_tables.slide_tables, Piece::Queen),

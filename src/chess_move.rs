@@ -15,7 +15,7 @@ impl EnPassantData {
 }
 
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Clone)]
 pub struct Move {
     pub from_tile: TileIndex,
     pub to_tile: TileIndex,
