@@ -1,5 +1,5 @@
 use crate::piece_set::Piece;
-use crate::graph_board::TileIndex;
+use crate::graph_boards::graph_board::TileIndex;
 
 
 #[derive(Debug, PartialEq, Clone)]

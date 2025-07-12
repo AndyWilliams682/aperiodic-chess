@@ -1,10 +1,4 @@
-use graph_board::{HexagonalBoardGraph, TraditionalBoardGraph};
-use position::Position;
-
-use crate::{engine::Engine, game::Game};
-
-mod graph_board;
-mod bit_board;
+mod graph_boards;
 mod limited_int;
 mod position;
 mod chess_move;
@@ -14,6 +8,12 @@ mod movement_tables;
 mod evaluator;
 mod game;
 mod engine;
+mod bit_board;
+
+use graph_boards::graph_board::{HexagonalBoardGraph, TraditionalBoardGraph};
+use position::Position;
+
+use crate::{engine::Engine, game::Game};
 
 fn main() {
     let board = TraditionalBoardGraph::new();

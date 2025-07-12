@@ -3,7 +3,7 @@ use std::collections::{HashMap, HashSet};
 
 use crate::bit_board::{BitBoard, BitBoardTiles};
 use crate::chess_move::EnPassantData;
-use crate::graph_board::TileIndex;
+use crate::graph_boards::graph_board::TileIndex;
 
 
 #[derive(Debug, PartialEq, Clone)]
@@ -182,7 +182,7 @@ impl PawnTables {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::graph_board::{TraditionalBoardGraph, HexagonalBoardGraph, TraditionalDirection};
+    use crate::graph_boards::graph_board::{TraditionalBoardGraph, HexagonalBoardGraph, TraditionalDirection};
     use crate::piece_set::Color;
 
     fn test_traditional_board() -> TraditionalBoardGraph {

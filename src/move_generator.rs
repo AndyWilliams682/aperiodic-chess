@@ -2,7 +2,7 @@
 use crate::{
     bit_board::{BitBoard, BitBoardMoves},
     chess_move::{EnPassantData, Move},
-    graph_board::TileIndex,
+    graph_boards::graph_board::TileIndex,
     position::Position,
     piece_set::{Color, Piece},
     movement_tables::{JumpTable, SlideTables, PawnTables},
@@ -149,7 +149,7 @@ impl MoveTables {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::graph_board::TraditionalBoardGraph;
+    use crate::graph_boards::graph_board::TraditionalBoardGraph;
 
     fn test_move_tables() -> MoveTables {
         let board = TraditionalBoardGraph::new();

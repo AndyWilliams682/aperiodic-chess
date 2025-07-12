@@ -3,7 +3,7 @@ use std::ops::{Sub, BitAnd, BitOr, Not, BitAndAssign, BitOrAssign};
 
 use crate::piece_set::Piece;
 use crate::chess_move::{EnPassantData, Move};
-use crate::graph_board::TileIndex;
+use crate::graph_boards::graph_board::TileIndex;
 
 
 #[derive(Debug, PartialEq, Eq, Clone, Copy, Hash)]

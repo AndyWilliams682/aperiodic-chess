@@ -1,6 +1,6 @@
 use std::io;
 
-use crate::{chess_move::Move, engine::Engine, graph_board::{TileIndex, TraditionalBoardGraph}, piece_set::Piece, position::{GameOver, Position}};
+use crate::{chess_move::Move, engine::Engine, graph_boards::graph_board::{TileIndex, TraditionalBoardGraph}, piece_set::Piece, position::{GameOver, Position}};
 
 
 

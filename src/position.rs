@@ -1,7 +1,7 @@
 use std::sync::Arc;
 
 use crate::bit_board::{BitBoard, BitBoardTiles};
-use crate::graph_board::{TileIndex};
+use crate::graph_boards::graph_board::{TileIndex};
 use crate::chess_move::{EnPassantData, Move};
 use crate::move_generator::MoveTables;
 use crate::piece_set::{Color, Piece, PieceSet};
@@ -377,7 +377,7 @@ impl Position {
 mod tests {
     use super::*;
     use crate::bit_board::BitBoard;
-    use crate::graph_board::TraditionalBoardGraph;
+    use crate::graph_boards::graph_board::TraditionalBoardGraph;
 
     #[test]
     fn test_new_traditional_occupied() {
