@@ -377,7 +377,7 @@ impl Position {
 mod tests {
     use super::*;
     use crate::bit_board::BitBoard;
-    use crate::graph_boards::graph_board::TraditionalBoardGraph;
+    use crate::graph_boards::traditional_board::TraditionalBoardGraph;
 
     #[test]
     fn test_new_traditional_occupied() {

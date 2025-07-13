@@ -149,7 +149,7 @@ impl MoveTables {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::graph_boards::graph_board::TraditionalBoardGraph;
+    use crate::graph_boards::traditional_board::TraditionalBoardGraph;
 
     fn test_move_tables() -> MoveTables {
         let board = TraditionalBoardGraph::new();

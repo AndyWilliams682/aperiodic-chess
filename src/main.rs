@@ -10,7 +10,8 @@ mod game;
 mod engine;
 mod bit_board;
 
-use graph_boards::graph_board::{HexagonalBoardGraph, TraditionalBoardGraph};
+use graph_boards::traditional_board::TraditionalBoardGraph;
+use graph_boards::hexagonal_board::HexagonalBoardGraph;
 use position::Position;
 
 use crate::{engine::Engine, game::Game};

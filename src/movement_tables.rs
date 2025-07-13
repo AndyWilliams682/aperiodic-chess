@@ -182,7 +182,8 @@ impl PawnTables {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::graph_boards::graph_board::{TraditionalBoardGraph, HexagonalBoardGraph, TraditionalDirection};
+    use crate::graph_boards::traditional_board::{TraditionalBoardGraph, TraditionalDirection};
+    use crate::graph_boards::hexagonal_board::HexagonalBoardGraph;
     use crate::piece_set::Color;
 
     fn test_traditional_board() -> TraditionalBoardGraph {
