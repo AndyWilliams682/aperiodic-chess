@@ -170,6 +170,10 @@ impl Position {
         return Position::from_string("BKNRP1QB2P2N1B1P3R3P4PPPPP21ppppp4p3r3p1b1n2p2bq1prnkb w -".to_string())
     }
 
+    pub fn new_triangular() -> Self {
+        return Position::from_string("RKNP2pnkrQBP3pbqNP4pnP5p21 w -".to_string())
+    }
+
     pub fn is_in_check(&self, move_tables: &MoveTables, color: &Color) -> bool {
         let opponent_idx = color.opponent().as_idx();
         let king_tile = self.pieces[color.as_idx()].king.lowest_one().unwrap();
