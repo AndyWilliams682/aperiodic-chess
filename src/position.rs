@@ -162,7 +162,7 @@ impl Position {
         output
     }
 
-    pub fn new_traditional() -> Self {
+    pub fn new_traditional() -> Self { // TODO: Move to the specific board graph files?
         return Position::from_string("RNBQKBNRPPPPPPPP32pppppppprnbqkbnr w -".to_string())
     }
 
