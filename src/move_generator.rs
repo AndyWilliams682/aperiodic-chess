@@ -127,6 +127,7 @@ impl MoveTables {
         false
     }
 
+    #[allow(unused)]
     pub fn perft(&self, position: &mut Position, depth: u8) -> u64 {
         // TODO: May want to move to a separate Engine object?
         let mut output = 0;
