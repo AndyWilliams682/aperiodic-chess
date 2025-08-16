@@ -47,6 +47,37 @@ pub enum Piece {
     Pawn
 }
 
+impl Piece {
+    pub fn as_idx(&self) -> usize {
+        return match self {
+            Piece::King => 0,
+            Piece::Queen => 1,
+            Piece::Rook => 2,
+            Piece::Bishop => 3,
+            Piece::Knight => 4,
+            Piece::Pawn => 5
+        }
+    }
+
+    pub fn as_char(&self) -> char {
+        return match self {
+            Piece::King => 'K',
+            Piece::Queen => 'Q',
+            Piece::Rook => 'R',
+            Piece::Bishop => 'B',
+            Piece::Knight => 'N',
+            Piece::Pawn => 'P'
+        }
+    }
+
+    pub fn as_colored_char(&self, color: Color) -> char {
+        return match color {
+            Color::White => self.as_char(),
+            Color::Black => self.as_char().to_lowercase().next().unwrap()
+        }
+    }
+}
+
 
 #[derive(Debug)]
 pub struct PieceSet {
