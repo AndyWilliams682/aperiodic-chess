@@ -12,7 +12,7 @@ pub struct MoveTables {
     pub king_table: JumpTable, // king_table is it's own reverse
     pub slide_tables: SlideTables,
     pub knight_table: JumpTable,
-    pub white_pawn_tables: PawnTables,
+    pub white_pawn_tables: PawnTables, // Rewrite to use an array for the pawn tables
     pub black_pawn_tables: PawnTables,
     pub reverse_slide_tables: Vec<JumpTable>,
     pub reverse_knight_table: JumpTable,
@@ -297,7 +297,7 @@ mod tests {
     }
 
     #[test]
-    fn test_perft_to_6() {
+    fn test_initial_perft_to_5() {
         let move_tables = test_move_tables();
         let mut position = Position::new_traditional();
         assert_eq!(move_tables.perft(&mut position, 1), 20);
@@ -305,6 +305,5 @@ mod tests {
         assert_eq!(move_tables.perft(&mut position, 3), 8902);
         assert_eq!(move_tables.perft(&mut position, 4), 197281);
         assert_eq!(move_tables.perft(&mut position, 5), 4865609);
-        // assert_eq!(move_tables.perft(&mut position, 6), 119060324);
     }
 }
