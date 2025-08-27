@@ -4,7 +4,7 @@ use crate::bit_board::BitBoard;
 use crate::graph_boards::graph_board::TileIndex;
 
 
-#[derive(Debug, PartialEq, Clone)]
+#[derive(Debug, PartialEq, Clone, Copy)]
 pub enum Color {
     White,
     Black
@@ -37,7 +37,7 @@ impl fmt::Display for Color {
 }
 
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Copy)]
 pub enum Piece {
     King,
     Queen,
@@ -61,12 +61,12 @@ impl Piece {
 
     pub fn as_char(&self) -> char {
         return match self {
-            Piece::King => 'K',
-            Piece::Queen => 'Q',
-            Piece::Rook => 'R',
-            Piece::Bishop => 'B',
-            Piece::Knight => 'N',
-            Piece::Pawn => 'P'
+            Piece::King => '♔',
+            Piece::Queen => '♕',
+            Piece::Rook => '♖',
+            Piece::Bishop => '♗',
+            Piece::Knight => '♘',
+            Piece::Pawn => '♙'
         }
     }
 
@@ -75,6 +75,30 @@ impl Piece {
             Color::White => self.as_char(),
             Color::Black => self.as_char().to_lowercase().next().unwrap()
         }
+    }
+}
+
+
+#[derive(Debug, Clone, PartialEq, Copy)]
+pub struct ColoredPiece {
+    pub piece: Piece,
+    pub color: Color
+}
+
+impl ColoredPiece {
+    pub fn display(&self) -> char {
+        let mut symbol = match self.piece {
+            Piece::King => 'K',
+            Piece::Queen => 'Q',
+            Piece::Rook => 'R',
+            Piece::Bishop => 'B',
+            Piece::Knight => 'N',
+            Piece::Pawn => 'P',
+        };
+        if self.color == Color::Black {
+            symbol = symbol.to_ascii_lowercase();
+        }
+        return symbol
     }
 }
 
