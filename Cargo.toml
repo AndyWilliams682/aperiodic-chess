@@ -6,10 +6,13 @@ edition = "2021"
 
 
 [dependencies]
-petgraph = "0.6.5"
+petgraph = "0.7"
 itertools = "0.13.0"
 clearscreen = "4.0.1"
-
+bevy = "0.13"
+bevy_egui = "0.27"
+bevy_mod_picking = "0.18"
+rand = "0.8"
 
 [profile.release]
 debug = true
