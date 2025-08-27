@@ -1,7 +1,7 @@
 use std::collections::HashSet;
 use std::ops::{Sub, BitAnd, BitOr, Not, BitAndAssign, BitOrAssign};
 
-use crate::piece_set::Piece;
+use crate::piece_set::PieceType;
 use crate::chess_move::{EnPassantData, Move};
 use crate::graph_boards::graph_board::TileIndex;
 
@@ -195,12 +195,12 @@ impl Iterator for BitBoardMoves {
         if let Some(to_tile) = self.current_promotion_tile {
             self.current_promotion_counter += 1;
             let promotion = match self.current_promotion_counter {
-                1 => Some(Piece::Bishop), // 0 will already be handled for the Knight
-                2 => Some(Piece::Rook),
+                1 => Some(PieceType::Bishop), // 0 will already be handled for the Knight
+                2 => Some(PieceType::Rook),
                 _ => { // Reset after Queen
                     self.current_promotion_tile.take();
                     self.current_promotion_counter = 0;
-                    Some(Piece::Queen)
+                    Some(PieceType::Queen)
                 }
             };
             Some(Move::new(self.source_tile, to_tile, promotion, en_passant_tile))
@@ -213,7 +213,7 @@ impl Iterator for BitBoardMoves {
                 }
                 if self.promotable_tiles.get_bit_at_tile(to_tile) { // Handles promotion to Knight
                     self.current_promotion_tile = Some(to_tile);
-                    promotion = Some(Piece::Knight);
+                    promotion = Some(PieceType::Knight);
                 }
             }
             Some(Move::new(self.source_tile, to_tile, promotion, en_passant_tile))
@@ -424,23 +424,23 @@ mod tests {
         );
         assert_eq!(
             bitboard_moves.next().unwrap(),
-            Move::new(source_tile, TileIndex::new(56), Some(Piece::Knight), None)
+            Move::new(source_tile, TileIndex::new(56), Some(PieceType::Knight), None)
         );
         assert_eq!(
             bitboard_moves.next().unwrap(),
-            Move::new(source_tile, TileIndex::new(56), Some(Piece::Bishop), None)
+            Move::new(source_tile, TileIndex::new(56), Some(PieceType::Bishop), None)
         );
         assert_eq!(
             bitboard_moves.next().unwrap(),
-            Move::new(source_tile, TileIndex::new(56), Some(Piece::Rook), None)
+            Move::new(source_tile, TileIndex::new(56), Some(PieceType::Rook), None)
         );
         assert_eq!(
             bitboard_moves.next().unwrap(),
-            Move::new(source_tile, TileIndex::new(56), Some(Piece::Queen), None)
+            Move::new(source_tile, TileIndex::new(56), Some(PieceType::Queen), None)
         );
         assert_eq!(
             bitboard_moves.next().unwrap(),
-            Move::new(source_tile, TileIndex::new(57), Some(Piece::Knight), None)
+            Move::new(source_tile, TileIndex::new(57), Some(PieceType::Knight), None)
         );
     }
 }

@@ -4,7 +4,7 @@ use crate::bit_board::{BitBoard, BitBoardTiles};
 use crate::graph_boards::graph_board::{TileIndex};
 use crate::chess_move::{EnPassantData, Move};
 use crate::move_generator::MoveTables;
-use crate::piece_set::{Color, ColoredPiece, Piece, PieceSet};
+use crate::piece_set::{Color, Piece, PieceType, PieceSet};
 
 #[derive(Debug, PartialEq)]
 pub enum GameOver {
@@ -24,7 +24,7 @@ impl GameOver {
 #[derive(Debug)]
 pub struct PositionRecord {
     pub en_passant_data: Option<EnPassantData>,
-    pub captured_piece: Option<Piece>,
+    pub captured_piece: Option<PieceType>,
     pub previous_record: Option<Arc<PositionRecord>>,
     pub fifty_move_counter: u32,
     // previous_zobrist_key??
@@ -65,11 +65,11 @@ pub struct Position {
 }
 
 impl Position {
-    pub fn get_occupant(&self, tile_index: TileIndex) -> Option<ColoredPiece> {
+    pub fn get_occupant(&self, tile_index: TileIndex) -> Option<Piece> {
         if let Some(piece) = self.pieces[0].get_piece_at(tile_index) {
-            return Some(ColoredPiece { piece, color: Color::White })
+            return Some(Piece { piece, color: Color::White })
         } else if let Some(piece) = self.pieces[1].get_piece_at(tile_index) {
-            return Some(ColoredPiece { piece, color: Color::Black })
+            return Some(Piece { piece, color: Color::Black })
         } else {
             return None
         }
@@ -136,12 +136,12 @@ impl Position {
             // TODO: This can be rewritten with new methods
             if let Some(piece) = self.pieces[0].get_piece_at(tile_index) {
                 let symbol = match piece {
-                    Piece::King => 'K',
-                    Piece::Queen => 'Q',
-                    Piece::Rook => 'R',
-                    Piece::Bishop => 'B',
-                    Piece::Knight => 'N',
-                    Piece::Pawn => 'P',
+                    PieceType::King => 'K',
+                    PieceType::Queen => 'Q',
+                    PieceType::Rook => 'R',
+                    PieceType::Bishop => 'B',
+                    PieceType::Knight => 'N',
+                    PieceType::Pawn => 'P',
                 };
                 if empty_tile_counter > 0 {
                     output.push_str(&empty_tile_counter.to_string());
@@ -150,12 +150,12 @@ impl Position {
                 output.push(symbol);
             } else if let Some(piece) = self.pieces[1].get_piece_at(tile_index) {
                 let symbol = match piece {
-                    Piece::King => 'k',
-                    Piece::Queen => 'q',
-                    Piece::Rook => 'r',
-                    Piece::Bishop => 'b',
-                    Piece::Knight => 'n',
-                    Piece::Pawn => 'p',
+                    PieceType::King => 'k',
+                    PieceType::Queen => 'q',
+                    PieceType::Rook => 'r',
+                    PieceType::Bishop => 'b',
+                    PieceType::Knight => 'n',
+                    PieceType::Pawn => 'p',
                 };
                 if empty_tile_counter > 0 {
                     output.push_str(&empty_tile_counter.to_string());
@@ -284,7 +284,7 @@ impl Position {
         
         let movement_options = match selected_piece {
             None => return false, // The moving player must have a piece at from_tile
-            Some(Piece::Pawn) => move_tables.query_pawn(
+            Some(PieceType::Pawn) => move_tables.query_pawn(
                 &self.active_player,
                 chess_move.from_tile,
                 &self.pieces[opponent_idx].occupied,
@@ -305,7 +305,7 @@ impl Position {
             _ => move_tables.black_pawn_tables.promotion_board
         };
 
-        if promotion_board.get_bit_at_tile(chess_move.to_tile) && self.pieces[player_idx].get_piece_at(chess_move.from_tile) == Some(Piece::Pawn) && chess_move.promotion == None {
+        if promotion_board.get_bit_at_tile(chess_move.to_tile) && self.pieces[player_idx].get_piece_at(chess_move.from_tile) == Some(PieceType::Pawn) && chess_move.promotion == None {
             return false // Promotion must be provided if a pawn is moving to a promotion tile
         }
         return true
@@ -338,11 +338,11 @@ impl Position {
             self.pieces[player_idx].promote_piece(to_tile, promotion_target)
         }
 
-        if moving_piece == Piece::Pawn {
+        if moving_piece == PieceType::Pawn {
             fifty_move_counter = 0;
             if let Some(en_passant_data) = &self.record.en_passant_data {
                 if to_tile == en_passant_data.passed_tile {
-                    target_piece = Some(Piece::Pawn);
+                    target_piece = Some(PieceType::Pawn);
                     self.pieces[opponent_idx].capture_piece(en_passant_data.occupied_tile)
                 }
             }
@@ -383,11 +383,11 @@ impl Position {
         } else {
             self.record = PositionRecord::default().into();
         }
-        if captured_piece == Some(Piece::Pawn) {
+        if captured_piece == Some(PieceType::Pawn) {
             if let Some(en_passant_data) = &self.record.en_passant_data {
                 if to_tile == en_passant_data.passed_tile {
                     self.pieces[opponent_idx].capture_piece(to_tile);
-                    self.pieces[opponent_idx].return_piece(en_passant_data.occupied_tile, &Piece::Pawn)
+                    self.pieces[opponent_idx].return_piece(en_passant_data.occupied_tile, &PieceType::Pawn)
                 }
             }
         }
@@ -551,7 +551,7 @@ mod tests {
 
         let from_tile = TileIndex::new(8);
         let to_tile = TileIndex::new(16);
-        let demotion_move = Move::new(from_tile, to_tile, Some(Piece::Knight), None);
+        let demotion_move = Move::new(from_tile, to_tile, Some(PieceType::Knight), None);
         position.make_legal_move(&demotion_move);
         position.unmake_legal_move(&demotion_move);
         assert_eq!(
@@ -569,7 +569,7 @@ mod tests {
         position.make_legal_move(&capture_move);
         assert_eq!(
             position.record.captured_piece,
-            Some(Piece::Rook)
+            Some(PieceType::Rook)
         );
         position.unmake_legal_move(&capture_move);
         assert_eq!(

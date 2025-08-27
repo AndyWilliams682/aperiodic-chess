@@ -1,7 +1,7 @@
 use std::collections::{HashSet, HashMap};
 
 use crate::graph_boards::graph_board::{GraphBoard, UniformTileOrientation, TileIndex, Tile};
-use crate::piece_set::{Color, Piece};
+use crate::piece_set::{Color, PieceType};
 use crate::bit_board::{BitBoard, BitBoardTiles};
 use crate::position::Position;
 use crate::move_generator::MoveTables;
@@ -125,7 +125,7 @@ impl TraditionalBoardGraph {
                 _ => white_pieces.occupied
             };
             move_options = match selected_piece {
-                Some(Piece::Pawn) => BitBoard::empty(), // TODO: Add pawn movement stuff here, depends on color
+                Some(PieceType::Pawn) => BitBoard::empty(), // TODO: Add pawn movement stuff here, depends on color
                 None => BitBoard::empty(),
                 _ => { // All non-Pawn PieceTypes
                     let display_idx = 631 - 84 * (tile.index() / 8) + 5 * (tile.index() % 8);

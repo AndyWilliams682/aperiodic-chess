@@ -1,6 +1,6 @@
 use crate::movement_tables::{JumpTable, PawnTables, SlideTables};
 use crate::bit_board::{BitBoard, BitBoardTiles};
-use crate::piece_set::{Color, PieceSet, Piece};
+use crate::piece_set::{Color, PieceSet, PieceType};
 use crate::move_generator::MoveTables;
 use crate::position::Position;
 
@@ -28,12 +28,12 @@ impl MobilityTable {
         Self(output)
     }
 
-    fn from_slides(table: &SlideTables, piece_type: Piece) -> Self {
-        let initial_direction = match piece_type == Piece::Bishop {
+    fn from_slides(table: &SlideTables, piece_type: PieceType) -> Self {
+        let initial_direction = match piece_type == PieceType::Bishop {
             true => 1,
             false => 0
         };
-        let direction_step = match piece_type == Piece::Queen {
+        let direction_step = match piece_type == PieceType::Queen {
             true => 1,
             false => 2
         };
@@ -67,9 +67,9 @@ impl Evaluator {
     pub fn new(move_tables: &MoveTables) -> Self {
         Self {
             king: MobilityTable::from_jumps(&move_tables.king_table),
-            queen: MobilityTable::from_slides(&move_tables.slide_tables, Piece::Queen),
-            rook: MobilityTable::from_slides(&move_tables.slide_tables, Piece::Rook),
-            bishop: MobilityTable::from_slides(&move_tables.slide_tables, Piece::Bishop),
+            queen: MobilityTable::from_slides(&move_tables.slide_tables, PieceType::Queen),
+            rook: MobilityTable::from_slides(&move_tables.slide_tables, PieceType::Rook),
+            bishop: MobilityTable::from_slides(&move_tables.slide_tables, PieceType::Bishop),
             knight: MobilityTable::from_jumps(&move_tables.knight_table),
             white_pawn: MobilityTable::from_pawn(&move_tables.white_pawn_tables),
             black_pawn: MobilityTable::from_pawn(&move_tables.black_pawn_tables)
@@ -87,14 +87,14 @@ impl Evaluator {
         material_score
     }
    
-    fn piece_positional_score(&self, piece_board: BitBoard, piece_type: Piece, color: &Color) -> isize {
+    fn piece_positional_score(&self, piece_board: BitBoard, piece_type: PieceType, color: &Color) -> isize {
         let mobility_table = match piece_type {
-            Piece::King => &self.king,
-            Piece::Queen => &self.queen,
-            Piece::Rook => &self.rook,
-            Piece::Bishop => &self.bishop,
-            Piece::Knight => &self.knight,
-            Piece::Pawn => match color {
+            PieceType::King => &self.king,
+            PieceType::Queen => &self.queen,
+            PieceType::Rook => &self.rook,
+            PieceType::Bishop => &self.bishop,
+            PieceType::Knight => &self.knight,
+            PieceType::Pawn => match color {
                 Color::White => &self.white_pawn,
                 Color::Black => &self.black_pawn
             },
@@ -112,12 +112,12 @@ impl Evaluator {
             true => 1,
             false => -1
         };
-        score += self.piece_positional_score(piece_set.king, Piece::King, color) * king_multi;
-        score += self.piece_positional_score(piece_set.queen, Piece::Queen, color);
-        score += self.piece_positional_score(piece_set.rook, Piece::Rook, color);
-        score += self.piece_positional_score(piece_set.bishop, Piece::Bishop, color);
-        score += self.piece_positional_score(piece_set.knight, Piece::Knight, color);
-        score += self.piece_positional_score(piece_set.pawn, Piece::Pawn, color);
+        score += self.piece_positional_score(piece_set.king, PieceType::King, color) * king_multi;
+        score += self.piece_positional_score(piece_set.queen, PieceType::Queen, color);
+        score += self.piece_positional_score(piece_set.rook, PieceType::Rook, color);
+        score += self.piece_positional_score(piece_set.bishop, PieceType::Bishop, color);
+        score += self.piece_positional_score(piece_set.knight, PieceType::Knight, color);
+        score += self.piece_positional_score(piece_set.pawn, PieceType::Pawn, color);
         score
     }
    

@@ -1,6 +1,6 @@
 use std::io;
 
-use crate::{bit_board::{BitBoard, BitBoardTiles}, chess_move::Move, engine::Engine, graph_boards::{graph_board::{Tile, TileIndex}, traditional_board::TraditionalBoardGraph}, piece_set::{Color, Piece}, position::{GameOver, Position}};
+use crate::{bit_board::{BitBoard, BitBoardTiles}, chess_move::Move, engine::Engine, graph_boards::{graph_board::{Tile, TileIndex}, traditional_board::TraditionalBoardGraph}, piece_set::{Color, PieceType}, position::{GameOver, Position}};
 
 
 
@@ -72,7 +72,7 @@ impl Game {
         };
 
         let mut pseudo_moves =  match selected_piece {
-            Some(Piece::Pawn) => {
+            Some(PieceType::Pawn) => {
                 self.engine.move_tables.query_pawn(&selected_color, *tile_index, &enemy_occupied, occupied, &self.current_position.record.en_passant_data)
             },
             None => BitBoard::empty(),
@@ -86,9 +86,9 @@ impl Game {
         // If pawn, if destination_tile == a promotion tile, set promotion = Queen
 
         for destination_tile in BitBoardTiles::new(pseudo_moves) {
-            let mut promotion: Option<Piece> = None;
-            if pawn_tables.promotion_board.get_bit_at_tile(destination_tile) && selected_piece == Some(Piece::Pawn) {
-                promotion = Some(Piece::Queen);
+            let mut promotion: Option<PieceType> = None;
+            if pawn_tables.promotion_board.get_bit_at_tile(destination_tile) && selected_piece == Some(PieceType::Pawn) {
+                promotion = Some(PieceType::Queen);
             }
             // TODO: Redesign and use BitBoardMoves
             let chess_move = Move::new(*tile_index, destination_tile, promotion, None);
@@ -117,7 +117,7 @@ impl Game {
         let active_pieces = &self.current_position.pieces[self.current_position.active_player.as_idx()];
 
         let en_passant_data = match active_pieces.get_piece_at(source_tile) {
-            Some(Piece::Pawn) => {
+            Some(PieceType::Pawn) => {
                 self.engine.move_tables.white_pawn_tables.en_passant_table[source_tile.index()].clone().or(
                     self.engine.move_tables.black_pawn_tables.en_passant_table[source_tile.index()].clone()
                 )
@@ -138,13 +138,13 @@ impl Game {
         };
 
         let mut promotion = None;
-        if active_pieces.get_piece_at(source_tile) == Some(Piece::Pawn) {
+        if active_pieces.get_piece_at(source_tile) == Some(PieceType::Pawn) {
             let promotion_board = match self.current_position.active_player.as_idx() {
                 0 => self.engine.move_tables.white_pawn_tables.promotion_board,
                 _ => self.engine.move_tables.black_pawn_tables.promotion_board
             };
             if promotion_board.get_bit_at_tile(destination_tile) {
-                promotion = Some(Piece::Queen)
+                promotion = Some(PieceType::Queen)
             }
         }
         
@@ -203,7 +203,7 @@ impl Game {
         let selected_idx = selected_tile.unwrap().index();
 
         let en_passant_data = match self.current_position.pieces[self.current_position.active_player.as_idx()].get_piece_at(selected_tile.unwrap()) {
-            Some(Piece::Pawn) => {
+            Some(PieceType::Pawn) => {
                 self.engine.move_tables.white_pawn_tables.en_passant_table[selected_idx].clone().or(
                     self.engine.move_tables.black_pawn_tables.en_passant_table[selected_idx].clone()
                 )
@@ -257,12 +257,12 @@ pub enum PieceParseError {
     InvalidPieceChar,
 }
 
-fn parse_promotion(arg: &str) -> Result<Piece, PieceParseError> {
+fn parse_promotion(arg: &str) -> Result<PieceType, PieceParseError> {
     match arg.to_lowercase().chars().nth(0) {
-        Some('q') => Ok(Piece::Queen),
-        Some('r') => Ok(Piece::Rook),
-        Some('b') => Ok(Piece::Bishop),
-        Some('n') => Ok(Piece::Knight),
+        Some('q') => Ok(PieceType::Queen),
+        Some('r') => Ok(PieceType::Rook),
+        Some('b') => Ok(PieceType::Bishop),
+        Some('n') => Ok(PieceType::Knight),
         _ => Err(PieceParseError::InvalidPieceChar) // Pawns and Kings are not valid promotion targets
     }
 }
