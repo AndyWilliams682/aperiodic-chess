@@ -4,12 +4,21 @@ use crate::bit_board::{BitBoard, BitBoardTiles};
 use crate::graph_boards::graph_board::{TileIndex};
 use crate::chess_move::{EnPassantData, Move};
 use crate::move_generator::MoveTables;
-use crate::piece_set::{Color, Piece, PieceSet};
+use crate::piece_set::{Color, ColoredPiece, Piece, PieceSet};
 
 #[derive(Debug, PartialEq)]
 pub enum GameOver {
     Checkmate,
     Draw
+}
+
+impl GameOver {
+    pub fn display(&self, winning_player: Color) -> String {
+        match self {
+            GameOver::Checkmate => format!("{} wins!", winning_player),
+            GameOver::Draw => format!("Draw!")
+        }
+    }
 }
 
 #[derive(Debug)]
@@ -56,6 +65,16 @@ pub struct Position {
 }
 
 impl Position {
+    pub fn get_occupant(&self, tile_index: TileIndex) -> Option<ColoredPiece> {
+        if let Some(piece) = self.pieces[0].get_piece_at(tile_index) {
+            return Some(ColoredPiece { piece, color: Color::White })
+        } else if let Some(piece) = self.pieces[1].get_piece_at(tile_index) {
+            return Some(ColoredPiece { piece, color: Color::Black })
+        } else {
+            return None
+        }
+    }
+
     pub fn from_string(fen: String) -> Self {
         // fen format: <piece_info> <active_player> <passed_tile_index,occupied_tile_index>
         let components: Vec<&str> = fen.split(" ").collect();
@@ -114,6 +133,7 @@ impl Position {
         let mut empty_tile_counter = 0;
         for tile in 0..128 { // TODO: Un-hardcode this value
             let tile_index = TileIndex::new(tile);
+            // TODO: This can be rewritten with new methods
             if let Some(piece) = self.pieces[0].get_piece_at(tile_index) {
                 let symbol = match piece {
                     Piece::King => 'K',
@@ -223,15 +243,15 @@ impl Position {
         false // Don't need to check for King-to-King threats
     }
 
-    fn is_checkmate(&mut self, move_tables: &MoveTables) -> bool {
+    pub fn is_checkmate(&mut self, move_tables: &MoveTables) -> bool {
         self.is_in_check(move_tables, &self.active_player) && !move_tables.has_legal_moves( self)
     }
 
-    fn is_stalemate(&mut self, move_tables: &MoveTables) -> bool {
+    pub fn is_stalemate(&mut self, move_tables: &MoveTables) -> bool {
         !self.is_in_check(move_tables, &self.active_player) && !move_tables.has_legal_moves(self)
     }
 
-    fn fifty_move_draw(&self) -> bool {
+    pub fn fifty_move_draw(&self) -> bool {
         self.record.fifty_move_counter >= 50
     }
 
