@@ -1,6 +1,4 @@
-use std::io;
-
-use crate::{bit_board::{BitBoard, BitBoardTiles}, chess_move::Move, engine::Engine, graph_boards::{graph_board::{Tile, TileIndex}, traditional_board::TraditionalBoardGraph}, piece_set::{Color, PieceType}, position::{GameOver, Position}};
+use crate::{bit_board::{BitBoard, BitBoardTiles}, chess_move::Move, engine::Engine, graph_boards::{graph_board::TileIndex, traditional_board::TraditionalBoardGraph}, piece_set::{Color, PieceType}, position::{GameOver, Position}};
 
 
 
@@ -19,36 +17,6 @@ impl Game {
             return Some(GameOver::Draw)
         } else {
             None
-        }
-    }
-
-    pub fn play_game(&mut self) {
-        let mut turn_count = 0;
-        while self.current_position.is_over(&self.engine.move_tables) == None {
-            let active_player = self.current_position.active_player.as_idx();
-            clearscreen::clear().expect("failed to clear screen");
-            println!("{}", self.board.display(&self.current_position, None, &self.engine.move_tables, true));
-            println!("Turn {}, {} to move", turn_count, self.current_position.active_player);
-            if self.current_position.is_in_check(&self.engine.move_tables, &self.current_position.active_player) {
-                println!("You are in check!")
-            }
-
-            let selected_move = match self.are_players_cpu[active_player] {
-                true => self.engine.search_for_move(&mut self.current_position),
-                false => self.get_human_move()
-            };
-
-            match self.current_position.is_playable_move(&selected_move, &self.engine.move_tables) {
-                true => {
-                    self.current_position.make_legal_move(&selected_move);
-                    turn_count += 1
-                },
-                false => continue
-            }
-        }
-        match self.current_position.is_over(&self.engine.move_tables).unwrap() {
-            GameOver::Draw => println!("Game ended in a draw!"),
-            GameOver::Checkmate => println!("{} wins by checkmate!", self.current_position.active_player.opponent())
         }
     }
 
@@ -100,19 +68,19 @@ impl Game {
         return pseudo_moves
     }
 
-    pub fn attempt_move_input(&mut self, source_tile: TileIndex, destination_tile: TileIndex) -> Result<(), TileParseError> {
+    pub fn attempt_move_input(&mut self, source_tile: TileIndex, destination_tile: TileIndex) -> Result<(), ChessError> {
         let chess_move = self.parse_move_input(source_tile, destination_tile)?;
         match self.current_position.is_playable_move(&chess_move, &self.engine.move_tables) {
             true => {
                 self.current_position.make_legal_move(&chess_move);
                 return Ok(())
             },
-            false => return Err(TileParseError::InvalidMoveError)
+            false => return Err(ChessError::InvalidMoveError)
         }
     }
 
     // TODO: Rename equivalent things to source_tile and destination_tile
-    fn parse_move_input(&self, source_tile: TileIndex, destination_tile: TileIndex) -> Result<Move, TileParseError> {
+    fn parse_move_input(&self, source_tile: TileIndex, destination_tile: TileIndex) -> Result<Move, ChessError> {
         // Assumes destination is valid due to limiting the selectable tiles
         let active_pieces = &self.current_position.pieces[self.current_position.active_player.as_idx()];
 
@@ -122,7 +90,7 @@ impl Game {
                     self.engine.move_tables.black_pawn_tables.en_passant_table[source_tile.index()].clone()
                 )
             },
-            None => return Err(TileParseError::InvalidMoveError), // Source could be enemy pieces
+            None => return Err(ChessError::InvalidMoveError), // Source could be enemy pieces
             _ => None
         };
 
@@ -155,114 +123,9 @@ impl Game {
             en_passant_data
         ))
     }
-
-    fn get_human_move(&mut self) -> Move {
-        let mut selected_tile = None;
-        let mut to_tile = None;
-        let mut promotion = None;
-        while to_tile == None {
-            clearscreen::clear().expect("failed to clear screen");
-            println!("{}", self.board.display(&self.current_position, selected_tile, &self.engine.move_tables, true));
-            println!("{} to move", self.current_position.active_player);
-            if self.current_position.is_in_check(&self.engine.move_tables, &self.current_position.active_player) {
-                println!("You ({}) are in check!", self.current_position.active_player)
-            }
-
-            let mut player_input = String::new();
-            io::stdin().read_line(&mut player_input)
-                .expect("Failed to read line");
-
-            let player_input: Vec<&str> = player_input.trim().split(", ").collect();
-
-            if player_input.len() == 0 {
-                continue
-            }
-            // Arg1 = tile index for selected piece, or from_tile
-            if player_input.len() >= 1 {
-                match self.parse_tile(player_input[0]) {
-                    Ok(t) => selected_tile = Some(t),
-                    Err(_) => continue
-                }
-            }
-            // Arg2 = tile index for to_tile
-            if player_input.len() >= 2 {
-                match self.parse_tile(player_input[1]) {
-                    Ok(t) => to_tile = Some(t),
-                    Err(_) => continue
-                }
-            }
-            // Arg3 = Optional promotion value
-            if player_input.len() >= 3 {
-                match parse_promotion(player_input[2]) {
-                    Ok(p) => promotion = Some(p),
-                    Err(_) => continue
-                }
-            }
-        }
-
-        let selected_idx = selected_tile.unwrap().index();
-
-        let en_passant_data = match self.current_position.pieces[self.current_position.active_player.as_idx()].get_piece_at(selected_tile.unwrap()) {
-            Some(PieceType::Pawn) => {
-                self.engine.move_tables.white_pawn_tables.en_passant_table[selected_idx].clone().or(
-                    self.engine.move_tables.black_pawn_tables.en_passant_table[selected_idx].clone()
-                )
-            },
-            _ => None
-        };
-
-        let en_passant_data = match en_passant_data {
-            Some(epd) => {
-                if epd.occupied_tile != to_tile.unwrap() {
-                    None
-                } else {
-                    Some(epd)
-                }
-            },
-            None => None
-        };
-
-        Move::from_input(
-            selected_tile.unwrap(),
-            to_tile.unwrap(),
-            promotion,
-            en_passant_data
-        )
-    }
-
-    fn parse_tile(&self, arg: &str) -> Result<TileIndex, TileParseError> {
-        let num = arg.parse();
-        match num {
-            Ok(n) => {
-                if n > self.board.0.node_count() {
-                    Err(TileParseError::TileOutOfRangeError)
-                } else {
-                    Ok(TileIndex::new(n))
-                }
-            },
-            Err(_) => Err(TileParseError::ParseIntError)
-        }
-    }
 }
 
 #[derive(Debug, Clone, PartialEq)]
-pub enum TileParseError {
-    ParseIntError,
-    TileOutOfRangeError,
+pub enum ChessError {
     InvalidMoveError
-}
-
-#[derive(Debug, Clone, PartialEq)]
-pub enum PieceParseError {
-    InvalidPieceChar,
-}
-
-fn parse_promotion(arg: &str) -> Result<PieceType, PieceParseError> {
-    match arg.to_lowercase().chars().nth(0) {
-        Some('q') => Ok(PieceType::Queen),
-        Some('r') => Ok(PieceType::Rook),
-        Some('b') => Ok(PieceType::Bishop),
-        Some('n') => Ok(PieceType::Knight),
-        _ => Err(PieceParseError::InvalidPieceChar) // Pawns and Kings are not valid promotion targets
-    }
 }
