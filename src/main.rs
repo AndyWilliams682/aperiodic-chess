@@ -221,10 +221,8 @@ fn spawn_move_indicators(
     indicator_query: Query<Entity, With<MoveIndicator>>,
 ) {
     // If a tile is selected, spawn indicators for its valid moves
-    // TODO: When move indicators spawn, it breaks if piece at promotion tile
     if let Some(tile_index) = selected_tile.tile_index {
 
-        // TODO: Make this not loop?
         // Despawn all existing indicators first
         for indicator in indicator_query.iter() {
             commands.entity(indicator).despawn_recursive();
@@ -271,7 +269,6 @@ fn spawn_move_indicators(
             }
         }
     } else {
-        // TODO: Make this not loop?
         // Despawn all existing indicators first
         // TODO: Two of this code
         for indicator in indicator_query.iter() {

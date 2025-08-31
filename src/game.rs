@@ -75,7 +75,6 @@ impl Game {
         }
     }
 
-    // TODO: Rename equivalent things to source_tile and destination_tile
     fn parse_move_input(&self, source_tile: &TileIndex, destination_tile: &TileIndex) -> Result<Move, ChessError> {
         // Assumes destination is valid due to limiting the selectable tiles
         let active_pieces = &self.current_position.pieces[self.current_position.active_player.as_idx()];

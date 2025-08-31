@@ -200,7 +200,7 @@ impl Position {
        
         let enemy_occupants = self.pieces[opponent_idx].occupied;
         let all_occupants = enemy_occupants | self.pieces[color.as_idx()].occupied;
-       
+
         // Orthogonals
         // TODO: Possibly consolidate with Diagonals into a single for loop
         for rev_direction_table in move_tables.reverse_slide_tables.iter().step_by(2) {
