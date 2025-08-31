@@ -47,7 +47,7 @@ impl HexagonalBoardGraph {
             56..=60 | 65 | 73 | 80 | 86 => Some(Color::Black),
             _ => None
         };
-        return Tile { orientation: UniformTileOrientation::new(0), pawn_start }
+        return Tile { id: source, occupant: None, orientation: UniformTileOrientation::new(0), pawn_start }
     }
    
     fn get_valid_directions(source: TileIndex) -> Vec<HexagonalDirection> {

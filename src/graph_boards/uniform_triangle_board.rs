@@ -52,7 +52,7 @@ impl UniformTriangleBoardGraph {
             6 | 16 | 25 | 33 => Some(Color::Black),
             _ => None
         };
-        return Tile { orientation: UniformTileOrientation::new(0), pawn_start }
+        return Tile { id: source, occupant: None, orientation: UniformTileOrientation::new(0), pawn_start }
     }
    
     fn get_valid_directions(source: TileIndex) -> Vec<TriangularDirection> {

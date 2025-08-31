@@ -36,11 +36,11 @@ impl TraditionalBoardGraph {
 
     fn new_tile(source: TileIndex) -> Tile<1> {
         if source.index() / 8 == 1 {
-            return Tile { orientation: UniformTileOrientation::new(0), pawn_start: Some(Color::White) }
+            return Tile { id: source, occupant: None, orientation: UniformTileOrientation::new(0), pawn_start: Some(Color::White) }
         } else if source.index() / 8 == 6 {
-            return Tile { orientation: UniformTileOrientation::new(0), pawn_start: Some(Color::Black) }
+            return Tile { id: source, occupant: None, orientation: UniformTileOrientation::new(0), pawn_start: Some(Color::Black) }
         } else {
-            return Tile { orientation: UniformTileOrientation::new(0), pawn_start: None }
+            return Tile { id: source, occupant: None, orientation: UniformTileOrientation::new(0), pawn_start: None }
         }
     }
    

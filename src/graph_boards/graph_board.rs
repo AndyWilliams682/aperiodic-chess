@@ -1,3 +1,4 @@
+use bevy::ecs::component::Component;
 use petgraph::graph::{Graph, NodeIndex};
 use petgraph::visit::EdgeRef;
 use std::collections::{HashSet, HashMap};
@@ -6,14 +7,16 @@ use std::ops::{Deref, DerefMut};
 use crate::bit_board::{BitBoard, CarryRippler};
 use crate::limited_int::LimitedInt;
 use crate::move_generator::MoveTables;
-use crate::piece_set::Color;
+use crate::piece_set::{Color, Piece};
 use crate::movement_tables::{JumpTable, DirectionalSlideTable, SlideTables, PawnTables};
 
 
 pub type TileIndex = NodeIndex;
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, Component)]
 pub struct Tile<const N: u8> {
+    pub id: TileIndex,
+    pub occupant: Option<Piece>,
     pub orientation: LimitedInt<N>,
     pub pawn_start: Option<Color>
 }
