@@ -49,10 +49,6 @@ impl Game {
             }
         };
 
-        // TODO: Playable move is breaking on pawn promotion
-        // Need to make the move a promotion if applicable
-        // If pawn, if destination_tile == a promotion tile, set promotion = Queen
-
         for destination_tile in BitBoardTiles::new(pseudo_moves) {
             let mut promotion: Option<PieceType> = None;
             if pawn_tables.promotion_board.get_bit_at_tile(&destination_tile) && selected_piece == Some(PieceType::Pawn) {

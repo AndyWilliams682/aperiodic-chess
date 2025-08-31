@@ -42,8 +42,8 @@ use bevy_mod_picking::prelude::*;
 /// A component that identifies an edge in our graph.
 #[derive(Component, Debug, Clone, Copy)]
 pub struct GraphEdge {
-    pub start_node_id: u32,
-    pub end_node_id: u32,
+    pub start_tile_id: u32,
+    pub end_tile_id: u32,
 }
 
 // A component to mark the visual indicators for possible moves
@@ -53,7 +53,7 @@ struct MoveIndicator;
 /// A resource to hold the global state of our graph.
 #[derive(Resource, Default)]
 struct GraphState {
-    node_count: u32,
+    tile_count: u32,
     edge_count: u32,
 }
 
@@ -69,9 +69,9 @@ struct CurrentTurn(Entity);
 struct GameHasFinished(bool);
 
 
-// A resource to track the currently selected node for move visualization
+// A resource to track the currently selected tile for move visualization
 #[derive(Resource, Default)]
-struct SelectedNode {
+struct SelectedTile {
     entity: Option<Entity>,
     tile_index: Option<TileIndex>,
 }
@@ -93,12 +93,12 @@ fn main() {
             current_position: Position::new_traditional(),
             board: TraditionalBoardGraph::new()
         }))
-        .insert_resource(SelectedNode::default())
+        .insert_resource(SelectedTile::default())
         .insert_resource(GameHasFinished::default())
         .add_systems(Startup, setup)
         .add_systems(Update, (
             handle_egui_ui,
-            handle_node_click,
+            handle_tile_click,
             spawn_move_indicators,
             update_piece_labels,
             update_turn_indicator,
@@ -107,12 +107,12 @@ fn main() {
         .run();
 }
 
-fn setup(mut commands: Commands, mut graph_state: ResMut<GraphState>, node_query: Query<Entity, With<Tile<1>>>, edge_query: Query<Entity, With<GraphEdge>>, chess_game: Res<ChessGame>) {
+fn setup(mut commands: Commands, mut graph_state: ResMut<GraphState>, tile_query: Query<Entity, With<Tile<1>>>, edge_query: Query<Entity, With<GraphEdge>>, chess_game: Res<ChessGame>) {
     // Spawn a camera to view the scene.
     commands.spawn(Camera2dBundle::default());
 
     // Despawn all entities before generating the first graph.
-    despawn_all_graph_entities(&mut commands, node_query, edge_query);
+    despawn_all_graph_entities(&mut commands, tile_query, edge_query);
 
     let player_type = match chess_game.0.are_players_cpu[0] {
         true => "CPU",
@@ -139,13 +139,13 @@ fn setup(mut commands: Commands, mut graph_state: ResMut<GraphState>, node_query
 
 // --- Systems ---
 
-/// Helper function to despawn all nodes and edges.
+/// Helper function to despawn all tiles and edges.
 fn despawn_all_graph_entities(
     commands: &mut Commands,
-    node_query: Query<Entity, With<Tile<1>>>,
+    tile_query: Query<Entity, With<Tile<1>>>,
     edge_query: Query<Entity, With<GraphEdge>>,
 ) {
-    for entity in node_query.iter() {
+    for entity in tile_query.iter() {
         commands.entity(entity).despawn_recursive();
     }
     for entity in edge_query.iter() {
@@ -162,11 +162,11 @@ fn make_cpu_moves(
     }
 }
 
-// A new system to handle node clicks. It takes `EventReader`, `Query`, and `ResMut` as parameters.
-fn handle_node_click(
+// A new system to handle tile clicks. It takes `EventReader`, `Query`, and `ResMut` as parameters.
+fn handle_tile_click(
     mut event_reader: EventReader<Pointer<Click>>,
-    node_query: Query<&Tile<1>>,
-    mut selected_node: ResMut<SelectedNode>,
+    tile_query: Query<&Tile<1>>,
+    mut selected_tile: ResMut<SelectedTile>,
     mut chess_game: ResMut<ChessGame>,
 ) {
     for event in event_reader.read() {
@@ -176,37 +176,37 @@ fn handle_node_click(
             return
         }
 
-        if let Ok(node) = node_query.get(event.target) {
-            if let Some(source_tile) = selected_node.tile_index {
+        if let Ok(tile) = tile_query.get(event.target) {
+            if let Some(source_tile) = selected_tile.tile_index {
                 let moves = chess_game.0.query_tile(&source_tile);
-                if moves.get_bit_at_tile(&node.id) {
-                    selected_node.entity = None;
-                    selected_node.tile_index = None;
+                if moves.get_bit_at_tile(&tile.id) {
+                    selected_tile.entity = None;
+                    selected_tile.tile_index = None;
                     // TODO: Rewrite with a better pattern; clean this trash up
-                    // Should be 1) assume clicked node is selected
-                    // 2) if move is possible, then reset selected_node instead
+                    // Should be 1) assume clicked tile is selected
+                    // 2) if move is possible, then reset selected_tile instead
                     // TODO: Actually handle errors and notify users
-                    match chess_game.0.attempt_move_input(&source_tile, &node.id) {
+                    match chess_game.0.attempt_move_input(&source_tile, &tile.id) {
                         Err(_) => {
                             // TODO: This is where unplayable moves due to legality should be handled
-                            if node.occupant != None { // TODO: Make function to reduce repeat code
-                                selected_node.entity = Some(event.target);
-                                selected_node.tile_index = Some(node.id); 
+                            if tile.occupant != None { // TODO: Make function to reduce repeat code
+                                selected_tile.entity = Some(event.target);
+                                selected_tile.tile_index = Some(tile.id); 
                             } else {
-                                selected_node.entity = None;
-                                selected_node.tile_index = None;
+                                selected_tile.entity = None;
+                                selected_tile.tile_index = None;
                             }
                         },
                         _ => {}
                     }
-                } else if node.occupant != None {
-                    selected_node.entity = Some(event.target);
-                    selected_node.tile_index = Some(node.id);
+                } else if tile.occupant != None {
+                    selected_tile.entity = Some(event.target);
+                    selected_tile.tile_index = Some(tile.id);
                 }
-            } else if node.occupant != None {
-                // Select this node if a piece is present
-                selected_node.entity = Some(event.target);
-                selected_node.tile_index = Some(node.id);
+            } else if tile.occupant != None {
+                // Select this tile if a piece is present
+                selected_tile.entity = Some(event.target);
+                selected_tile.tile_index = Some(tile.id);
             }
         }
     }
@@ -215,14 +215,14 @@ fn handle_node_click(
 // A new system to spawn and despawn visual indicators for possible moves.
 fn spawn_move_indicators(
     mut commands: Commands,
-    selected_node: Res<SelectedNode>,
+    selected_tile: Res<SelectedTile>,
     mut chess_game: ResMut<ChessGame>,
-    node_query: Query<(&Tile<1>, Entity)>,
+    tile_query: Query<(&Tile<1>, Entity)>,
     indicator_query: Query<Entity, With<MoveIndicator>>,
 ) {
-    // If a node is selected, spawn indicators for its valid moves
+    // If a tile is selected, spawn indicators for its valid moves
     // TODO: When move indicators spawn, it breaks if piece at promotion tile
-    if let Some(tile_index) = selected_node.tile_index {
+    if let Some(tile_index) = selected_tile.tile_index {
 
         // TODO: Make this not loop?
         // Despawn all existing indicators first
@@ -232,10 +232,10 @@ fn spawn_move_indicators(
 
         let moves = chess_game.0.query_tile(&tile_index);
 
-        for (node, entity) in node_query.iter() {
-            // TODO: More efficient way to write this that only queries nodes in the moves (removing this check)
-            if moves.get_bit_at_tile(&node.id) {
-                // Spawn a small circle as a child of the destination node
+        for (tile, entity) in tile_query.iter() {
+            // TODO: More efficient way to write this that only queries tiles in the moves (removing this check)
+            if moves.get_bit_at_tile(&tile.id) {
+                // Spawn a small circle as a child of the destination tile
                 let mut bundle = PickableBundle::default(); // Needed to add this to get the right behavior
                 bundle.pickable.should_block_lower = false;
                 commands.entity(entity).with_children(|parent| {
@@ -253,7 +253,7 @@ fn spawn_move_indicators(
                         },
                     ));
                 });
-            } else if node.id == tile_index {
+            } else if tile.id == tile_index {
                 commands.entity(entity).with_children(|parent| {
                     parent.spawn((
                         MoveIndicator,
@@ -280,22 +280,22 @@ fn spawn_move_indicators(
     }
 }
 
-// A new system to update the character labels on the nodes based on the game state.
+// A new system to update the character labels on the tiles based on the game state.
 fn update_piece_labels(
     chess_game: Res<ChessGame>,
-    mut node_query: Query<(&mut Tile<1>, &Children)>,
+    mut tile_query: Query<(&mut Tile<1>, &Children)>,
     mut text_query: Query<&mut Text>,
 ) {
     // This system only runs when the ChessGame resource has been changed.
     if chess_game.is_changed() {
-        for (mut node, children) in node_query.iter_mut() {
-            node.occupant = chess_game.0.current_position.get_occupant(&node.id);
+        for (mut tile, children) in tile_query.iter_mut() {
+            tile.occupant = chess_game.0.current_position.get_occupant(&tile.id);
 
             for &child in children.iter() {
                 if let Ok(mut text) = text_query.get_mut(child) {
                     let mut new_char = ' ';
                     let mut new_color = Color::BLACK;
-                    if let Some(occupant) = node.occupant {
+                    if let Some(occupant) = tile.occupant {
                         new_char = occupant.display();
                         new_color = match occupant.color {
                             piece_set::Color::White => Color::WHITE,
@@ -336,11 +336,11 @@ fn update_turn_indicator(
 
 fn spawn_traditional_graph(commands: &mut Commands, graph_state: &mut ResMut<GraphState>, chess_game_res: Res<ChessGame>) {
     // Get the ChessGame resource to access the position.
-    let num_nodes = chess_game_res.0.board.0.node_count() as u32;
+    let num_tiles = chess_game_res.0.board.0.node_count() as u32;
     let num_edges = chess_game_res.0.board.0.edge_count() as u32;
-    let mut nodes: Vec<(Entity, Tile<1>)> = Vec::with_capacity(num_nodes as usize);
+    let mut tiles: Vec<(Entity, Tile<1>)> = Vec::with_capacity(num_tiles as usize);
 
-    for i in 0..num_nodes {
+    for i in 0..num_tiles {
         let x = ((i % 8) as f32) * ((600 / 7) as f32);
         let y = ((i / 8) as f32) * ((600 / 7) as f32);
         let pos = Vec2::new(x - 300.0, y - 300.0);
@@ -351,16 +351,16 @@ fn spawn_traditional_graph(commands: &mut Commands, graph_state: &mut ResMut<Gra
             occupant_char = occ.display();
         }
 
-        let graph_node_component = Tile { id: TileIndex::new(i as usize), occupant, orientation: LimitedInt::<1>::new(1), pawn_start: None };
+        let graph_tile_component = Tile { id: TileIndex::new(i as usize), occupant, orientation: LimitedInt::<1>::new(1), pawn_start: None };
 
         let color = match (i + (i / 8)) % 2 {
             0 => Color::rgb(0.46, 0.58, 0.33),
             _ => Color::rgb(0.92, 0.92, 0.81)
         };
 
-        // A node is an entity with a sprite and our custom `GraphNode` component.
-        let node_entity = commands.spawn((
-            graph_node_component,
+        // A tile is an entity with a sprite and our custom `GraphTile` component.
+        let tile_entity = commands.spawn((
+            graph_tile_component,
             SpriteBundle {
                 sprite: Sprite {
                     color: color,
@@ -387,10 +387,10 @@ fn spawn_traditional_graph(commands: &mut Commands, graph_state: &mut ResMut<Gra
             });
         })
         .id();
-        nodes.push((node_entity, graph_node_component));
+        tiles.push((tile_entity, graph_tile_component));
     }
 
-    graph_state.node_count = num_nodes;
+    graph_state.tile_count = num_tiles;
     graph_state.edge_count = num_edges;
 }
 
@@ -399,18 +399,18 @@ fn handle_egui_ui(
     mut contexts: EguiContexts,
     mut commands: Commands,
     graph_state: ResMut<GraphState>,
-    node_query: Query<Entity, With<Tile<1>>>,
+    tile_query: Query<Entity, With<Tile<1>>>,
     edge_query: Query<Entity, With<GraphEdge>>,
 ) {
     egui::Window::new("Graph Controls")
         .default_pos(egui::pos2(10.0, 10.0))
         .show(contexts.ctx_mut(), |ui| {
             ui.heading("Graph Information");
-            ui.label(format!("Nodes: {}", graph_state.node_count));
+            ui.label(format!("Tiles: {}", graph_state.tile_count));
             ui.label(format!("Edges: {}", graph_state.edge_count));
             ui.separator();
             if ui.button("Delete Graph").clicked() {
-                despawn_all_graph_entities(&mut commands, node_query, edge_query);
+                despawn_all_graph_entities(&mut commands, tile_query, edge_query);
             }
         });
 }
