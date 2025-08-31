@@ -1,10 +1,7 @@
 use std::collections::HashSet;
 
 use crate::graph_boards::graph_board::{GraphBoard, UniformTileOrientation, TileIndex, Tile};
-use crate::piece_set::{Color, PieceType};
-use crate::bit_board::{BitBoard, BitBoardTiles};
-use crate::position::Position;
-use crate::move_generator::MoveTables;
+use crate::piece_set::Color;
 use crate::limited_int::LimitedInt;
 
 // Convention:
