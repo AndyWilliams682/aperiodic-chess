@@ -31,34 +31,34 @@ impl TraditionalBoardGraph {
         return TraditionalBoardGraph(board_graph)
     }
 
-    fn new_tile(source: TileIndex) -> Tile<1> {
-        if source.index() / 8 == 1 {
-            return Tile { id: source, occupant: None, orientation: UniformTileOrientation::new(0), pawn_start: Some(Color::White) }
-        } else if source.index() / 8 == 6 {
-            return Tile { id: source, occupant: None, orientation: UniformTileOrientation::new(0), pawn_start: Some(Color::Black) }
+    fn new_tile(source_tile: TileIndex) -> Tile<1> {
+        if source_tile.index() / 8 == 1 {
+            return Tile { id: source_tile, occupant: None, orientation: UniformTileOrientation::new(0), pawn_start: Some(Color::White) }
+        } else if source_tile.index() / 8 == 6 {
+            return Tile { id: source_tile, occupant: None, orientation: UniformTileOrientation::new(0), pawn_start: Some(Color::Black) }
         } else {
-            return Tile { id: source, occupant: None, orientation: UniformTileOrientation::new(0), pawn_start: None }
+            return Tile { id: source_tile, occupant: None, orientation: UniformTileOrientation::new(0), pawn_start: None }
         }
     }
    
     // This function is used for making the empty traditional board
-    fn get_valid_directions(source: TileIndex) -> Vec<TraditionalDirection> {
+    fn get_valid_directions(source_tile: TileIndex) -> Vec<TraditionalDirection> {
         let mut result = TraditionalDirection::all_values();
         let mut invalid = HashSet::new();
-        if source.index() % 8 == 0 {
+        if source_tile.index() % 8 == 0 {
             invalid.insert(1);
             invalid.insert(2);
             invalid.insert(3);
-        } else if source.index() % 8 == 7 {
+        } else if source_tile.index() % 8 == 7 {
             invalid.insert(5);
             invalid.insert(6);
             invalid.insert(7);
         }
-        if source.index() <= 7 {
+        if source_tile.index() <= 7 {
             invalid.insert(3);
             invalid.insert(4);
             invalid.insert(5);
-        } else if source.index() >= 56 {
+        } else if source_tile.index() >= 56 {
             invalid.insert(1);
             invalid.insert(0);
             invalid.insert(7);

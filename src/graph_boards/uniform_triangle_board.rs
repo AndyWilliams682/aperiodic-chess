@@ -46,34 +46,34 @@ impl UniformTriangleBoardGraph {
         }
     }
 
-    fn new_tile(source: TileIndex) -> Tile<1> {
-        let pawn_start = match source.index() {
+    fn new_tile(source_tile: TileIndex) -> Tile<1> {
+        let pawn_start = match source_tile.index() {
             3 | 12 | 20 | 27 => Some(Color::White),
             6 | 16 | 25 | 33 => Some(Color::Black),
             _ => None
         };
-        return Tile { id: source, occupant: None, orientation: UniformTileOrientation::new(0), pawn_start }
+        return Tile { id: source_tile, occupant: None, orientation: UniformTileOrientation::new(0), pawn_start }
     }
    
-    fn get_valid_directions(source: TileIndex) -> Vec<TriangularDirection> {
+    fn get_valid_directions(source_tile: TileIndex) -> Vec<TriangularDirection> {
         let mut result = TriangularDirection::all_values();
         let mut invalid = HashSet::new();
        
-        match source.index() { // TODO: Rewrite more elegantly
+        match source_tile.index() { // TODO: Rewrite more elegantly
             0..=9 => {
                 invalid.insert(4);
                 invalid.insert(5);
             },
             _ => {}
         };
-        match source.index() { // TODO: Rewrite more elegantly
+        match source_tile.index() { // TODO: Rewrite more elegantly
             0 | 10 | 19 | 27 | 34 | 40 | 45 | 49 | 52 | 54 => {
                 invalid.insert(2);
                 invalid.insert(3);
             },
             _ => {}
         };
-        match source.index() { // TODO: Rewrite more elegantly
+        match source_tile.index() { // TODO: Rewrite more elegantly
             9 | 18 | 26 | 33 | 39 | 44 | 48 | 51 | 53 | 54 => {
                 invalid.insert(0);
                 invalid.insert(1);
@@ -86,8 +86,8 @@ impl UniformTriangleBoardGraph {
         return result
     }
    
-    fn get_tile_index_shift(source: TileIndex, direction: &TriangularDirection) -> i32 {
-        let row = Self::row_length(source);
+    fn get_tile_index_shift(source_tile: TileIndex, direction: &TriangularDirection) -> i32 {
+        let row = Self::row_length(source_tile);
         return match direction.0 {
             0 => 1,
             1 => row,

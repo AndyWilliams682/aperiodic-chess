@@ -270,21 +270,21 @@ impl Position {
     pub fn is_playable_move(&mut self, chess_move: &Move, move_tables: &MoveTables) -> bool {
         let player_idx = self.active_player.as_idx();
         let opponent_idx = self.active_player.opponent().as_idx();
-        let selected_piece = self.pieces[player_idx].get_piece_at(&chess_move.from_tile);
+        let selected_piece = self.pieces[player_idx].get_piece_at(&chess_move.source_tile);
         
         let movement_options = match selected_piece {
-            None => return false, // The moving player must have a piece at from_tile
+            None => return false, // The moving player must have a piece at source_tile
             Some(PieceType::Pawn) => move_tables.query_pawn(
                 &self.active_player,
-                chess_move.from_tile,
+                chess_move.source_tile,
                 &self.pieces[opponent_idx].occupied,
                 self.get_occupied(),
                 &self.record.en_passant_data
             ),
-            _ => move_tables.query_piece(&selected_piece.unwrap(), chess_move.from_tile, self.get_occupied())
+            _ => move_tables.query_piece(&selected_piece.unwrap(), chess_move.source_tile, self.get_occupied())
         };
 
-        if movement_options.get_bit_at_tile(&chess_move.to_tile) == false {
+        if movement_options.get_bit_at_tile(&chess_move.destination_tile) == false {
             return false // The selected piece must be able to move to to_tile
         }
         if self.is_legal_move(chess_move, move_tables) == false {
@@ -295,7 +295,7 @@ impl Position {
             _ => move_tables.black_pawn_tables.promotion_board
         };
 
-        if promotion_board.get_bit_at_tile(&chess_move.to_tile) && self.pieces[player_idx].get_piece_at(&chess_move.from_tile) == Some(PieceType::Pawn) && chess_move.promotion == None {
+        if promotion_board.get_bit_at_tile(&chess_move.destination_tile) && self.pieces[player_idx].get_piece_at(&chess_move.source_tile) == Some(PieceType::Pawn) && chess_move.promotion == None {
             return false // Promotion must be provided if a pawn is moving to a promotion tile
         }
         return true
@@ -310,28 +310,28 @@ impl Position {
         let player_idx = self.active_player.as_idx();
         let opponent_idx = self.active_player.opponent().as_idx();
 
-        let from_tile = legal_move.from_tile;
-        let to_tile = legal_move.to_tile;
+        let source_tile = legal_move.source_tile;
+        let destination_tile = legal_move.destination_tile;
 
         let mut fifty_move_counter = self.record.fifty_move_counter + 1;
 
-        let moving_piece = self.pieces[player_idx].get_piece_at(&from_tile).unwrap();
-        self.pieces[player_idx].move_piece(from_tile, to_tile);
+        let moving_piece = self.pieces[player_idx].get_piece_at(&source_tile).unwrap();
+        self.pieces[player_idx].move_piece(source_tile, destination_tile);
 
-        let mut target_piece = self.pieces[opponent_idx].get_piece_at(&to_tile);
+        let mut target_piece = self.pieces[opponent_idx].get_piece_at(&destination_tile);
         if let Some(_) = target_piece {
             fifty_move_counter = 0;
-            self.pieces[opponent_idx].capture_piece(to_tile)
+            self.pieces[opponent_idx].capture_piece(destination_tile)
         };
 
         if let Some(promotion_target) =  &legal_move.promotion {
-            self.pieces[player_idx].promote_piece(to_tile, promotion_target)
+            self.pieces[player_idx].promote_piece(destination_tile, promotion_target)
         }
 
         if moving_piece == PieceType::Pawn {
             fifty_move_counter = 0;
             if let Some(en_passant_data) = &self.record.en_passant_data {
-                if to_tile == en_passant_data.passed_tile {
+                if destination_tile == en_passant_data.passed_tile {
                     target_piece = Some(PieceType::Pawn);
                     self.pieces[opponent_idx].capture_piece(en_passant_data.occupied_tile)
                 }
@@ -356,17 +356,17 @@ impl Position {
         let player_idx = self.active_player.as_idx();
         let opponent_idx = self.active_player.opponent().as_idx();
        
-        let from_tile = legal_move.from_tile;
-        let to_tile = legal_move.to_tile;
+        let source_tile = legal_move.source_tile;
+        let destination_tile = legal_move.destination_tile;
        
-        self.pieces[player_idx].move_piece(to_tile, from_tile);
+        self.pieces[player_idx].move_piece(destination_tile, source_tile);
 
         let captured_piece = self.record.captured_piece.to_owned();
         if let Some(ref piece_type) = captured_piece {
-            self.pieces[opponent_idx].return_piece(to_tile, &piece_type)
+            self.pieces[opponent_idx].return_piece(destination_tile, &piece_type)
         }
         if let Some(_t) = &legal_move.promotion {
-            self.pieces[player_idx].demote_piece(from_tile)
+            self.pieces[player_idx].demote_piece(source_tile)
         }
         if let Some(prev_record) = self.record.get_previous_record() {
             self.record = prev_record
@@ -375,8 +375,8 @@ impl Position {
         }
         if captured_piece == Some(PieceType::Pawn) {
             if let Some(en_passant_data) = &self.record.en_passant_data {
-                if to_tile == en_passant_data.passed_tile {
-                    self.pieces[opponent_idx].capture_piece(to_tile);
+                if destination_tile == en_passant_data.passed_tile {
+                    self.pieces[opponent_idx].capture_piece(destination_tile);
                     self.pieces[opponent_idx].return_piece(en_passant_data.occupied_tile, &PieceType::Pawn)
                 }
             }
@@ -427,9 +427,9 @@ mod tests {
     #[test]
     fn test_make_legal_move() {
         let mut position = Position::new_traditional();
-        let from_tile = TileIndex::new(1);
-        let to_tile = TileIndex::new(18);
-        let legal_move = Move::new(from_tile, to_tile, None, None);
+        let source_tile = TileIndex::new(1);
+        let destination_tile = TileIndex::new(18);
+        let legal_move = Move::new(source_tile, destination_tile, None, None);
         position.make_legal_move(&legal_move);
         assert_eq!(
             position.pieces[0].knight,
@@ -440,17 +440,17 @@ mod tests {
     #[test]
     fn test_en_passant_move() {
         let mut position = Position::new_traditional();
-        let to_tile = TileIndex::new(24);
+        let destination_tile = TileIndex::new(24);
         let legal_move = Move::new(
             TileIndex::new(8),
-            to_tile,
+            destination_tile,
             None,
             Some(TileIndex::new(16))
         );
         position.make_legal_move(&legal_move);
         assert_eq!(
             *position.record.en_passant_data.as_ref().unwrap(),
-            EnPassantData::new(TileIndex::new(16), to_tile)
+            EnPassantData::new(TileIndex::new(16), destination_tile)
         )
     }
 
@@ -525,9 +525,9 @@ mod tests {
     fn test_unmake_legal_move() {
         let mut position = Position::from_string("RNBQKBNRPPPPPPP16P16pppppppprnbqkbnr w 23,31".to_string());
         
-        let from_tile = TileIndex::new(1);
-        let to_tile = TileIndex::new(18);
-        let legal_move = Move::new(from_tile, to_tile, None, None);
+        let source_tile = TileIndex::new(1);
+        let destination_tile = TileIndex::new(18);
+        let legal_move = Move::new(source_tile, destination_tile, None, None);
         position.make_legal_move(&legal_move);
         position.unmake_legal_move(&legal_move);
         assert_eq!(
@@ -539,9 +539,9 @@ mod tests {
             Some(EnPassantData { passed_tile: TileIndex::new(23), occupied_tile: TileIndex::new(31) })
         );
 
-        let from_tile = TileIndex::new(8);
-        let to_tile = TileIndex::new(16);
-        let demotion_move = Move::new(from_tile, to_tile, Some(PieceType::Knight), None);
+        let source_tile = TileIndex::new(8);
+        let destination_tile = TileIndex::new(16);
+        let demotion_move = Move::new(source_tile, destination_tile, Some(PieceType::Knight), None);
         position.make_legal_move(&demotion_move);
         position.unmake_legal_move(&demotion_move);
         assert_eq!(
@@ -553,9 +553,9 @@ mod tests {
             BitBoard::from_ints(vec![8, 9, 10, 11, 12, 13, 14, 31])
         );
 
-        let from_tile = TileIndex::new(0);
-        let to_tile = TileIndex::new(56);
-        let capture_move = Move::new(from_tile, to_tile, None, None);
+        let source_tile = TileIndex::new(0);
+        let destination_tile = TileIndex::new(56);
+        let capture_move = Move::new(source_tile, destination_tile, None, None);
         position.make_legal_move(&capture_move);
         assert_eq!(
             position.record.captured_piece,

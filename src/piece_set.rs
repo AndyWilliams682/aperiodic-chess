@@ -167,11 +167,11 @@ impl PieceSet {
         };
     }
 
-    pub fn move_piece(&mut self, from_tile: TileIndex, to_tile: TileIndex) {
-        let piece_type = self.get_piece_at(&from_tile).unwrap();
+    pub fn move_piece(&mut self, source_tile: TileIndex, destination_tile: TileIndex) {
+        let piece_type = self.get_piece_at(&source_tile).unwrap();
         let bitboard = self.get_bitboard_for_piece(&piece_type);
-        bitboard.flip_bit_at_tile_index(from_tile);
-        bitboard.flip_bit_at_tile_index(to_tile);
+        bitboard.flip_bit_at_tile_index(source_tile);
+        bitboard.flip_bit_at_tile_index(destination_tile);
     }
 
     pub fn capture_piece(&mut self, capture_tile: TileIndex) {
@@ -231,9 +231,9 @@ mod tests {
     #[test]
     fn test_move_piece() {
         let piece_set = &mut Position::new_traditional().pieces[0];
-        let from_tile = TileIndex::new(1);
-        let to_tile = TileIndex::new(18);
-        piece_set.move_piece(from_tile, to_tile);
+        let source_tile = TileIndex::new(1);
+        let destination_tile = TileIndex::new(18);
+        piece_set.move_piece(source_tile, destination_tile);
         assert_eq!(
             piece_set.knight,
             BitBoard::from_ints(vec![6, 18])

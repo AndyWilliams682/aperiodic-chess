@@ -192,7 +192,7 @@ impl Iterator for BitBoardMoves {
         let mut en_passant_tile = None;
        
         // Need to iterate through the possible promotions if possible
-        if let Some(to_tile) = self.current_promotion_tile {
+        if let Some(destination_tile) = self.current_promotion_tile {
             self.current_promotion_counter += 1;
             let promotion = match self.current_promotion_counter {
                 1 => Some(PieceType::Bishop), // 0 will already be handled for the Knight
@@ -203,20 +203,20 @@ impl Iterator for BitBoardMoves {
                     Some(PieceType::Queen)
                 }
             };
-            Some(Move::new(self.source_tile, to_tile, promotion, en_passant_tile))
-        } else if let Some(to_tile) = self.remaining_moves.next() {
+            Some(Move::new(self.source_tile, destination_tile, promotion, en_passant_tile))
+        } else if let Some(destination_tile) = self.remaining_moves.next() {
             if self.is_pawn {
                 if let Some(data) = &self.next_ep_data {
-                    if data.occupied_tile == to_tile {
+                    if data.occupied_tile == destination_tile {
                         en_passant_tile = Some(data.passed_tile)
                     }
                 }
-                if self.promotable_tiles.get_bit_at_tile(&to_tile) { // Handles promotion to Knight
-                    self.current_promotion_tile = Some(to_tile);
+                if self.promotable_tiles.get_bit_at_tile(&destination_tile) { // Handles promotion to Knight
+                    self.current_promotion_tile = Some(destination_tile);
                     promotion = Some(PieceType::Knight);
                 }
             }
-            Some(Move::new(self.source_tile, to_tile, promotion, en_passant_tile))
+            Some(Move::new(self.source_tile, destination_tile, promotion, en_passant_tile))
         } else {
             None
         }

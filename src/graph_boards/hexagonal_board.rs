@@ -41,20 +41,20 @@ impl HexagonalBoardGraph {
         }
     }
 
-    fn new_tile(source: TileIndex) -> Tile<1> {
-        let pawn_start = match source.index() {
+    fn new_tile(source_tile: TileIndex) -> Tile<1> {
+        let pawn_start = match source_tile.index() {
             4 | 10 | 17 | 25 | 30..=34 => Some(Color::White),
             56..=60 | 65 | 73 | 80 | 86 => Some(Color::Black),
             _ => None
         };
-        return Tile { id: source, occupant: None, orientation: UniformTileOrientation::new(0), pawn_start }
+        return Tile { id: source_tile, occupant: None, orientation: UniformTileOrientation::new(0), pawn_start }
     }
    
-    fn get_valid_directions(source: TileIndex) -> Vec<HexagonalDirection> {
+    fn get_valid_directions(source_tile: TileIndex) -> Vec<HexagonalDirection> {
         let mut result = HexagonalDirection::all_values();
         let mut invalid = HashSet::new();
        
-        match source.index() {
+        match source_tile.index() {
             0..=5 => {
                 invalid.insert(5);
                 invalid.insert(6);
@@ -88,7 +88,7 @@ impl HexagonalBoardGraph {
             _ => {}
         };
        
-        match source.index() {
+        match source_tile.index() {
             5 | 12 | 20 | 29 | 39 | 50 => {
                 invalid.insert(7);
                 invalid.insert(8);
@@ -128,51 +128,51 @@ impl HexagonalBoardGraph {
         return result
     }
    
-    fn get_tile_index_shift(source: TileIndex, direction: &HexagonalDirection) -> i32 {
-        let row = Self::row_length(source);
+    fn get_tile_index_shift(source_tile: TileIndex, direction: &HexagonalDirection) -> i32 {
+        let row = Self::row_length(source_tile);
         return match direction.0 {
             0 => {
-                if source.index() <= 40 { row + 1 }
+                if source_tile.index() <= 40 { row + 1 }
                 else { row }
             },
             1 => {
-                if source.index() <= 30 { 2 * row + 2 }
-                else if source.index() >= 41 { 2 * row - 2 }
+                if source_tile.index() <= 30 { 2 * row + 2 }
+                else if source_tile.index() >= 41 { 2 * row - 2 }
                 else { 2 * row + 1 }
             },
             2 => {
-                if source.index() <= 40 { row }
+                if source_tile.index() <= 40 { row }
                 else { row - 1}
             },
             3 => {
-                if source.index() <= 40 { row - 1 }
+                if source_tile.index() <= 40 { row - 1 }
                 else { row - 2 }
             },
             4 => -1,
             5 => {
-                if source.index() <= 51 { -row - 1 }
+                if source_tile.index() <= 51 { -row - 1 }
                 else { -row - 2 }
             },
             6 => {
-                if source.index() <= 51 { -row }
+                if source_tile.index() <= 51 { -row }
                 else { -row - 1}
             },
             7 => {
-                if source.index() >= 62 { -2 * row - 2 }
-                else if source.index() <= 41 { -2 * row + 2 }
+                if source_tile.index() >= 62 { -2 * row - 2 }
+                else if source_tile.index() <= 41 { -2 * row + 2 }
                 else { -2 * row - 1 }
             },
             8 => {
-                if source.index() <= 51 { -row + 1 }
+                if source_tile.index() <= 51 { -row + 1 }
                 else { -row }
             },
             9 => {
-                if source.index() <= 51 { -row + 2 }
+                if source_tile.index() <= 51 { -row + 2 }
                 else { -row + 1 }
             },
             10 => 1,
             11 => {
-                if source.index() <= 40 { row + 2 }
+                if source_tile.index() <= 40 { row + 2 }
                 else { row + 1 }
             },
             _ => 0

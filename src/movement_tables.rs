@@ -29,8 +29,8 @@ impl JumpTable {
 
         let mut source_tile = 0;
         for source_tile_moves in &self.0 {
-            for to_tile in BitBoardTiles::new(*source_tile_moves) {
-                output[to_tile].flip_bit_at_tile_index(TileIndex::new(source_tile));
+            for destination_tile in BitBoardTiles::new(*source_tile_moves) {
+                output[destination_tile].flip_bit_at_tile_index(TileIndex::new(source_tile));
             }
             source_tile += 1;
         }
@@ -68,8 +68,8 @@ impl DirectionalSlideTable {
         let mut source_tile = 0;
         for source_tile_moves in &self.0 {
             let unblocked_moves = source_tile_moves.get(&BitBoard::empty()).unwrap();
-            for to_tile in BitBoardTiles::new(*unblocked_moves) {
-                output[to_tile].flip_bit_at_tile_index(TileIndex::new(source_tile));
+            for destination_tile in BitBoardTiles::new(*unblocked_moves) {
+                output[destination_tile].flip_bit_at_tile_index(TileIndex::new(source_tile));
             }
             source_tile += 1;
         }
@@ -169,8 +169,8 @@ impl PawnTables {
    
     fn create_promotion_board(single_table: &JumpTable) -> BitBoard {
         let mut promotable: HashSet<TileIndex> = HashSet::new();
-        for to_tile in 0..single_table.num_tiles() {
-            let tile_idx = TileIndex::new(to_tile);
+        for destination_tile in 0..single_table.num_tiles() {
+            let tile_idx = TileIndex::new(destination_tile);
             if single_table[tile_idx].is_zero() {
                 promotable.insert(tile_idx);
             }
