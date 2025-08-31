@@ -18,11 +18,11 @@ impl <const N: u8> LimitedInt<N> {
         return output // return 0..N ????
     }
 
-    pub fn adjacent_values(&self) -> Vec<Self> {
+    pub fn adjacent_values(&self) -> [LimitedInt<N>; 2] {
         let value = self.0;
-        let prev = Self::new(value + N - 1); // TODO: Remove
+        let prev = Self::new(value + N - 1);
         let next = Self::new(value + 1);
-        vec![prev, next]
+        [prev, next]
     }
 
     pub fn map_to_other<const T: u8>() -> HashMap<Self, LimitedInt<T>> {
@@ -38,9 +38,7 @@ impl <const N: u8> LimitedInt<N> {
             output.insert(Self::new(i), LimitedInt::<T>::new(new_value));
         }
         return output
-    } // Replace 1 with 0.5 to get the backwards mapping, same as shifting by the mid value?
-    // Might be able to use the exact same mapping to encode forwards and backwards
-    // TODO: Remove or implement comment
+    }
 
     pub fn shift_by(&self, shift: u8) -> Self {
         Self::new(self.0 + shift)
@@ -64,10 +62,7 @@ mod tests {
     fn test_adjacent_values() {
         assert_eq!(
             LimitedInt::<6>::new(0).adjacent_values(),
-            vec![
-                LimitedInt::<6>::new(5),
-                LimitedInt::<6>::new(1)
-            ]
+            [LimitedInt::<6>::new(5), LimitedInt::<6>::new(1)]
         )
     }
 
