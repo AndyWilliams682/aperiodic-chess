@@ -138,7 +138,7 @@ impl PieceSet {
         self.occupied = occupied
     }
 
-    pub fn get_piece_at(&self, tile_index: TileIndex) -> Option<PieceType> {
+    pub fn get_piece_at(&self, tile_index: &TileIndex) -> Option<PieceType> {
         if self.king.get_bit_at_tile(tile_index) == true {
             return Some(PieceType::King)
         } else if self.queen.get_bit_at_tile(tile_index) == true {
@@ -168,14 +168,14 @@ impl PieceSet {
     }
 
     pub fn move_piece(&mut self, from_tile: TileIndex, to_tile: TileIndex) {
-        let piece_type = self.get_piece_at(from_tile).unwrap();
+        let piece_type = self.get_piece_at(&from_tile).unwrap();
         let bitboard = self.get_bitboard_for_piece(&piece_type);
         bitboard.flip_bit_at_tile_index(from_tile);
         bitboard.flip_bit_at_tile_index(to_tile);
     }
 
     pub fn capture_piece(&mut self, capture_tile: TileIndex) {
-        let piece_type = self.get_piece_at(capture_tile).unwrap();
+        let piece_type = self.get_piece_at(&capture_tile).unwrap();
         let bitboard = self.get_bitboard_for_piece(&piece_type);
         bitboard.flip_bit_at_tile_index(capture_tile);
     }
@@ -193,7 +193,7 @@ impl PieceSet {
     } // Inverse of capture_piece
     
     pub fn demote_piece(&mut self, demotion_tile: TileIndex) {
-        let piece_type = self.get_piece_at(demotion_tile).unwrap();
+        let piece_type = self.get_piece_at(&demotion_tile).unwrap();
         let bitboard = self.get_bitboard_for_piece(&piece_type);
         bitboard.flip_bit_at_tile_index(demotion_tile);
         self.pawn.flip_bit_at_tile_index(demotion_tile);
@@ -210,11 +210,11 @@ mod tests {
     fn test_get_piece_at_tile() {
         let piece_set = &Position::new_traditional().pieces[0];
         assert_eq!(
-            piece_set.get_piece_at(TileIndex::new(0)).unwrap(),
+            piece_set.get_piece_at(&TileIndex::new(0)).unwrap(),
             PieceType::Rook
         );
         assert_eq!(
-            piece_set.get_piece_at(TileIndex::new(17)),
+            piece_set.get_piece_at(&TileIndex::new(17)),
             None
         )
     }

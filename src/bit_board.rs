@@ -34,7 +34,7 @@ impl BitBoard {
         return BitBoard(0)
     }
 
-    pub fn get_bit_at_tile(self, tile: TileIndex) -> bool {
+    pub fn get_bit_at_tile(self, tile: &TileIndex) -> bool {
         let mask: u128 = 1 << tile.index();
         return (self.0 & mask) != 0
     }
@@ -211,7 +211,7 @@ impl Iterator for BitBoardMoves {
                         en_passant_tile = Some(data.passed_tile)
                     }
                 }
-                if self.promotable_tiles.get_bit_at_tile(to_tile) { // Handles promotion to Knight
+                if self.promotable_tiles.get_bit_at_tile(&to_tile) { // Handles promotion to Knight
                     self.current_promotion_tile = Some(to_tile);
                     promotion = Some(PieceType::Knight);
                 }
@@ -238,7 +238,7 @@ mod tests {
     #[test]
     fn test_get_bit_at_tile() {
         assert_eq!(
-            BitBoard(33554433).get_bit_at_tile(TileIndex::new(25)),
+            BitBoard(33554433).get_bit_at_tile(&TileIndex::new(25)),
             true
         )
     }

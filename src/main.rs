@@ -179,14 +179,14 @@ fn handle_node_click(
         if let Ok(node) = node_query.get(event.target) {
             if let Some(source_tile) = selected_node.tile_index {
                 let moves = chess_game.0.query_tile(&source_tile);
-                if moves.get_bit_at_tile(node.id) {
+                if moves.get_bit_at_tile(&node.id) {
                     selected_node.entity = None;
                     selected_node.tile_index = None;
                     // TODO: Rewrite with a better pattern; clean this trash up
                     // Should be 1) assume clicked node is selected
                     // 2) if move is possible, then reset selected_node instead
                     // TODO: Actually handle errors and notify users
-                    match chess_game.0.attempt_move_input(source_tile, node.id) {
+                    match chess_game.0.attempt_move_input(&source_tile, &node.id) {
                         Err(_) => {
                             // TODO: This is where unplayable moves due to legality should be handled
                             if node.occupant != None { // TODO: Make function to reduce repeat code
@@ -234,7 +234,7 @@ fn spawn_move_indicators(
 
         for (node, entity) in node_query.iter() {
             // TODO: More efficient way to write this that only queries nodes in the moves (removing this check)
-            if moves.get_bit_at_tile(node.id) {
+            if moves.get_bit_at_tile(&node.id) {
                 // Spawn a small circle as a child of the destination node
                 let mut bundle = PickableBundle::default(); // Needed to add this to get the right behavior
                 bundle.pickable.should_block_lower = false;
@@ -289,7 +289,7 @@ fn update_piece_labels(
     // This system only runs when the ChessGame resource has been changed.
     if chess_game.is_changed() {
         for (mut node, children) in node_query.iter_mut() {
-            node.occupant = chess_game.0.current_position.get_occupant(node.id);
+            node.occupant = chess_game.0.current_position.get_occupant(&node.id);
 
             for &child in children.iter() {
                 if let Ok(mut text) = text_query.get_mut(child) {
@@ -345,7 +345,7 @@ fn spawn_traditional_graph(commands: &mut Commands, graph_state: &mut ResMut<Gra
         let y = ((i / 8) as f32) * ((600 / 7) as f32);
         let pos = Vec2::new(x - 300.0, y - 300.0);
         let tile_index = TileIndex::new(i as usize);
-        let occupant = chess_game_res.0.current_position.get_occupant(tile_index);
+        let occupant = chess_game_res.0.current_position.get_occupant(&tile_index);
         let mut occupant_char = ' ';
         if let Some(occ) = occupant {
             occupant_char = occ.display();

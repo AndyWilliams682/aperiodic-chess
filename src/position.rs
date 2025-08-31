@@ -65,7 +65,7 @@ pub struct Position {
 }
 
 impl Position {
-    pub fn get_occupant(&self, tile_index: TileIndex) -> Option<Piece> {
+    pub fn get_occupant(&self, tile_index: &TileIndex) -> Option<Piece> {
         if let Some(piece) = self.pieces[0].get_piece_at(tile_index) {
             return Some(Piece { piece, color: Color::White })
         } else if let Some(piece) = self.pieces[1].get_piece_at(tile_index) {
@@ -134,7 +134,7 @@ impl Position {
         for tile in 0..128 { // TODO: Un-hardcode this value
             let tile_index = TileIndex::new(tile);
             // TODO: This can be rewritten with new methods
-            if let Some(piece) = self.pieces[0].get_piece_at(tile_index) {
+            if let Some(piece) = self.pieces[0].get_piece_at(&tile_index) {
                 let symbol = match piece {
                     PieceType::King => 'K',
                     PieceType::Queen => 'Q',
@@ -148,7 +148,7 @@ impl Position {
                     empty_tile_counter = 0;
                 }
                 output.push(symbol);
-            } else if let Some(piece) = self.pieces[1].get_piece_at(tile_index) {
+            } else if let Some(piece) = self.pieces[1].get_piece_at(&tile_index) {
                 let symbol = match piece {
                     PieceType::King => 'k',
                     PieceType::Queen => 'q',
@@ -208,7 +208,7 @@ impl Position {
                 self.pieces[opponent_idx].rook | self.pieces[opponent_idx].queen
             );
             for candidate in BitBoardTiles::new(candidates) {
-                if move_tables.slide_tables.query(&candidate, &all_occupants, true, false).get_bit_at_tile(king_tile) {
+                if move_tables.slide_tables.query(&candidate, &all_occupants, true, false).get_bit_at_tile(&king_tile) {
                     return true
                 }
             }
@@ -220,7 +220,7 @@ impl Position {
                 self.pieces[opponent_idx].bishop | self.pieces[opponent_idx].queen
             );
             for candidate in BitBoardTiles::new(candidates) {
-                if move_tables.slide_tables.query(&candidate, &all_occupants, false, true).get_bit_at_tile(king_tile) {
+                if move_tables.slide_tables.query(&candidate, &all_occupants, false, true).get_bit_at_tile(&king_tile) {
                     return true
                 }
             }
@@ -270,7 +270,7 @@ impl Position {
     pub fn is_playable_move(&mut self, chess_move: &Move, move_tables: &MoveTables) -> bool {
         let player_idx = self.active_player.as_idx();
         let opponent_idx = self.active_player.opponent().as_idx();
-        let selected_piece = self.pieces[player_idx].get_piece_at(chess_move.from_tile);
+        let selected_piece = self.pieces[player_idx].get_piece_at(&chess_move.from_tile);
         
         let movement_options = match selected_piece {
             None => return false, // The moving player must have a piece at from_tile
@@ -284,7 +284,7 @@ impl Position {
             _ => move_tables.query_piece(&selected_piece.unwrap(), chess_move.from_tile, self.get_occupied())
         };
 
-        if movement_options.get_bit_at_tile(chess_move.to_tile) == false {
+        if movement_options.get_bit_at_tile(&chess_move.to_tile) == false {
             return false // The selected piece must be able to move to to_tile
         }
         if self.is_legal_move(chess_move, move_tables) == false {
@@ -295,7 +295,7 @@ impl Position {
             _ => move_tables.black_pawn_tables.promotion_board
         };
 
-        if promotion_board.get_bit_at_tile(chess_move.to_tile) && self.pieces[player_idx].get_piece_at(chess_move.from_tile) == Some(PieceType::Pawn) && chess_move.promotion == None {
+        if promotion_board.get_bit_at_tile(&chess_move.to_tile) && self.pieces[player_idx].get_piece_at(&chess_move.from_tile) == Some(PieceType::Pawn) && chess_move.promotion == None {
             return false // Promotion must be provided if a pawn is moving to a promotion tile
         }
         return true
@@ -315,10 +315,10 @@ impl Position {
 
         let mut fifty_move_counter = self.record.fifty_move_counter + 1;
 
-        let moving_piece = self.pieces[player_idx].get_piece_at(from_tile).unwrap();
+        let moving_piece = self.pieces[player_idx].get_piece_at(&from_tile).unwrap();
         self.pieces[player_idx].move_piece(from_tile, to_tile);
 
-        let mut target_piece = self.pieces[opponent_idx].get_piece_at(to_tile);
+        let mut target_piece = self.pieces[opponent_idx].get_piece_at(&to_tile);
         if let Some(_) = target_piece {
             fifty_move_counter = 0;
             self.pieces[opponent_idx].capture_piece(to_tile)
@@ -474,11 +474,11 @@ mod tests {
         );
         position.make_legal_move(&capturing_move);
         assert_eq!(
-            position.pieces[0].pawn.get_bit_at_tile(TileIndex::new(24)),
+            position.pieces[0].pawn.get_bit_at_tile(&TileIndex::new(24)),
             false
         );
         assert_eq!(
-            position.pieces[1].pawn.get_bit_at_tile(TileIndex::new(16)),
+            position.pieces[1].pawn.get_bit_at_tile(&TileIndex::new(16)),
             true
         )
     }

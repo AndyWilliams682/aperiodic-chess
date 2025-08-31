@@ -30,11 +30,11 @@ impl Game {
         let black_pieces = &self.current_position.pieces[1];
         let occupied = white_pieces.occupied | black_pieces.occupied; // TODO: Occupied stored somewhere??
         
-        let selected_white = white_pieces.get_piece_at(*tile_index); // TODO: These should all be references in functions!
-        let selected_black = black_pieces.get_piece_at(*tile_index);
+        let selected_white = white_pieces.get_piece_at(tile_index);
+        let selected_black = black_pieces.get_piece_at(tile_index);
         let selected_piece = selected_white.or(selected_black);
         
-        let (selected_color, allied_occupied, enemy_occupied, pawn_tables) = match black_pieces.get_piece_at(*tile_index) {
+        let (selected_color, allied_occupied, enemy_occupied, pawn_tables) = match black_pieces.get_piece_at(tile_index) {
             Some(_t) => (Color::Black, black_pieces.occupied, white_pieces.occupied, &self.engine.move_tables.black_pawn_tables),
             _ => (Color::White, white_pieces.occupied, black_pieces.occupied, &self.engine.move_tables.white_pawn_tables)
         };
@@ -55,7 +55,7 @@ impl Game {
 
         for destination_tile in BitBoardTiles::new(pseudo_moves) {
             let mut promotion: Option<PieceType> = None;
-            if pawn_tables.promotion_board.get_bit_at_tile(destination_tile) && selected_piece == Some(PieceType::Pawn) {
+            if pawn_tables.promotion_board.get_bit_at_tile(&destination_tile) && selected_piece == Some(PieceType::Pawn) {
                 promotion = Some(PieceType::Queen);
             }
             // TODO: Redesign and use BitBoardMoves
@@ -68,7 +68,7 @@ impl Game {
         return pseudo_moves
     }
 
-    pub fn attempt_move_input(&mut self, source_tile: TileIndex, destination_tile: TileIndex) -> Result<(), ChessError> {
+    pub fn attempt_move_input(&mut self, source_tile: &TileIndex, destination_tile: &TileIndex) -> Result<(), ChessError> {
         let chess_move = self.parse_move_input(source_tile, destination_tile)?;
         match self.current_position.is_playable_move(&chess_move, &self.engine.move_tables) {
             true => {
@@ -80,7 +80,7 @@ impl Game {
     }
 
     // TODO: Rename equivalent things to source_tile and destination_tile
-    fn parse_move_input(&self, source_tile: TileIndex, destination_tile: TileIndex) -> Result<Move, ChessError> {
+    fn parse_move_input(&self, source_tile: &TileIndex, destination_tile: &TileIndex) -> Result<Move, ChessError> {
         // Assumes destination is valid due to limiting the selectable tiles
         let active_pieces = &self.current_position.pieces[self.current_position.active_player.as_idx()];
 
@@ -96,7 +96,7 @@ impl Game {
 
         let en_passant_data = match en_passant_data {
             Some(epd) => {
-                if epd.occupied_tile != destination_tile {
+                if &epd.occupied_tile != destination_tile {
                     None
                 } else {
                     Some(epd)
@@ -117,8 +117,8 @@ impl Game {
         }
         
         return Ok(Move::from_input(
-            source_tile,
-            destination_tile,
+            *source_tile,
+            *destination_tile,
             promotion,
             en_passant_data
         ))
