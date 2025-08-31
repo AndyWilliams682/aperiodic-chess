@@ -255,16 +255,6 @@ impl Position {
         self.record.fifty_move_counter >= 50
     }
 
-    pub fn is_over(&mut self, move_tables: &MoveTables) -> Option<GameOver> {
-        if self.is_checkmate(move_tables) {
-            return Some(GameOver::Checkmate)
-        } else if self.is_stalemate(move_tables) || self.fifty_move_draw() { // TODO: Add more draw conditions here
-            return Some(GameOver::Draw)
-        } else {
-            None
-        }
-    }
-
     pub fn is_legal_move(&mut self, chess_move: &Move, move_tables: &MoveTables) -> bool {
         // Could check other parameters:
         // Kings cannot be captured, allies cannot be captured
