@@ -1,25 +1,24 @@
-use std::collections::{HashSet, HashMap};
+use std::collections::HashSet;
 
 use crate::graph_boards::graph_board::{GraphBoard, UniformTileOrientation, TileIndex, Tile};
 use crate::piece_set::Color;
-use crate::limited_int::LimitedIntTrait;
-use crate::create_limited_int;
+use crate::limited_int::LimitedInt;
 
 // Convention:
 //    0 is the forward direction for White
 //    1 is the forward-left direction, continuing counter-clockwise until 7, which is forward-right
 //    Even directions are orthogonal, odd directions are diagonal
-create_limited_int!(HexagonalDirection, 12);
+pub type HexagonalDirection = LimitedInt<12>;
 
 
 #[derive(Debug)]
-pub struct HexagonalBoardGraph(pub GraphBoard<UniformTileOrientation, HexagonalDirection>);
+pub struct HexagonalBoardGraph(pub GraphBoard<1, 12>);
 
 impl HexagonalBoardGraph {
     pub fn new() -> Self {
         let mut board_graph = GraphBoard::new();
         for tile in 0..91 {
-            board_graph.add_node(Self::new_tile(tile));
+            board_graph.add_node(Self::new_tile(TileIndex::new(tile)));
         }
         for tile_idx in board_graph.node_indices() {
             for direction in Self::get_valid_directions(tile_idx) {
@@ -42,13 +41,13 @@ impl HexagonalBoardGraph {
         }
     }
 
-    fn new_tile(source: i32) -> Tile<UniformTileOrientation> {
-        let pawn_start = match source {
+    fn new_tile(source: TileIndex) -> Tile<1> {
+        let pawn_start = match source.index() {
             4 | 10 | 17 | 25 | 30..=34 => Some(Color::White),
             56..=60 | 65 | 73 | 80 | 86 => Some(Color::Black),
             _ => None
         };
-        return Tile { orientation: UniformTileOrientation(0), pawn_start }
+        return Tile { orientation: UniformTileOrientation::new(0), pawn_start }
     }
    
     fn get_valid_directions(source: TileIndex) -> Vec<HexagonalDirection> {

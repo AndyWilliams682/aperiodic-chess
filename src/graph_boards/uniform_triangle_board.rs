@@ -1,26 +1,25 @@
-use std::collections::{HashSet, HashMap};
+use std::collections::HashSet;
 
 use crate::graph_boards::graph_board::{GraphBoard, UniformTileOrientation, TileIndex, Tile};
 use crate::piece_set::Color;
-use crate::limited_int::LimitedIntTrait;
-use crate::create_limited_int;
+use crate::limited_int::LimitedInt;
 
 
 // Convention:
 //    0 is the forward direction for White
 //    1 is the forward-left direction, continuing counter-clockwise until 7, which is forward-right
 //    Even directions are orthogonal, odd directions are diagonal
-create_limited_int!(TriangularDirection, 6);
+pub type TriangularDirection = LimitedInt<6>;
 
 
 #[derive(Debug)]
-pub struct UniformTriangleBoardGraph(pub GraphBoard<UniformTileOrientation, TriangularDirection>);
+pub struct UniformTriangleBoardGraph(pub GraphBoard<1, 6>);
 
 impl UniformTriangleBoardGraph {
     pub fn new() -> Self {
         let mut board_graph = GraphBoard::new();
         for tile in 0..55 {
-            board_graph.add_node(Self::new_tile(tile));
+            board_graph.add_node(Self::new_tile(TileIndex::new(tile)));
         }
         for tile_idx in board_graph.node_indices() {
             for direction in Self::get_valid_directions(tile_idx) {
@@ -47,13 +46,13 @@ impl UniformTriangleBoardGraph {
         }
     }
 
-    fn new_tile(source: i32) -> Tile<UniformTileOrientation> {
-        let pawn_start = match source {
+    fn new_tile(source: TileIndex) -> Tile<1> {
+        let pawn_start = match source.index() {
             3 | 12 | 20 | 27 => Some(Color::White),
             6 | 16 | 25 | 33 => Some(Color::Black),
             _ => None
         };
-        return Tile { orientation: UniformTileOrientation(0), pawn_start }
+        return Tile { orientation: UniformTileOrientation::new(0), pawn_start }
     }
    
     fn get_valid_directions(source: TileIndex) -> Vec<TriangularDirection> {

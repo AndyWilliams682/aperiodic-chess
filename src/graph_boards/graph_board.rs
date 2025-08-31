@@ -4,33 +4,30 @@ use std::collections::{HashSet, HashMap};
 use std::ops::{Deref, DerefMut};
 
 use crate::bit_board::{BitBoard, CarryRippler};
-use crate::create_limited_int;
-use crate::limited_int::LimitedIntTrait;
+use crate::limited_int::LimitedInt;
 use crate::move_generator::MoveTables;
 use crate::piece_set::Color;
 use crate::movement_tables::{JumpTable, DirectionalSlideTable, SlideTables, PawnTables};
 
+
 pub type TileIndex = NodeIndex;
 
-#[derive(Debug)]
-pub struct Tile<N: LimitedIntTrait> {
-    pub orientation: N,
+#[derive(Debug, Clone, Copy)]
+pub struct Tile<const N: u8> {
+    pub orientation: LimitedInt<N>,
     pub pawn_start: Option<Color>
 }
 
 // Generic graph that uses LimitedIntTrait for the edges
 #[derive(Debug)]
-pub struct GraphBoard<N: LimitedIntTrait, E: LimitedIntTrait>(Graph<Tile<N>, E>);
+pub struct GraphBoard<const N: u8, const E: u8>(Graph<Tile<N>, LimitedInt<E>>);
 
-impl<
-    N: LimitedIntTrait + std::cmp::Eq + std::hash::Hash + std::fmt::Debug,
-    E: LimitedIntTrait + std::cmp::PartialEq + std::fmt::Debug + std::cmp::PartialOrd
-> GraphBoard<N, E> {
+impl <const N: u8, const E: u8> GraphBoard<N, E> {
     pub fn new() -> Self {
         GraphBoard(Graph::new())
     }
    
-    fn get_next_tile_in_direction(&self, source_tile: TileIndex, direction: &E) -> Option<TileIndex> {
+    fn get_next_tile_in_direction(&self, source_tile: TileIndex, direction: &LimitedInt<E>) -> Option<TileIndex> {
         self.edges_directed(source_tile, petgraph::Direction::Outgoing)
             .find(|edge| &edge.weight() == &direction)
             .map(|edge| edge.target())
@@ -38,9 +35,9 @@ impl<
    
     pub fn knight_jumps_from(&self, source_tile: TileIndex) -> HashSet<TileIndex> {
         let mut result: HashSet<TileIndex> = HashSet::new();
-        for direction in E::all_values() {
+        for direction in LimitedInt::<E>::all_values() {
             if let Some(next_tile) = self.get_next_tile_in_direction(source_tile, &direction) {
-                for next_direction in E::adjacent_values(&direction) {
+                for next_direction in LimitedInt::<E>::adjacent_values(&direction) {
                     if let Some(final_tile) = self.get_next_tile_in_direction(next_tile, &next_direction) {
                         result.insert(final_tile);
                     }
@@ -50,7 +47,7 @@ impl<
         return result
     }
 
-    pub fn slides_from_in_direction(&self, source_tile: TileIndex, direction: &E, limit: u32, obstructions: BitBoard) -> HashSet<TileIndex> {
+    pub fn slides_from_in_direction(&self, source_tile: TileIndex, direction: &LimitedInt<E>, limit: u32, obstructions: BitBoard) -> HashSet<TileIndex> {
         let mut result: HashSet<TileIndex> = HashSet::new();
         let mut current_tile = source_tile;
         let mut distance_traveled = 0;
@@ -89,7 +86,7 @@ impl<
         };
 
         let mut result: HashSet<TileIndex> = HashSet::new();
-        for even_direction in E::all_values()
+        for even_direction in LimitedInt::<E>::all_values()
                                     .into_iter()
                                     .skip(initital_direction)
                                     .step_by(direction_step) { // TODO: Better iterator usage
@@ -111,7 +108,7 @@ impl<
         return JumpTable::new(result)
     }
 
-    pub fn slide_table_for_direction(&self, direction: &E) -> DirectionalSlideTable {
+    pub fn slide_table_for_direction(&self, direction: &LimitedInt<E>) -> DirectionalSlideTable {
         let mut attack_table: Vec<HashMap<BitBoard, BitBoard>> = vec![];
         for source_tile in self.0.node_indices() {
             let unobstructed_attacks = BitBoard::from_tile_indices(
@@ -144,7 +141,7 @@ impl<
 
     pub fn all_slide_tables(&self) -> SlideTables {
         let mut output = vec![];
-        for direction in E::all_values() {
+        for direction in LimitedInt::<E>::all_values() {
             output.push(self.slide_table_for_direction(&direction))
         }
         return SlideTables::new(output)
@@ -169,10 +166,10 @@ impl<
 
         let forward_or_backward = match color {
             Color::White => 0,
-            _ => E::max_value() / 2 // This assumes max_value is even
+            _ => E / 2 // This assumes max_value is even
         };
 
-        let map = N::map_to_other::<E>();
+        let map = LimitedInt::<N>::map_to_other::<E>();
 
         for source_tile in self.0.node_indices() {
             let tile = &self.0[source_tile];
@@ -194,16 +191,16 @@ impl<
 
         let forward_or_backward = match color {
             Color::White => 0,
-            _ => E::max_value() / 2 // This assumes max_value is even
+            _ => E / 2 // This assumes max_value is even
         };
 
-        let map = N::map_to_other::<E>();
+        let map = LimitedInt::<N>::map_to_other::<E>();
 
         for source_tile in self.0.node_indices() {
             let tile = &self.0[source_tile];
 
             let move_direction = map.get(&tile.orientation).unwrap().shift_by(forward_or_backward);
-            let attack_directions = E::adjacent_values(&move_direction);
+            let attack_directions = LimitedInt::<E>::adjacent_values(&move_direction);
             let mut attacks = BitBoard::empty();
 
             for direction in attack_directions {
@@ -269,22 +266,22 @@ impl<
     }
 }
 
-impl<N: LimitedIntTrait, E: LimitedIntTrait> Deref for GraphBoard<N, E> {
-    type Target = Graph<Tile<N>, E>;
+impl<const N: u8, const E: u8> Deref for GraphBoard<N, E> {
+    type Target = Graph<Tile<N>, LimitedInt<E>>;
    
     fn deref(&self) -> &Self::Target {
         &self.0
     }
 }
 
-impl<N: LimitedIntTrait, E: LimitedIntTrait> DerefMut for GraphBoard<N, E> {
+impl<const N: u8, const E: u8> DerefMut for GraphBoard<N, E> {
     fn deref_mut(&mut self) -> &mut Self::Target {
         &mut self.0
     }
 }
 
 
-create_limited_int!(UniformTileOrientation, 1);
+pub type UniformTileOrientation = LimitedInt<1>;
 
 
 #[cfg(test)]
@@ -300,7 +297,7 @@ mod tests {
     fn test_get_next_tile_in_direction_returns_tile() {
         let board = test_traditional_board();
         assert_eq!(
-            board.0.get_next_tile_in_direction(TileIndex::new(0), &TraditionalDirection(0)).unwrap(),
+            board.0.get_next_tile_in_direction(TileIndex::new(0), &TraditionalDirection::new(0)).unwrap(),
             TileIndex::new(8)
         );
     }
@@ -309,7 +306,7 @@ mod tests {
     fn test_get_next_tile_in_direction_returns_none() {
         let board = test_traditional_board();
         assert_eq!(
-            board.0.get_next_tile_in_direction(TileIndex::new(0), &TraditionalDirection(2)),
+            board.0.get_next_tile_in_direction(TileIndex::new(0), &TraditionalDirection::new(2)),
             None
         )
     }
@@ -338,7 +335,7 @@ mod tests {
         let board = test_traditional_board();
         let source_tile = TileIndex::new(1);
         assert_eq!(
-            board.0.slides_from_in_direction(source_tile, &TraditionalDirection(6), 0, BitBoard::empty()),
+            board.0.slides_from_in_direction(source_tile, &TraditionalDirection::new(6), 0, BitBoard::empty()),
             HashSet::from_iter([
                 TileIndex::new(2),
                 TileIndex::new(3),
@@ -354,7 +351,7 @@ mod tests {
         let board = test_traditional_board();
         let source_tile = TileIndex::new(1);
         assert_eq!(
-            board.0.slides_from_in_direction(source_tile, &TraditionalDirection(6), 1, BitBoard::empty()),
+            board.0.slides_from_in_direction(source_tile, &TraditionalDirection::new(6), 1, BitBoard::empty()),
             HashSet::from_iter([TileIndex::new(2)])
         )
     }
@@ -365,7 +362,7 @@ mod tests {
         let source_tile = TileIndex::new(1);
         let obstructions = BitBoard::new(16);
         assert_eq!(
-            board.0.slides_from_in_direction(source_tile, &TraditionalDirection(6), 0, obstructions),
+            board.0.slides_from_in_direction(source_tile, &TraditionalDirection::new(6), 0, obstructions),
             HashSet::from_iter([
                 TileIndex::new(2),
                 TileIndex::new(3),

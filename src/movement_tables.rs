@@ -254,7 +254,7 @@ mod tests {
         let board = test_traditional_board();
         let source_tile = TileIndex::new(0);
         assert_eq!(
-            *board.0.slide_table_for_direction(&TraditionalDirection(0))[source_tile].get(&BitBoard::new(65536)).unwrap(),
+            *board.0.slide_table_for_direction(&TraditionalDirection::new(0))[source_tile].get(&BitBoard::new(65536)).unwrap(),
             BitBoard::from_ints(vec![8, 16])
         )
     }
@@ -402,7 +402,7 @@ mod tests {
     fn test_reverse_directional_slide_table() {
         let board = test_traditional_board();
         let directional_slide_table = board.0.slide_table_for_direction(
-            &TraditionalDirection(0)
+            &TraditionalDirection::new(0)
         );
         assert_eq!(
             directional_slide_table.reverse()[TileIndex::new(56)],

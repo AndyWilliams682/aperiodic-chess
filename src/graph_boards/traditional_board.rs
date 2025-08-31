@@ -1,28 +1,29 @@
-use std::collections::{HashSet, HashMap};
+use std::collections::HashSet;
 
 use crate::graph_boards::graph_board::{GraphBoard, UniformTileOrientation, TileIndex, Tile};
 use crate::piece_set::{Color, PieceType};
 use crate::bit_board::{BitBoard, BitBoardTiles};
 use crate::position::Position;
 use crate::move_generator::MoveTables;
-use crate::limited_int::LimitedIntTrait;
-use crate::create_limited_int;
+use crate::limited_int::LimitedInt;
 
 // Convention:
 //    0 is the forward direction for White
 //    1 is the forward-left direction, continuing counter-clockwise until 7, which is forward-right
 //    Even directions are orthogonal, odd directions are diagonal
-create_limited_int!(TraditionalDirection, 8);
+// create_limited_int!(TraditionalDirection, 8);
+
+pub type TraditionalDirection = LimitedInt::<8>;
 
 
 #[derive(Debug)]
-pub struct TraditionalBoardGraph(pub GraphBoard<UniformTileOrientation, TraditionalDirection>);
+pub struct TraditionalBoardGraph(pub GraphBoard<1, 8>);
 
 impl TraditionalBoardGraph {
     pub fn new() -> Self {
         let mut board_graph = GraphBoard::new();
         for tile in 0..64 {
-            board_graph.add_node(Self::new_tile(tile));
+            board_graph.add_node(Self::new_tile(TileIndex::new(tile)));
         }
         for tile_idx in board_graph.node_indices() {
             for direction in Self::get_valid_directions(tile_idx) {
@@ -33,13 +34,13 @@ impl TraditionalBoardGraph {
         return TraditionalBoardGraph(board_graph)
     }
 
-    fn new_tile(source: i32) -> Tile<UniformTileOrientation> {
-        if source / 8 == 1 {
-            return Tile { orientation: UniformTileOrientation(0), pawn_start: Some(Color::White) }
-        } else if source / 8 == 6 {
-            return Tile { orientation: UniformTileOrientation(0), pawn_start: Some(Color::Black) }
+    fn new_tile(source: TileIndex) -> Tile<1> {
+        if source.index() / 8 == 1 {
+            return Tile { orientation: UniformTileOrientation::new(0), pawn_start: Some(Color::White) }
+        } else if source.index() / 8 == 6 {
+            return Tile { orientation: UniformTileOrientation::new(0), pawn_start: Some(Color::Black) }
         } else {
-            return Tile { orientation: UniformTileOrientation(0), pawn_start: None }
+            return Tile { orientation: UniformTileOrientation::new(0), pawn_start: None }
         }
     }
    
