@@ -10,32 +10,16 @@ mod game;
 mod engine;
 mod bit_board;
 
+use bevy::prelude::*;
+use bevy_egui::{egui, EguiContexts, EguiPlugin};
+use bevy_mod_picking::prelude::*;
+
 use graph_boards::traditional_board::TraditionalBoardGraph;
 use graph_boards::hexagonal_board::HexagonalBoardGraph;
 use position::Position;
 use graph_boards::graph_board::TileIndex;
 
 use crate::{engine::Engine, game::Game, graph_boards::graph_board::Tile, limited_int::LimitedInt};
-
-// fn main() {
-//     let board = TraditionalBoardGraph::new();
-//     let move_tables = board.0.move_tables();
-//     let position = Position::new_traditional();
-
-//     let mut game = Game {
-//         engine: Engine::new(move_tables),
-//         are_players_cpu: vec![false, true],
-//         current_position: position,
-//         board
-//     };
-
-//     game.play_game();
-// }
-
-// Trying bevy
-use bevy::prelude::*;
-use bevy_egui::{egui, EguiContexts, EguiPlugin};
-use bevy_mod_picking::prelude::*;
 
 // --- Components and Resources ---
 
@@ -46,7 +30,6 @@ pub struct GraphEdge {
     pub end_tile_id: u32,
 }
 
-// A component to mark the visual indicators for possible moves
 #[derive(Component)]
 struct MoveIndicator;
 
@@ -56,10 +39,6 @@ struct GraphState {
     tile_count: u32,
     edge_count: u32,
 }
-
-// A new resource to hold the chess game state
-#[derive(Resource)]
-struct ChessGame(Game);
 
 // A resource to hold the entity of the turn indicator text
 #[derive(Resource)]
@@ -86,13 +65,12 @@ fn main() {
             DefaultPickingPlugins,
         ))
         .insert_resource(GraphState::default())
-        // Insert the ChessGame resource here so it's available to all systems
-        .insert_resource(ChessGame(Game {
+        .insert_resource(Game {
             engine: Engine::new(TraditionalBoardGraph::new().0.move_tables()),
             are_players_cpu: vec![false, true],
             current_position: Position::new_traditional(),
             board: TraditionalBoardGraph::new()
-        }))
+        })
         .insert_resource(SelectedTile::default())
         .insert_resource(GameHasFinished::default())
         .add_systems(Startup, setup)
@@ -107,14 +85,14 @@ fn main() {
         .run();
 }
 
-fn setup(mut commands: Commands, mut graph_state: ResMut<GraphState>, tile_query: Query<Entity, With<Tile<1>>>, edge_query: Query<Entity, With<GraphEdge>>, chess_game: Res<ChessGame>) {
+fn setup(mut commands: Commands, mut graph_state: ResMut<GraphState>, tile_query: Query<Entity, With<Tile<1>>>, edge_query: Query<Entity, With<GraphEdge>>, game: Res<Game>) {
     // Spawn a camera to view the scene.
     commands.spawn(Camera2dBundle::default());
 
     // Despawn all entities before generating the first graph.
     despawn_all_graph_entities(&mut commands, tile_query, edge_query);
 
-    let player_type = match chess_game.0.are_players_cpu[0] {
+    let player_type = match game.are_players_cpu[0] {
         true => "CPU",
         false => "Human"
     };
@@ -134,7 +112,7 @@ fn setup(mut commands: Commands, mut graph_state: ResMut<GraphState>, tile_query
     }).id();
     commands.insert_resource(CurrentTurn(turn_text));
 
-    spawn_traditional_graph(&mut commands, &mut graph_state, chess_game);
+    spawn_traditional_graph(&mut commands, &mut graph_state, game);
 }
 
 // --- Systems ---
@@ -154,11 +132,11 @@ fn despawn_all_graph_entities(
 }
 
 fn make_cpu_moves(
-    mut chess_game: ResMut<ChessGame>,
+    mut game: ResMut<Game>,
     finished: Res<GameHasFinished>,
 ) {
-    if !finished.0 && chess_game.0.are_players_cpu[chess_game.0.current_position.active_player.as_idx()] {
-        chess_game.0.make_cpu_move()
+    if !finished.0 && game.are_players_cpu[game.current_position.active_player.as_idx()] {
+        game.make_cpu_move()
     }
 }
 
@@ -167,18 +145,18 @@ fn handle_tile_click(
     mut event_reader: EventReader<Pointer<Click>>,
     tile_query: Query<&Tile<1>>,
     mut selected_tile: ResMut<SelectedTile>,
-    mut chess_game: ResMut<ChessGame>,
+    mut game: ResMut<Game>,
 ) {
     for event in event_reader.read() {
         // Handle selecting a new piece
         // TODO: Make this run less? It keeps looping
-        if chess_game.0.are_players_cpu[chess_game.0.current_position.active_player.as_idx()] { 
+        if game.are_players_cpu[game.current_position.active_player.as_idx()] { 
             return
         }
 
         if let Ok(tile) = tile_query.get(event.target) {
             if let Some(source_tile) = selected_tile.tile_index {
-                let moves = chess_game.0.query_tile(&source_tile);
+                let moves = game.query_tile(&source_tile);
                 if moves.get_bit_at_tile(&tile.id) {
                     selected_tile.entity = None;
                     selected_tile.tile_index = None;
@@ -186,7 +164,7 @@ fn handle_tile_click(
                     // Should be 1) assume clicked tile is selected
                     // 2) if move is possible, then reset selected_tile instead
                     // TODO: Actually handle errors and notify users
-                    match chess_game.0.attempt_move_input(&source_tile, &tile.id) {
+                    match game.attempt_move_input(&source_tile, &tile.id) {
                         Err(_) => {
                             // TODO: This is where unplayable moves due to legality should be handled
                             if tile.occupant != None { // TODO: Make function to reduce repeat code
@@ -216,7 +194,7 @@ fn handle_tile_click(
 fn spawn_move_indicators(
     mut commands: Commands,
     selected_tile: Res<SelectedTile>,
-    mut chess_game: ResMut<ChessGame>,
+    mut game: ResMut<Game>,
     tile_query: Query<(&Tile<1>, Entity)>,
     indicator_query: Query<Entity, With<MoveIndicator>>,
 ) {
@@ -228,7 +206,7 @@ fn spawn_move_indicators(
             commands.entity(indicator).despawn_recursive();
         }
 
-        let moves = chess_game.0.query_tile(&tile_index);
+        let moves = game.query_tile(&tile_index);
 
         for (tile, entity) in tile_query.iter() {
             // TODO: More efficient way to write this that only queries tiles in the moves (removing this check)
@@ -279,14 +257,13 @@ fn spawn_move_indicators(
 
 // A new system to update the character labels on the tiles based on the game state.
 fn update_piece_labels(
-    chess_game: Res<ChessGame>,
+    game: Res<Game>,
     mut tile_query: Query<(&mut Tile<1>, &Children)>,
     mut text_query: Query<&mut Text>,
 ) {
-    // This system only runs when the ChessGame resource has been changed.
-    if chess_game.is_changed() {
+    if game.is_changed() {
         for (mut tile, children) in tile_query.iter_mut() {
-            tile.occupant = chess_game.0.current_position.get_occupant(&tile.id);
+            tile.occupant = game.current_position.get_occupant(&tile.id);
 
             for &child in children.iter() {
                 if let Ok(mut text) = text_query.get_mut(child) {
@@ -308,21 +285,21 @@ fn update_piece_labels(
 }
 
 fn update_turn_indicator(
-    mut chess_game: ResMut<ChessGame>,
+    mut game: ResMut<Game>,
     current_turn_res: Res<CurrentTurn>,
     mut text_query: Query<&mut Text>,
     mut finished: ResMut<GameHasFinished>,
 ) {
-    if chess_game.is_changed() {
+    if game.is_changed() {
         if let Ok(mut text) = text_query.get_mut(current_turn_res.0) {
-            let active_player = chess_game.0.current_position.active_player;
+            let active_player = game.current_position.active_player;
             let player_name = if active_player == piece_set::Color::White { "White" } else { "Black" };
-            let player_type = match chess_game.0.are_players_cpu[active_player.as_idx()] {
+            let player_type = match game.are_players_cpu[active_player.as_idx()] {
                 true => "CPU",
                 false => "Human"
             };
-            if let Some(game_over_condition) = chess_game.0.is_over() {
-                text.sections[0].value = game_over_condition.display(chess_game.0.current_position.active_player.opponent());
+            if let Some(game_over_condition) = game.is_over() {
+                text.sections[0].value = game_over_condition.display(game.current_position.active_player.opponent());
                 finished.0 = true;
             } else {
                 text.sections[0].value = format!("{} ({}) to move", player_name, player_type);
@@ -331,10 +308,9 @@ fn update_turn_indicator(
     }
 }
 
-fn spawn_traditional_graph(commands: &mut Commands, graph_state: &mut ResMut<GraphState>, chess_game_res: Res<ChessGame>) {
-    // Get the ChessGame resource to access the position.
-    let num_tiles = chess_game_res.0.board.0.node_count() as u32;
-    let num_edges = chess_game_res.0.board.0.edge_count() as u32;
+fn spawn_traditional_graph(commands: &mut Commands, graph_state: &mut ResMut<GraphState>, game: Res<Game>) {
+    let num_tiles = game.board.0.node_count() as u32;
+    let num_edges = game.board.0.edge_count() as u32;
     let mut tiles: Vec<(Entity, Tile<1>)> = Vec::with_capacity(num_tiles as usize);
 
     for i in 0..num_tiles {
@@ -342,7 +318,7 @@ fn spawn_traditional_graph(commands: &mut Commands, graph_state: &mut ResMut<Gra
         let y = ((i / 8) as f32) * ((600 / 7) as f32);
         let pos = Vec2::new(x - 300.0, y - 300.0);
         let tile_index = TileIndex::new(i as usize);
-        let occupant = chess_game_res.0.current_position.get_occupant(&tile_index);
+        let occupant = game.current_position.get_occupant(&tile_index);
         let mut occupant_char = ' ';
         if let Some(occ) = occupant {
             occupant_char = occ.display();

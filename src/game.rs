@@ -1,7 +1,9 @@
+use bevy::prelude::Resource;
+
 use crate::{bit_board::{BitBoard, BitBoardTiles}, chess_move::Move, engine::Engine, graph_boards::{graph_board::TileIndex, traditional_board::TraditionalBoardGraph}, piece_set::{Color, PieceType}, position::{GameOver, Position}};
 
 
-
+#[derive(Resource)]
 pub struct Game {
     pub engine: Engine,
     pub are_players_cpu: Vec<bool>,
