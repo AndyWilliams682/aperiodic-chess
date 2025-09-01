@@ -21,9 +21,6 @@ use graph_boards::graph_board::TileIndex;
 
 use crate::{engine::Engine, game::Game, graph_boards::graph_board::Tile, limited_int::LimitedInt};
 
-// --- Components and Resources ---
-
-/// A component that identifies an edge in our graph.
 #[derive(Component, Debug, Clone, Copy)]
 pub struct GraphEdge {
     pub start_tile_id: u32,
@@ -36,21 +33,17 @@ struct MoveIndicator;
 #[derive(Resource)]
 struct CurrentTurnLabel(Entity);
 
-/// A resource to hold the global state of our graph.
 #[derive(Resource, Default)]
 struct GraphState {
     tile_count: u32,
     edge_count: u32,
 }
 
-// A resource to track the currently selected tile for move visualization
 #[derive(Resource, Default)]
 struct SelectedTile {
     entity: Option<Entity>,
     tile_index: Option<TileIndex>,
 }
-
-// --- Plugins and Setup ---
 
 fn main() {
     App::new()
@@ -81,10 +74,8 @@ fn main() {
 }
 
 fn setup(mut commands: Commands, mut graph_state: ResMut<GraphState>, tile_query: Query<Entity, With<Tile<1>>>, edge_query: Query<Entity, With<GraphEdge>>, game: Res<Game>) {
-    // Spawn a camera to view the scene.
     commands.spawn(Camera2dBundle::default());
 
-    // Despawn all entities before generating the first graph.
     despawn_all_graph_entities(&mut commands, tile_query, edge_query);
 
     let player_type = match game.are_players_cpu[0] {
@@ -92,7 +83,6 @@ fn setup(mut commands: Commands, mut graph_state: ResMut<GraphState>, tile_query
         false => "Human"
     };
 
-    // Spawn the turn indicator text
     let turn_text = commands.spawn(Text2dBundle {
         text: Text::from_section(
             format!("White ({}) to move", player_type),
@@ -110,9 +100,6 @@ fn setup(mut commands: Commands, mut graph_state: ResMut<GraphState>, tile_query
     spawn_traditional_graph(&mut commands, &mut graph_state, game);
 }
 
-// --- Systems ---
-
-/// Helper function to despawn all tiles and edges.
 fn despawn_all_graph_entities(
     commands: &mut Commands,
     tile_query: Query<Entity, With<Tile<1>>>,
@@ -134,7 +121,6 @@ fn make_cpu_moves(
     }
 }
 
-// A new system to handle tile clicks. It takes `EventReader`, `Query`, and `ResMut` as parameters.
 fn handle_tile_click(
     mut event_reader: EventReader<Pointer<Click>>,
     tile_query: Query<&Tile<1>>,
@@ -142,7 +128,6 @@ fn handle_tile_click(
     mut game: ResMut<Game>,
 ) {
     for event in event_reader.read() {
-        // Handle selecting a new piece
         // TODO: Make this run less? It keeps looping
         if game.are_players_cpu[game.current_position.active_player.as_idx()] { 
             return
@@ -176,7 +161,6 @@ fn handle_tile_click(
                     selected_tile.tile_index = Some(tile.id);
                 }
             } else if tile.occupant != None {
-                // Select this tile if a piece is present
                 selected_tile.entity = Some(event.target);
                 selected_tile.tile_index = Some(tile.id);
             }
@@ -184,7 +168,6 @@ fn handle_tile_click(
     }
 }
 
-// A new system to spawn and despawn visual indicators for possible moves.
 fn spawn_move_indicators(
     mut commands: Commands,
     selected_tile: Res<SelectedTile>,
@@ -192,10 +175,7 @@ fn spawn_move_indicators(
     tile_query: Query<(&Tile<1>, Entity)>,
     indicator_query: Query<Entity, With<MoveIndicator>>,
 ) {
-    // If a tile is selected, spawn indicators for its valid moves
     if let Some(tile_index) = selected_tile.tile_index {
-
-        // Despawn all existing indicators first
         for indicator in indicator_query.iter() {
             commands.entity(indicator).despawn_recursive();
         }
@@ -205,7 +185,6 @@ fn spawn_move_indicators(
         for (tile, entity) in tile_query.iter() {
             // TODO: More efficient way to write this that only queries tiles in the moves (removing this check)
             if moves.get_bit_at_tile(&tile.id) {
-                // Spawn a small circle as a child of the destination tile
                 let mut bundle = PickableBundle::default(); // Needed to add this to get the right behavior
                 bundle.pickable.should_block_lower = false;
                 commands.entity(entity).with_children(|parent| {
@@ -241,7 +220,6 @@ fn spawn_move_indicators(
             }
         }
     } else {
-        // Despawn all existing indicators first
         // TODO: Two of this code
         for indicator in indicator_query.iter() {
             commands.entity(indicator).despawn_recursive();
@@ -249,7 +227,6 @@ fn spawn_move_indicators(
     }
 }
 
-// A new system to update the character labels on the tiles based on the game state.
 fn update_piece_labels(
     game: Res<Game>,
     mut tile_query: Query<(&mut Tile<1>, &Children)>,
@@ -324,7 +301,6 @@ fn spawn_traditional_graph(commands: &mut Commands, graph_state: &mut ResMut<Gra
             _ => Color::rgb(0.92, 0.92, 0.81)
         };
 
-        // A tile is an entity with a sprite and our custom `GraphTile` component.
         let tile_entity = commands.spawn((
             graph_tile_component,
             SpriteBundle {
@@ -336,7 +312,6 @@ fn spawn_traditional_graph(commands: &mut Commands, graph_state: &mut ResMut<Gra
                 transform: Transform::from_xyz(pos.x, pos.y, 0.0),
                 ..default()
             },
-            // The `bevy_mod_picking` components are essential for interaction.
             PickableBundle::default(),
         )).with_children(|parent| {
             parent.spawn(Text2dBundle {
@@ -360,7 +335,6 @@ fn spawn_traditional_graph(commands: &mut Commands, graph_state: &mut ResMut<Gra
     graph_state.edge_count = num_edges;
 }
 
-/// A system to render the Egui UI.
 fn handle_egui_ui(
     mut contexts: EguiContexts,
     mut commands: Commands,
