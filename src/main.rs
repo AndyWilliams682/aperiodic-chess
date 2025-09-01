@@ -33,20 +33,15 @@ pub struct GraphEdge {
 #[derive(Component)]
 struct MoveIndicator;
 
+#[derive(Resource)]
+struct CurrentTurnLabel(Entity);
+
 /// A resource to hold the global state of our graph.
 #[derive(Resource, Default)]
 struct GraphState {
     tile_count: u32,
     edge_count: u32,
 }
-
-// A resource to hold the entity of the turn indicator text
-#[derive(Resource)]
-struct CurrentTurn(Entity);
-
-#[derive(Resource, Default)]
-struct GameHasFinished(bool);
-
 
 // A resource to track the currently selected tile for move visualization
 #[derive(Resource, Default)]
@@ -69,10 +64,10 @@ fn main() {
             engine: Engine::new(TraditionalBoardGraph::new().0.move_tables()),
             are_players_cpu: vec![false, true],
             current_position: Position::new_traditional(),
-            board: TraditionalBoardGraph::new()
+            board: TraditionalBoardGraph::new(),
+            game_over_state: None
         })
         .insert_resource(SelectedTile::default())
-        .insert_resource(GameHasFinished::default())
         .add_systems(Startup, setup)
         .add_systems(Update, (
             handle_egui_ui,
@@ -110,7 +105,7 @@ fn setup(mut commands: Commands, mut graph_state: ResMut<GraphState>, tile_query
         transform: Transform::from_translation(Vec3::new(0.0, 350.0, 0.5)),
         ..default()
     }).id();
-    commands.insert_resource(CurrentTurn(turn_text));
+    commands.insert_resource(CurrentTurnLabel(turn_text));
 
     spawn_traditional_graph(&mut commands, &mut graph_state, game);
 }
@@ -133,9 +128,8 @@ fn despawn_all_graph_entities(
 
 fn make_cpu_moves(
     mut game: ResMut<Game>,
-    finished: Res<GameHasFinished>,
 ) {
-    if !finished.0 && game.are_players_cpu[game.current_position.active_player.as_idx()] {
+    if game.game_over_state == None && game.are_players_cpu[game.current_position.active_player.as_idx()] {
         game.make_cpu_move()
     }
 }
@@ -286,9 +280,8 @@ fn update_piece_labels(
 
 fn update_turn_indicator(
     mut game: ResMut<Game>,
-    current_turn_res: Res<CurrentTurn>,
+    current_turn_res: Res<CurrentTurnLabel>,
     mut text_query: Query<&mut Text>,
-    mut finished: ResMut<GameHasFinished>,
 ) {
     if game.is_changed() {
         if let Ok(mut text) = text_query.get_mut(current_turn_res.0) {
@@ -298,9 +291,9 @@ fn update_turn_indicator(
                 true => "CPU",
                 false => "Human"
             };
-            if let Some(game_over_condition) = game.is_over() {
+            game.check_if_over();
+            if let Some(game_over_condition) = &game.game_over_state {
                 text.sections[0].value = game_over_condition.display(game.current_position.active_player.opponent());
-                finished.0 = true;
             } else {
                 text.sections[0].value = format!("{} ({}) to move", player_name, player_type);
             }

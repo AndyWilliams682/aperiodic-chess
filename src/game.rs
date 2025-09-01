@@ -8,17 +8,18 @@ pub struct Game {
     pub engine: Engine,
     pub are_players_cpu: Vec<bool>,
     pub current_position: Position,
-    pub board: TraditionalBoardGraph
+    pub board: TraditionalBoardGraph,
+    pub game_over_state: Option<GameOver>,
 }
 
 impl Game {
-    pub fn is_over(&mut self) -> Option<GameOver> {
+    pub fn check_if_over(&mut self) -> () {
         if self.current_position.is_checkmate(&self.engine.move_tables) {
-            return Some(GameOver::Checkmate)
+            self.game_over_state = Some(GameOver::Checkmate)
         } else if self.current_position.is_stalemate(&self.engine.move_tables) || self.current_position.fifty_move_draw() { // TODO: Add more draw conditions here
-            return Some(GameOver::Draw)
+            self.game_over_state = Some(GameOver::Draw)
         } else {
-            None
+            self.game_over_state = None
         }
     }
 
