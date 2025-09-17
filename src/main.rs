@@ -130,39 +130,29 @@ fn handle_tile_click(
     for event in event_reader.read() {
         // TODO: Make this run less? It keeps looping
         if game.are_players_cpu[game.current_position.active_player.as_idx()] { 
-            return
+            return // No clicks will register while the AI is thinking
         }
 
-        if let Ok(tile) = tile_query.get(event.target) {
-            if let Some(source_tile) = selected_tile.tile_index {
-                let moves = game.query_tile(&source_tile);
-                if moves.get_bit_at_tile(&tile.id) {
-                    selected_tile.entity = None;
-                    selected_tile.tile_index = None;
-                    // TODO: Rewrite with a better pattern; clean this trash up
-                    // Should be 1) assume clicked tile is selected
-                    // 2) if move is possible, then reset selected_tile instead
-                    // TODO: Actually handle errors and notify users
-                    match game.attempt_move_input(&source_tile, &tile.id) {
-                        Err(_) => {
-                            // TODO: This is where unplayable moves due to legality should be handled
-                            if tile.occupant != None { // TODO: Make function to reduce repeat code
-                                selected_tile.entity = Some(event.target);
-                                selected_tile.tile_index = Some(tile.id); 
-                            } else {
-                                selected_tile.entity = None;
-                                selected_tile.tile_index = None;
-                            }
-                        },
-                        _ => {}
-                    }
-                } else if tile.occupant != None {
-                    selected_tile.entity = Some(event.target);
-                    selected_tile.tile_index = Some(tile.id);
-                }
-            } else if tile.occupant != None {
+        if let Ok(clicked_tile) = tile_query.get(event.target) {
+            // Assume the clicked tile should be selected if it has an occupant
+            let original_selected_tile = selected_tile.tile_index;
+            if clicked_tile.occupant != None {
                 selected_tile.entity = Some(event.target);
-                selected_tile.tile_index = Some(tile.id);
+                selected_tile.tile_index = Some(clicked_tile.id);
+            }
+
+            // Attempt to make a move if a different tile is already selected
+            if let Some(source_tile) = original_selected_tile {
+                let moves = game.query_tile(&source_tile);
+                if moves.get_bit_at_tile(&clicked_tile.id) {
+                    match game.attempt_move_input(&source_tile, &clicked_tile.id) {
+                        Err(_) => {}, // TODO: Add code to display the error here
+                        _ => { // Successful moves reset selected_tile
+                            selected_tile.entity = None;
+                            selected_tile.tile_index = None;
+                        }
+                    }
+                }
             }
         }
     }
