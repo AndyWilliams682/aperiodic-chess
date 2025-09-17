@@ -140,7 +140,6 @@ fn handle_tile_click(
                 selected_tile.entity = Some(event.target);
                 selected_tile.tile_index = Some(clicked_tile.id);
             }
-
             // Attempt to make a move if a different tile is already selected
             if let Some(source_tile) = original_selected_tile {
                 let moves = game.query_tile(&source_tile);
@@ -165,11 +164,11 @@ fn spawn_move_indicators(
     tile_query: Query<(&Tile<1>, Entity)>,
     indicator_query: Query<Entity, With<MoveIndicator>>,
 ) {
-    if let Some(tile_index) = selected_tile.tile_index {
-        for indicator in indicator_query.iter() {
-            commands.entity(indicator).despawn_recursive();
-        }
+    for indicator in indicator_query.iter() {
+        commands.entity(indicator).despawn_recursive();
+    }
 
+    if let Some(tile_index) = selected_tile.tile_index {
         let moves = game.query_tile(&tile_index);
 
         for (tile, entity) in tile_query.iter() {
@@ -208,11 +207,6 @@ fn spawn_move_indicators(
                     ));
                 });
             }
-        }
-    } else {
-        // TODO: Two of this code
-        for indicator in indicator_query.iter() {
-            commands.entity(indicator).despawn_recursive();
         }
     }
 }
