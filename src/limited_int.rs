@@ -10,7 +10,7 @@ impl <const N: u8> LimitedInt<N> {
         return Self(value % N, PhantomData)
     }
 
-    pub fn all_values() -> Vec<Self> { // TODO: This should be an iterator
+    pub fn all_values() -> Vec<Self> {
         let mut output: Vec<Self> = vec![];
         for i in 0..N {
             output.push(Self::new(i));

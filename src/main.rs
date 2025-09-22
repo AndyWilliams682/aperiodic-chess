@@ -19,7 +19,7 @@ use graph_boards::hexagonal_board::HexagonalBoardGraph;
 use position::Position;
 use graph_boards::graph_board::TileIndex;
 
-use crate::{engine::Engine, game::Game, graph_boards::graph_board::Tile, limited_int::LimitedInt};
+use crate::{bit_board::BitBoardTiles, engine::Engine, game::Game, graph_boards::graph_board::Tile, limited_int::LimitedInt};
 
 #[derive(Component, Debug, Clone, Copy)]
 pub struct GraphEdge {
@@ -128,7 +128,6 @@ fn handle_tile_click(
     mut game: ResMut<Game>,
 ) {
     for event in event_reader.read() {
-        // TODO: Make this run less? It keeps looping
         if game.are_players_cpu[game.current_position.active_player.as_idx()] { 
             return // No clicks will register while the AI is thinking
         }
@@ -145,7 +144,7 @@ fn handle_tile_click(
                 let moves = game.query_tile(&source_tile);
                 if moves.get_bit_at_tile(&clicked_tile.id) {
                     match game.attempt_move_input(&source_tile, &clicked_tile.id) {
-                        Err(_) => {}, // TODO: Add code to display the error here
+                        Err(_) => {},
                         _ => { // Successful moves reset selected_tile
                             selected_tile.entity = None;
                             selected_tile.tile_index = None;
@@ -172,7 +171,6 @@ fn spawn_move_indicators(
         let moves = game.query_tile(&tile_index);
 
         for (tile, entity) in tile_query.iter() {
-            // TODO: More efficient way to write this that only queries tiles in the moves (removing this check)
             if moves.get_bit_at_tile(&tile.id) {
                 let mut bundle = PickableBundle::default(); // Needed to add this to get the right behavior
                 bundle.pickable.should_block_lower = false;

@@ -48,7 +48,7 @@ pub enum PieceType {
 }
 
 impl PieceType {
-    pub fn as_idx(&self) -> usize { // TODO: Use this in arrays
+    pub fn as_idx(&self) -> usize {
         return match self {
             PieceType::King => 0,
             PieceType::Queen => 1,
@@ -59,7 +59,7 @@ impl PieceType {
         }
     }
 
-    pub fn as_char(&self) -> char { // TODO: Replace with images?
+    pub fn as_char(&self) -> char {
         return match self {
             PieceType::King => '♔',
             PieceType::Queen => '♕',

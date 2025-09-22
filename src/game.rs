@@ -1,6 +1,6 @@
 use bevy::prelude::Resource;
 
-use crate::{bit_board::{BitBoard, BitBoardTiles}, chess_move::Move, engine::Engine, graph_boards::{graph_board::TileIndex, traditional_board::TraditionalBoardGraph}, piece_set::{Color, PieceType}, position::{GameOver, Position}};
+use crate::{bit_board::{BitBoard, BitBoardMoves, BitBoardTiles}, chess_move::Move, engine::Engine, graph_boards::{graph_board::TileIndex, traditional_board::TraditionalBoardGraph}, piece_set::{Color, PieceType}, position::{GameOver, Position}};
 
 
 #[derive(Resource)]
@@ -16,7 +16,7 @@ impl Game {
     pub fn check_if_over(&mut self) -> () {
         if self.current_position.is_checkmate(&self.engine.move_tables) {
             self.game_over_state = Some(GameOver::Checkmate)
-        } else if self.current_position.is_stalemate(&self.engine.move_tables) || self.current_position.fifty_move_draw() { // TODO: Add more draw conditions here
+        } else if self.current_position.is_stalemate(&self.engine.move_tables) || self.current_position.fifty_move_draw() {
             self.game_over_state = Some(GameOver::Draw)
         } else {
             self.game_over_state = None
@@ -31,7 +31,7 @@ impl Game {
     pub fn query_tile(&mut self, tile_index: &TileIndex) -> BitBoard {
         let white_pieces = &self.current_position.pieces[0];
         let black_pieces = &self.current_position.pieces[1];
-        let occupied = white_pieces.occupied | black_pieces.occupied; // TODO: Occupied stored somewhere??
+        let occupied = white_pieces.occupied | black_pieces.occupied;
         
         let selected_white = white_pieces.get_piece_at(tile_index);
         let selected_black = black_pieces.get_piece_at(tile_index);
@@ -57,7 +57,6 @@ impl Game {
             if pawn_tables.promotion_board.get_bit_at_tile(&destination_tile) && selected_piece == Some(PieceType::Pawn) {
                 promotion = Some(PieceType::Queen);
             }
-            // TODO: Redesign and use BitBoardMoves
             let chess_move = Move::new(*tile_index, destination_tile, promotion, None);
             if !self.current_position.is_playable_move(&chess_move, &self.engine.move_tables) {
                 pseudo_moves.flip_bit_at_tile_index(destination_tile);

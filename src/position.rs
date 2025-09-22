@@ -131,9 +131,8 @@ impl Position {
     pub fn to_string(&self) -> String {
         let mut output = "".to_string();
         let mut empty_tile_counter = 0;
-        for tile in 0..128 { // TODO: Un-hardcode this value
+        for tile in 0..128 {
             let tile_index = TileIndex::new(tile);
-            // TODO: This can be rewritten with new methods
             if let Some(piece) = self.pieces[0].get_piece_at(&tile_index) {
                 let symbol = match piece {
                     PieceType::King => 'K',
@@ -182,7 +181,7 @@ impl Position {
         output
     }
 
-    pub fn new_traditional() -> Self { // TODO: Move to the specific board graph files?
+    pub fn new_traditional() -> Self {
         return Position::from_string("RNBQKBNRPPPPPPPP32pppppppprnbqkbnr w -".to_string())
     }
 
@@ -202,7 +201,6 @@ impl Position {
         let all_occupants = enemy_occupants | self.pieces[color.as_idx()].occupied;
 
         // Orthogonals
-        // TODO: Possibly consolidate with Diagonals into a single for loop
         for rev_direction_table in move_tables.reverse_slide_tables.iter().step_by(2) {
             let candidates = rev_direction_table[king_tile] & (
                 self.pieces[opponent_idx].rook | self.pieces[opponent_idx].queen
@@ -265,8 +263,7 @@ impl Position {
         self.unmake_legal_move(chess_move);
         return legality
     }
-
-    // TODO: Rewrite using Result and a custom error type
+   
     pub fn is_playable_move(&mut self, chess_move: &Move, move_tables: &MoveTables) -> bool {
         let player_idx = self.active_player.as_idx();
         let opponent_idx = self.active_player.opponent().as_idx();
@@ -339,9 +336,9 @@ impl Position {
         }
 
         self.record = PositionRecord {
-            en_passant_data: legal_move.en_passant_data.clone(), // TODO: Candidate 1
+            en_passant_data: legal_move.en_passant_data.clone(),
             captured_piece: target_piece,
-            previous_record: Some(self.record.clone()), // TODO: Candidate 2
+            previous_record: Some(self.record.clone()),
             fifty_move_counter: fifty_move_counter
         }.into();
 

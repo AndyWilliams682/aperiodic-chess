@@ -154,7 +154,7 @@ impl PawnTables {
     fn create_en_passant_table(single_table: &JumpTable, double_table: &DirectionalSlideTable) -> Vec<Option<EnPassantData>> {
         let mut output = vec![];
         for source_tile in 0..single_table.num_tiles() {
-            let tile_idx = TileIndex::new(source_tile); // TODO: Make/USE TileIndex iterator?
+            let tile_idx = TileIndex::new(source_tile);
             let en_passant_data = match double_table[tile_idx].get(&BitBoard::empty()).unwrap().lowest_one() {
                 Some(occupied_tile) => {
                     let passed_tile = single_table[tile_idx].lowest_one().unwrap();

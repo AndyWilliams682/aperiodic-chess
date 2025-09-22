@@ -6,7 +6,6 @@ use crate::position::Position;
 
 
 // All measured in centipawns
-// TODO: May need a better way to evaluate individual pieces as the board changes
 const KING_SCORE: isize = 9999;
 const QUEEN_SCORE: isize = 900;
 const ROOK_SCORE: isize = 500;

@@ -59,21 +59,21 @@ impl UniformTriangleBoardGraph {
         let mut result = TriangularDirection::all_values();
         let mut invalid = HashSet::new();
        
-        match source_tile.index() { // TODO: Rewrite more elegantly
+        match source_tile.index() {
             0..=9 => {
                 invalid.insert(4);
                 invalid.insert(5);
             },
             _ => {}
         };
-        match source_tile.index() { // TODO: Rewrite more elegantly
+        match source_tile.index() {
             0 | 10 | 19 | 27 | 34 | 40 | 45 | 49 | 52 | 54 => {
                 invalid.insert(2);
                 invalid.insert(3);
             },
             _ => {}
         };
-        match source_tile.index() { // TODO: Rewrite more elegantly
+        match source_tile.index() {
             9 | 18 | 26 | 33 | 39 | 44 | 48 | 51 | 53 | 54 => {
                 invalid.insert(0);
                 invalid.insert(1);
@@ -94,8 +94,7 @@ impl UniformTriangleBoardGraph {
             2 => row - 1,
             3 => -1,
             4 => -row - 1,
-            5 => -row,
-            _ => 0 // TODO: Remove impossible match arms? I've covered the whole space above
+            _ => -row, // Last possible option is 5
         }
     }
 }

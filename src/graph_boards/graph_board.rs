@@ -89,13 +89,13 @@ impl <const N: u8, const E: u8> GraphBoard<N, E> {
         };
 
         let mut result: HashSet<TileIndex> = HashSet::new();
-        for even_direction in LimitedInt::<E>::all_values()
+        for direction in LimitedInt::<E>::all_values()
                                     .into_iter()
                                     .skip(initital_direction)
-                                    .step_by(direction_step) { // TODO: Better iterator usage
+                                    .step_by(direction_step) {
             result.extend(self.slides_from_in_direction(
                 source_tile,
-                &even_direction,
+                &direction,
                 limit,
                 obstructions
             ))
