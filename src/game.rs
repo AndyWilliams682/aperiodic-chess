@@ -6,7 +6,7 @@ use crate::{bit_board::{BitBoard, BitBoardTiles}, chess_move::Move, engine::Engi
 #[derive(Resource)]
 pub struct Game {
     pub engine: Engine,
-    pub are_players_cpu: Vec<bool>,
+    pub are_players_cpu: [bool; 2],
     pub current_position: Position,
     pub board: TraditionalBoardGraph,
     pub game_over_state: Option<GameOver>,

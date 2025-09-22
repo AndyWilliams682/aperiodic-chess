@@ -55,7 +55,7 @@ fn main() {
         .insert_resource(GraphState::default())
         .insert_resource(Game {
             engine: Engine::new(TraditionalBoardGraph::new().0.move_tables()),
-            are_players_cpu: vec![false, true],
+            are_players_cpu: [false, true],
             current_position: Position::new_traditional(),
             board: TraditionalBoardGraph::new(),
             game_over_state: None
