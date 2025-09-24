@@ -5,6 +5,9 @@ use crate::graph_boards::graph_board::{TileIndex};
 use crate::chess_move::{EnPassantData, Move};
 use crate::move_generator::MoveTables;
 use crate::piece_set::{Color, Piece, PieceType, PieceSet};
+use crate::zobrist::ZobristTable;
+
+static ZOBRIST_TABLE: ZobristTable = ZobristTable::generate();
 
 #[derive(Debug, PartialEq)]
 pub enum GameOver {
@@ -73,6 +76,27 @@ impl Position {
         } else {
             return None
         }
+    }
+
+    pub fn to_hash(&self) -> u64 {
+        let mut output = 0;
+        for tile_index in 0..128 {
+            if let Some(occupant) = self.get_occupant(&TileIndex::new(tile_index)) {
+                let color_idx_shift = match occupant.color {
+                    Color::White => 0,
+                    Color::Black => 6
+                };
+                let piece_idx = occupant.piece.as_idx();
+                output ^= ZOBRIST_TABLE.pieces[piece_idx + color_idx_shift][tile_index]
+            }
+        }
+        if let Some(en_passant_data) = &self.record.en_passant_data {
+            output ^= ZOBRIST_TABLE.en_passant[en_passant_data.passed_tile.index()]
+        }
+        if self.active_player == Color::Black {
+            output ^= ZOBRIST_TABLE.black_to_move
+        }
+        return output
     }
 
     pub fn from_string(fen: String) -> Self {

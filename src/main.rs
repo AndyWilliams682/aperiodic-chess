@@ -9,6 +9,7 @@ mod evaluator;
 mod game;
 mod engine;
 mod bit_board;
+mod zobrist;
 
 use bevy::prelude::*;
 use bevy_egui::{egui, EguiContexts, EguiPlugin};
@@ -19,7 +20,7 @@ use graph_boards::hexagonal_board::HexagonalBoardGraph;
 use position::Position;
 use graph_boards::graph_board::TileIndex;
 
-use crate::{bit_board::BitBoardTiles, engine::Engine, game::Game, graph_boards::graph_board::Tile, limited_int::LimitedInt};
+use crate::{bit_board::BitBoardTiles, engine::Engine, game::Game, graph_boards::graph_board::Tile, limited_int::LimitedInt, zobrist::ZobristTable};
 
 #[derive(Component, Debug, Clone, Copy)]
 pub struct GraphEdge {
