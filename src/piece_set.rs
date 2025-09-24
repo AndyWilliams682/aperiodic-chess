@@ -1,6 +1,7 @@
 use std::fmt;
 
 use crate::bit_board::BitBoard;
+use crate::constants::NUM_PIECE_TYPES;
 use crate::graph_boards::graph_board::TileIndex;
 
 
@@ -48,6 +49,28 @@ pub enum PieceType {
 }
 
 impl PieceType {
+    pub fn from_idx(idx: usize) -> Self {
+        return match idx {
+            0 => PieceType::King,
+            1 => PieceType::Queen,
+            2 => PieceType::Rook,
+            3 => PieceType::Bishop,
+            4 => PieceType::Knight,
+            _ => PieceType::Pawn
+        }
+    }
+
+    pub fn from_char(character: char) -> Self {
+        return match character.to_ascii_lowercase() {
+            'k' => PieceType::King,
+            'q' => PieceType::Queen,
+            'r' => PieceType::Rook,
+            'b' => PieceType::Bishop,
+            'n' => PieceType::Knight,
+            _ => PieceType::Pawn
+        }
+    }
+
     pub fn as_idx(&self) -> usize {
         return match self {
             PieceType::King => 0,
@@ -105,66 +128,43 @@ impl Piece {
 
 #[derive(Debug)]
 pub struct PieceSet {
-    pub king: BitBoard,
-    pub queen: BitBoard,
-    pub rook: BitBoard,
-    pub bishop: BitBoard,
-    pub knight: BitBoard,
-    pub pawn: BitBoard,
+    // pub king: BitBoard,
+    // pub queen: BitBoard,
+    // pub rook: BitBoard,
+    // pub bishop: BitBoard,
+    // pub knight: BitBoard,
+    // pub pawn: BitBoard,
+    pub piece_boards: [BitBoard; 6],
     pub occupied: BitBoard
 }
 
 impl PieceSet {
     pub fn empty() -> Self {
         Self {
-            king: BitBoard::empty(),
-            queen: BitBoard::empty(),
-            rook: BitBoard::empty(),
-            bishop: BitBoard::empty(),
-            knight: BitBoard::empty(),
-            pawn: BitBoard::empty(),
+            piece_boards: [BitBoard::empty(); 6],
             occupied: BitBoard::empty()
         }
     }
 
     pub fn update_occupied(&mut self) {
         let mut occupied = BitBoard::empty();
-        occupied |= self.king;
-        occupied |= self.queen;
-        occupied |= self.rook;
-        occupied |= self.bishop;
-        occupied |= self.knight;
-        occupied |= self.pawn;
+        for piece_board in self.piece_boards {
+            occupied |= piece_board
+        }
         self.occupied = occupied
     }
 
     pub fn get_piece_at(&self, tile_index: &TileIndex) -> Option<PieceType> {
-        if self.king.get_bit_at_tile(tile_index) == true {
-            return Some(PieceType::King)
-        } else if self.queen.get_bit_at_tile(tile_index) == true {
-            return Some(PieceType::Queen)
-        } else if self.rook.get_bit_at_tile(tile_index) == true {
-            return Some(PieceType::Rook)
-        } else if self.bishop.get_bit_at_tile(tile_index) == true {
-            return Some(PieceType::Bishop)
-        } else if self.knight.get_bit_at_tile(tile_index) == true {
-            return Some(PieceType::Knight)
-        } else if self.pawn.get_bit_at_tile(tile_index) == true {
-            return Some(PieceType::Pawn)
-        } else {
-            return None
+        for piece_idx in 0..NUM_PIECE_TYPES {
+            if self.piece_boards[piece_idx].get_bit_at_tile(tile_index) == true {
+                return Some(PieceType::from_idx(piece_idx))
+            }
         }
+        return None
     }
 
     pub fn get_bitboard_for_piece(&mut self, piece_type: &PieceType) -> &mut BitBoard {
-        return match piece_type {
-            PieceType::King => &mut self.king,
-            PieceType::Queen => &mut self.queen,
-            PieceType::Rook => &mut self.rook,
-            PieceType::Bishop => &mut self.bishop,
-            PieceType::Knight => &mut self.knight,
-            PieceType::Pawn => &mut self.pawn,
-        };
+        return &mut self.piece_boards[piece_type.as_idx()]
     }
 
     pub fn move_piece(&mut self, source_tile: TileIndex, destination_tile: TileIndex) {
@@ -182,7 +182,7 @@ impl PieceSet {
 
     pub fn promote_piece(&mut self, promotion_tile: TileIndex, promotion_target: &PieceType) {
         // This assumes the move has been registered before applying the promotion
-        self.pawn.flip_bit_at_tile_index(promotion_tile);
+        self.piece_boards[PieceType::Pawn.as_idx()].flip_bit_at_tile_index(promotion_tile);
         let bitboard = self.get_bitboard_for_piece(promotion_target);
         bitboard.flip_bit_at_tile_index(promotion_tile);
     }
@@ -196,7 +196,7 @@ impl PieceSet {
         let piece_type = self.get_piece_at(&demotion_tile).unwrap();
         let bitboard = self.get_bitboard_for_piece(&piece_type);
         bitboard.flip_bit_at_tile_index(demotion_tile);
-        self.pawn.flip_bit_at_tile_index(demotion_tile);
+        self.piece_boards[PieceType::Pawn.as_idx()].flip_bit_at_tile_index(demotion_tile);
     } // inverse of promote_piece
 }
 
@@ -235,7 +235,7 @@ mod tests {
         let destination_tile = TileIndex::new(18);
         piece_set.move_piece(source_tile, destination_tile);
         assert_eq!(
-            piece_set.knight,
+            piece_set.piece_boards[PieceType::Knight.as_idx()],
             BitBoard::from_ints(vec![6, 18])
         );
     }
@@ -246,7 +246,7 @@ mod tests {
         let capture_tile = TileIndex::new(0);
         piece_set.capture_piece(capture_tile);
         assert_eq!(
-            piece_set.rook,
+            piece_set.piece_boards[PieceType::Rook.as_idx()],
             BitBoard::from_ints(vec![7])
         )
     }
@@ -257,11 +257,11 @@ mod tests {
         let promotion_tile = TileIndex::new(8);
         piece_set.promote_piece(promotion_tile, &PieceType::Queen);
         assert_eq!(
-            piece_set.pawn,
+            piece_set.piece_boards[PieceType::Pawn.as_idx()],
             BitBoard::from_ints(vec![9, 10, 11, 12, 13, 14, 15])
         );
         assert_eq!(
-            piece_set.queen,
+            piece_set.piece_boards[PieceType::Queen.as_idx()],
             BitBoard::from_ints(vec![3, 8])
         )
     }
@@ -272,7 +272,7 @@ mod tests {
         let captured_tile = TileIndex::new(16);
         piece_set.return_piece(captured_tile, &PieceType::Rook);
         assert_eq!(
-            piece_set.rook,
+            piece_set.piece_boards[PieceType::Rook.as_idx()],
             BitBoard::from_ints(vec![0, 7, 16])
         )
     }
@@ -283,11 +283,11 @@ mod tests {
         let demotion_tile = TileIndex::new(0);
         piece_set.demote_piece(demotion_tile);
         assert_eq!(
-            piece_set.rook,
+            piece_set.piece_boards[PieceType::Rook.as_idx()],
             BitBoard::from_ints(vec![7])
         );
         assert_eq!(
-            piece_set.pawn,
+            piece_set.piece_boards[PieceType::Pawn.as_idx()],
             BitBoard::from_ints(vec![0, 8, 9, 10, 11, 12, 13, 14, 15])
         )
     }

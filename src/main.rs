@@ -1,3 +1,4 @@
+mod constants;
 mod graph_boards;
 mod limited_int;
 mod position;
