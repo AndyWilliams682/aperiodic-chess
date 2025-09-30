@@ -158,7 +158,7 @@ impl PawnTables {
             let en_passant_data = match double_table[tile_idx].get(&BitBoard::empty()).unwrap().lowest_one() {
                 Some(occupied_tile) => {
                     let passed_tile = single_table[tile_idx].lowest_one().unwrap();
-                    Some(EnPassantData { passed_tile, occupied_tile })
+                    Some(EnPassantData { source_tile: tile_idx, passed_tile, occupied_tile })
                 },
                 _ => None
             };

@@ -197,14 +197,14 @@ mod tests {
         assert_eq!( // En Passant Capture
             move_tables.query_pawn(
                 color, source_tile, &enemies, occupied, 
-                &Some(EnPassantData { passed_tile: TileIndex::new(16), occupied_tile: TileIndex::new(8) })
+                &Some(EnPassantData { source_tile, passed_tile: TileIndex::new(16), occupied_tile: TileIndex::new(8) })
             ),
             BitBoard::from_ints(vec![16, 17, 25])
         );
         assert_eq!( // Irrelevant En Passant
             move_tables.query_pawn(
                 color, source_tile, &enemies, occupied, 
-                &Some(EnPassantData { passed_tile: TileIndex::new(19), occupied_tile: TileIndex::new(11) })
+                &Some(EnPassantData { source_tile, passed_tile: TileIndex::new(19), occupied_tile: TileIndex::new(11) })
             ),
             BitBoard::from_ints(vec![17, 25])
         )
@@ -240,14 +240,14 @@ mod tests {
         assert_eq!( // En Passant Capture
             move_tables.query_pawn(
                 color, source_tile, &enemies, occupied, 
-                &Some(EnPassantData { passed_tile: TileIndex::new(40), occupied_tile: TileIndex::new(48) })
+                &Some(EnPassantData { source_tile, passed_tile: TileIndex::new(40), occupied_tile: TileIndex::new(48) })
             ),
             BitBoard::from_ints(vec![40, 41, 33])
         );
         assert_eq!( // Irrelevant En Passant
             move_tables.query_pawn(
                 color, source_tile, &enemies, occupied, 
-                &Some(EnPassantData { passed_tile: TileIndex::new(43), occupied_tile: TileIndex::new(51) })
+                &Some(EnPassantData { source_tile, passed_tile: TileIndex::new(43), occupied_tile: TileIndex::new(51) })
             ),
             BitBoard::from_ints(vec![41, 33])
         )

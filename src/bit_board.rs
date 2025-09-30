@@ -388,6 +388,7 @@ mod tests {
         let source_tile = TileIndex::new(8);
         let remaining_moves = BitBoard::from_ints(vec![16, 17, 24]);
         let en_passant_data = Some(EnPassantData { 
+            source_tile,
             passed_tile: TileIndex::new(16),
             occupied_tile: TileIndex::new(24) 
         });
