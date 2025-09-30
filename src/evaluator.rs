@@ -1,3 +1,4 @@
+use crate::constants::NUM_PIECE_TYPES;
 use crate::movement_tables::{JumpTable, PawnTables, SlideTables};
 use crate::bit_board::{BitBoard, BitBoardTiles};
 use crate::piece_set::{Color, PieceSet, PieceType};
@@ -6,12 +7,14 @@ use crate::position::Position;
 
 
 // All measured in centipawns
-const KING_SCORE: isize = 9999;
-const QUEEN_SCORE: isize = 900;
-const ROOK_SCORE: isize = 500;
-const BISHOP_SCORE: isize = 350;
-const KNIGHT_SCORE: isize = 350;
-const PAWN_SCORE: isize = 100;
+const PIECE_SCORES: [isize; 6] = [
+    9999, // King
+    900,  // Queen
+    500,  // Rook
+    350,  // Bishop
+    350,  // Knight
+    100   // Pawn
+];
 const CHECKMATED_SCORE: isize = -99999;
 const POSITIONAL_MULTIPLIER: isize = 5;
 
@@ -77,12 +80,9 @@ impl Evaluator {
    
     fn pieceset_material_score(&self, piece_set: &PieceSet) -> isize {
         let mut material_score = 0;
-        material_score += piece_set.king.0.count_ones() as isize * KING_SCORE;
-        material_score += piece_set.queen.0.count_ones() as isize * QUEEN_SCORE;
-        material_score += piece_set.rook.0.count_ones() as isize * ROOK_SCORE;
-        material_score += piece_set.bishop.0.count_ones() as isize * BISHOP_SCORE;
-        material_score += piece_set.knight.0.count_ones() as isize * KNIGHT_SCORE;
-        material_score += piece_set.pawn.0.count_ones() as isize * PAWN_SCORE;
+        for piece_idx in 0..NUM_PIECE_TYPES {
+            material_score += piece_set.piece_boards[piece_idx].0.count_ones() as isize * PIECE_SCORES[piece_idx]
+        }
         material_score
     }
    
@@ -111,12 +111,17 @@ impl Evaluator {
             true => 1,
             false => -1
         };
-        score += self.piece_positional_score(piece_set.king, PieceType::King, color) * king_multi;
-        score += self.piece_positional_score(piece_set.queen, PieceType::Queen, color);
-        score += self.piece_positional_score(piece_set.rook, PieceType::Rook, color);
-        score += self.piece_positional_score(piece_set.bishop, PieceType::Bishop, color);
-        score += self.piece_positional_score(piece_set.knight, PieceType::Knight, color);
-        score += self.piece_positional_score(piece_set.pawn, PieceType::Pawn, color);
+        for piece_idx in 0..NUM_PIECE_TYPES {
+            let mut piece_positional_score = self.piece_positional_score(
+                piece_set.piece_boards[piece_idx],
+                PieceType::from_idx(piece_idx),
+                color
+            );
+            if PieceType::from_idx(piece_idx) == PieceType::King {
+                piece_positional_score *= king_multi
+            }
+            score += piece_positional_score
+        }
         score
     }
    
@@ -136,7 +141,9 @@ impl Evaluator {
         score -= opponent_material;
         total_material_score += opponent_material;
        
-        let is_endgame = total_material_score < 2 * KING_SCORE + 2 * QUEEN_SCORE + 2 * ROOK_SCORE;
+        let is_endgame = total_material_score < 2 * PIECE_SCORES[PieceType::King.as_idx()]
+                                                    + 2 * PIECE_SCORES[PieceType::Queen.as_idx()]
+                                                    + 2 * PIECE_SCORES[PieceType::Rook.as_idx()];
        
         score += self.pieceset_positional_score(player_pieceset, is_endgame, &position.active_player);
         score -= self.pieceset_positional_score(opponent_pieceset, is_endgame, &position.active_player.opponent());

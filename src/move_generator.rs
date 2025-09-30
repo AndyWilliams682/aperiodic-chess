@@ -1,11 +1,6 @@
 
 use crate::{
-    bit_board::{BitBoard, BitBoardMoves},
-    chess_move::{EnPassantData, Move},
-    graph_boards::graph_board::TileIndex,
-    position::Position,
-    piece_set::{Color, PieceType},
-    movement_tables::{JumpTable, SlideTables, PawnTables},
+    bit_board::{BitBoard, BitBoardMoves}, chess_move::{EnPassantData, Move}, constants::NUM_PIECE_TYPES, graph_boards::graph_board::TileIndex, movement_tables::{JumpTable, PawnTables, SlideTables}, piece_set::{Color, PieceType}, position::Position
 };
 
 pub struct MoveTables {
@@ -95,13 +90,9 @@ impl MoveTables {
             }
         };
 
-        get_piece_iter(active_pieces.king, &PieceType::King);
-        get_piece_iter(active_pieces.queen, &PieceType::Queen);
-        get_piece_iter(active_pieces.rook, &PieceType::Rook);
-        get_piece_iter(active_pieces.bishop, &PieceType::Bishop);
-        get_piece_iter(active_pieces.knight, &PieceType::Knight);
-        get_piece_iter(active_pieces.pawn, &PieceType::Pawn);
-
+        for piece_idx in 0..NUM_PIECE_TYPES {
+            get_piece_iter(active_pieces.piece_boards[piece_idx], &PieceType::from_idx(piece_idx))
+        }
         piece_iters.into_iter().flatten()
     }
 
@@ -258,10 +249,10 @@ mod tests {
         let move_tables = test_move_tables();
         let mut position = Position::new_traditional();
        
-        position.pieces[0].pawn.flip_bit_at_tile_index(TileIndex::new(12));
-        position.pieces[1].queen.flip_bit_at_tile_index(TileIndex::new(28));
-        position.pieces[0].pawn.flip_bit_at_tile_index(TileIndex::new(13));
-        position.pieces[0].pawn.flip_bit_at_tile_index(TileIndex::new(21));
+        position.pieces[0].piece_boards[PieceType::Pawn.as_idx()].flip_bit_at_tile_index(TileIndex::new(12));
+        position.pieces[1].piece_boards[PieceType::Queen.as_idx()].flip_bit_at_tile_index(TileIndex::new(28));
+        position.pieces[0].piece_boards[PieceType::Pawn.as_idx()].flip_bit_at_tile_index(TileIndex::new(13));
+        position.pieces[0].piece_boards[PieceType::Pawn.as_idx()].flip_bit_at_tile_index(TileIndex::new(21));
         position.pieces[0].update_occupied();
         position.pieces[1].update_occupied();
        

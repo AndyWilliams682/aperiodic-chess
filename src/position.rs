@@ -124,21 +124,12 @@ impl Position {
                         skip_tiles = "".to_string();
                     }
                     let tile_index = TileIndex::new(tile_counter);
-                    match symbol {
-                        'K' => pieces[0].king.flip_bit_at_tile_index(tile_index),
-                        'Q' => pieces[0].queen.flip_bit_at_tile_index(tile_index),
-                        'R' => pieces[0].rook.flip_bit_at_tile_index(tile_index),
-                        'B' => pieces[0].bishop.flip_bit_at_tile_index(tile_index),
-                        'N' => pieces[0].knight.flip_bit_at_tile_index(tile_index),
-                        'P' => pieces[0].pawn.flip_bit_at_tile_index(tile_index),
-                        'k' => pieces[1].king.flip_bit_at_tile_index(tile_index),
-                        'q' => pieces[1].queen.flip_bit_at_tile_index(tile_index),
-                        'r' => pieces[1].rook.flip_bit_at_tile_index(tile_index),
-                        'b' => pieces[1].bishop.flip_bit_at_tile_index(tile_index),
-                        'n' => pieces[1].knight.flip_bit_at_tile_index(tile_index),
-                        'p' => pieces[1].pawn.flip_bit_at_tile_index(tile_index),
-                        _ => {}
+                    let color = match symbol == symbol.to_ascii_lowercase() {
+                        false => Color::White,
+                        true => Color::Black
                     };
+                    pieces[color.as_idx()].piece_boards[PieceType::from_char(symbol).as_idx()]
+                        .flip_bit_at_tile_index(tile_index);
                     tile_counter += 1;
                 }
             }
@@ -223,7 +214,7 @@ impl Position {
 
     pub fn is_in_check(&self, move_tables: &MoveTables, color: &Color) -> bool {
         let opponent_idx = color.opponent().as_idx();
-        let king_tile = self.pieces[color.as_idx()].king.lowest_one().unwrap();
+        let king_tile = self.pieces[color.as_idx()].piece_boards[PieceType::King.as_idx()].lowest_one().unwrap();
        
         let enemy_occupants = self.pieces[opponent_idx].occupied;
         let all_occupants = enemy_occupants | self.pieces[color.as_idx()].occupied;
@@ -231,7 +222,7 @@ impl Position {
         // Orthogonals
         for rev_direction_table in move_tables.reverse_slide_tables.iter().step_by(2) {
             let candidates = rev_direction_table[king_tile] & (
-                self.pieces[opponent_idx].rook | self.pieces[opponent_idx].queen
+                self.pieces[opponent_idx].piece_boards[PieceType::Rook.as_idx()] | self.pieces[opponent_idx].piece_boards[PieceType::Queen.as_idx()]
             );
             for candidate in BitBoardTiles::new(candidates) {
                 if move_tables.slide_tables.query(&candidate, &all_occupants, true, false).get_bit_at_tile(&king_tile) {
@@ -243,7 +234,7 @@ impl Position {
         // Diagonals
         for rev_direction_table in move_tables.reverse_slide_tables.iter().skip(1).step_by(2) {
             let candidates = rev_direction_table[king_tile] & (
-                self.pieces[opponent_idx].bishop | self.pieces[opponent_idx].queen
+                self.pieces[opponent_idx].piece_boards[PieceType::Bishop.as_idx()] | self.pieces[opponent_idx].piece_boards[PieceType::Queen.as_idx()]
             );
             for candidate in BitBoardTiles::new(candidates) {
                 if move_tables.slide_tables.query(&candidate, &all_occupants, false, true).get_bit_at_tile(&king_tile) {
@@ -253,7 +244,7 @@ impl Position {
         }
        
         // Knights
-        if !(move_tables.reverse_knight_table[king_tile] & self.pieces[opponent_idx].knight).is_zero() {
+        if !(move_tables.reverse_knight_table[king_tile] & self.pieces[opponent_idx].piece_boards[PieceType::Knight.as_idx()]).is_zero() {
             return true
         }
 
@@ -262,7 +253,7 @@ impl Position {
             Color::White => &move_tables.reverse_black_pawn_table,
             Color::Black => &move_tables.reverse_white_pawn_table
         };
-        if !(pawn_threats[king_tile] & self.pieces[opponent_idx].pawn).is_zero() {
+        if !(pawn_threats[king_tile] & self.pieces[opponent_idx].piece_boards[PieceType::Pawn.as_idx()]).is_zero() {
             return true
         };
 
@@ -473,7 +464,7 @@ mod tests {
         let legal_move = Move::new(source_tile, destination_tile, None, None);
         position.make_legal_move(&legal_move);
         assert_eq!(
-            position.pieces[0].knight,
+            position.pieces[0].piece_boards[PieceType::Knight.as_idx()],
             BitBoard::from_ints(vec![6, 18])
         );
     }
@@ -515,11 +506,11 @@ mod tests {
         );
         position.make_legal_move(&capturing_move);
         assert_eq!(
-            position.pieces[0].pawn.get_bit_at_tile(&TileIndex::new(24)),
+            position.pieces[0].piece_boards[PieceType::Pawn.as_idx()].get_bit_at_tile(&TileIndex::new(24)),
             false
         );
         assert_eq!(
-            position.pieces[1].pawn.get_bit_at_tile(&TileIndex::new(16)),
+            position.pieces[1].piece_boards[PieceType::Pawn.as_idx()].get_bit_at_tile(&TileIndex::new(16)),
             true
         )
     }
@@ -572,7 +563,7 @@ mod tests {
         position.make_legal_move(&legal_move);
         position.unmake_legal_move(&legal_move);
         assert_eq!(
-            position.pieces[0].knight,
+            position.pieces[0].piece_boards[PieceType::Knight.as_idx()],
             BitBoard::from_ints(vec![1, 6])
         );
         assert_eq!(
@@ -586,11 +577,11 @@ mod tests {
         position.make_legal_move(&demotion_move);
         position.unmake_legal_move(&demotion_move);
         assert_eq!(
-            position.pieces[0].knight,
+            position.pieces[0].piece_boards[PieceType::Knight.as_idx()],
             BitBoard::from_ints(vec![1, 6])
         );
         assert_eq!(
-            position.pieces[0].pawn,
+            position.pieces[0].piece_boards[PieceType::Pawn.as_idx()],
             BitBoard::from_ints(vec![8, 9, 10, 11, 12, 13, 14, 31])
         );
 
@@ -604,11 +595,11 @@ mod tests {
         );
         position.unmake_legal_move(&capture_move);
         assert_eq!(
-            position.pieces[0].rook,
+            position.pieces[0].piece_boards[PieceType::Rook.as_idx()],
             BitBoard::from_ints(vec![0, 7])
         );
         assert_eq!(
-            position.pieces[1].rook,
+            position.pieces[1].piece_boards[PieceType::Rook.as_idx()],
             BitBoard::from_ints(vec![56, 63])
         );
     }
