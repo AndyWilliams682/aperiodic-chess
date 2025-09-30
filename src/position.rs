@@ -49,14 +49,16 @@ impl PositionRecord {
         }
     }
 
-    pub fn from_string(fen: String) -> PositionRecord {
+    pub fn from_string(fen: String, mut initial_zobrist: u64) -> PositionRecord {
         let tile_indices: Vec<&str> = fen.split(",").collect();
+        let source_tile_idx = tile_indices[0].parse().unwrap();
         let en_passant_data = Some(EnPassantData {
-            source_tile: TileIndex::new(tile_indices[0].parse().unwrap()),
+            source_tile: TileIndex::new(source_tile_idx),
             passed_tile: TileIndex::new(tile_indices[1].parse().unwrap()),
             occupied_tile: TileIndex::new(tile_indices[2].parse().unwrap())
         });
-        PositionRecord { en_passant_data, captured_piece: None, previous_record: None, zobrist: 0, fifty_move_counter: 0 }
+        initial_zobrist ^= ZOBRIST_TABLE.en_passant[source_tile_idx];
+        PositionRecord { en_passant_data, captured_piece: None, previous_record: None, zobrist: initial_zobrist, fifty_move_counter: 0 }
     }
    
     pub fn get_previous_record(&self) -> Option<Arc<PositionRecord>> {
@@ -103,7 +105,7 @@ impl Position {
     }
 
     pub fn from_string(fen: String) -> Self {
-        // fen format: <piece_info> <active_player> <passed_tile_index,occupied_tile_index>
+        // fen format: <piece_info> <active_player> <source_tile_index,passed_tile_index,occupied_tile_index>
         let mut zobrist_hash = 0;
         let components: Vec<&str> = fen.split(" ").collect();
         let mut pieces = [
@@ -128,8 +130,10 @@ impl Position {
                         false => Color::White,
                         true => Color::Black
                     };
-                    pieces[color.as_idx()].piece_boards[PieceType::from_char(symbol).as_idx()]
+                    let piece_idx = PieceType::from_char(symbol).as_idx();
+                    pieces[color.as_idx()].piece_boards[piece_idx]
                         .flip_bit_at_tile_index(tile_index);
+                    zobrist_hash ^= ZOBRIST_TABLE.pieces[color.as_idx()][piece_idx][tile_counter];
                     tile_counter += 1;
                 }
             }
@@ -138,11 +142,14 @@ impl Position {
         pieces[1].update_occupied();
         let active_player = match components[1] {
             "w" => Color::White,
-            _ => Color::Black
+            _ => {
+                zobrist_hash ^= ZOBRIST_TABLE.black_to_move;
+                Color::Black
+            }
         };
         let record = match components[2] {
-            "-" => PositionRecord::default(),
-            _ => PositionRecord::from_string(components[2].to_string())
+            "-" => PositionRecord::default(zobrist_hash),
+            _ => PositionRecord::from_string(components[2].to_string(), zobrist_hash)
         };
         Self { active_player, pieces, record: record.into() }
     }
@@ -403,7 +410,7 @@ impl Position {
         if let Some(prev_record) = self.record.get_previous_record() {
             self.record = prev_record
         } else {
-            self.record = PositionRecord::default().into();
+            self.record = PositionRecord::default(self.get_zobrist()).into();
         }
         if captured_piece == Some(PieceType::Pawn) {
             if let Some(en_passant_data) = &self.record.en_passant_data {
@@ -690,12 +697,6 @@ mod tests {
             }
             position.unmake_legal_move(&move_1);
         };
-        let first_move = Move::new(
-            TileIndex::new(8),
-            TileIndex::new(16),
-            None, None
-        );
-        position.make_legal_move(&first_move);
         assert_eq!(init_hash, position.record.zobrist)
     }
         
