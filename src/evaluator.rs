@@ -1,13 +1,13 @@
-use crate::constants::NUM_PIECE_TYPES;
 use crate::movement_tables::{JumpTable, PawnTables, SlideTables};
 use crate::bit_board::{BitBoard, BitBoardTiles};
 use crate::piece_set::{Color, PieceSet, PieceType};
 use crate::move_generator::MoveTables;
 use crate::position::Position;
+use crate::constants::{MAX_NUM_TILES, NUM_PIECE_TYPES};
 
 
 // All measured in centipawns
-const PIECE_SCORES: [isize; 6] = [
+const PIECE_SCORES: [isize; NUM_PIECE_TYPES] = [
     9999, // King
     900,  // Queen
     500,  // Rook
@@ -39,7 +39,7 @@ impl MobilityTable {
             true => 1,
             false => 2
         };
-        let mut output: Vec<u32> = vec![0; 128];
+        let mut output: Vec<u32> = vec![0; MAX_NUM_TILES];
         for direction in (initial_direction..table.0.len()).step_by(direction_step) {
             let mut tile_idx = 0;
             for tile in &table[direction].0 {

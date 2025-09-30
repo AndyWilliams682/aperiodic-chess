@@ -7,6 +7,8 @@ use crate::chess_move::{EnPassantData, Move};
 use crate::move_generator::MoveTables;
 use crate::piece_set::{Color, Piece, PieceType, PieceSet};
 use crate::zobrist::ZobristTable;
+use crate::constants::{MAX_NUM_TILES};
+
 
 lazy_static! {
     static ref ZOBRIST_TABLE: ZobristTable = ZobristTable::generate();
@@ -89,7 +91,7 @@ impl Position {
 
     pub fn get_zobrist(&self) -> u64 {
         let mut output = 0;
-        for tile_index in 0..128 {
+        for tile_index in 0..MAX_NUM_TILES {
             if let Some(occupant) = self.get_occupant(&TileIndex::new(tile_index)) {
                 let piece_idx = occupant.piece.as_idx();
                 output ^= ZOBRIST_TABLE.pieces[occupant.color.as_idx()][piece_idx][tile_index]
@@ -157,7 +159,7 @@ impl Position {
     pub fn to_string(&self) -> String {
         let mut output = "".to_string();
         let mut empty_tile_counter = 0;
-        for tile in 0..128 {
+        for tile in 0..MAX_NUM_TILES {
             let tile_index = TileIndex::new(tile);
             if let Some(piece) = self.pieces[0].get_piece_at(&tile_index) {
                 let symbol = match piece {

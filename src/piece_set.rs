@@ -134,14 +134,14 @@ pub struct PieceSet {
     // pub bishop: BitBoard,
     // pub knight: BitBoard,
     // pub pawn: BitBoard,
-    pub piece_boards: [BitBoard; 6],
+    pub piece_boards: [BitBoard; NUM_PIECE_TYPES],
     pub occupied: BitBoard
 }
 
 impl PieceSet {
     pub fn empty() -> Self {
         Self {
-            piece_boards: [BitBoard::empty(); 6],
+            piece_boards: [BitBoard::empty(); NUM_PIECE_TYPES],
             occupied: BitBoard::empty()
         }
     }
