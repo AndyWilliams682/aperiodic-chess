@@ -179,6 +179,7 @@ dependencies = [
  "bevy_mod_picking",
  "clearscreen",
  "itertools",
+ "lazy_static",
  "petgraph 0.7.1",
  "rand",
 ]

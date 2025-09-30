@@ -1,4 +1,5 @@
 use std::sync::Arc;
+use lazy_static::lazy_static;
 
 use crate::bit_board::{BitBoard, BitBoardTiles};
 use crate::graph_boards::graph_board::{TileIndex};
@@ -7,7 +8,11 @@ use crate::move_generator::MoveTables;
 use crate::piece_set::{Color, Piece, PieceType, PieceSet};
 use crate::zobrist::ZobristTable;
 
-static ZOBRIST_TABLE: ZobristTable = ZobristTable::generate();
+lazy_static! {
+    static ref ZOBRIST_TABLE: ZobristTable = ZobristTable::generate();
+}
+
+// static ZOBRIST_TABLE: ZobristTable = ZobristTable::generate();
 
 #[derive(Debug, PartialEq)]
 pub enum GameOver {
@@ -29,16 +34,17 @@ pub struct PositionRecord {
     pub en_passant_data: Option<EnPassantData>,
     pub captured_piece: Option<PieceType>,
     pub previous_record: Option<Arc<PositionRecord>>,
+    pub zobrist: u64,
     pub fifty_move_counter: u32,
-    // previous_zobrist_key??
 }
 
 impl PositionRecord {
-    pub fn default() -> PositionRecord {
+    pub fn default(initial_zobrist: u64) -> PositionRecord {
         PositionRecord {
             en_passant_data: None,
             captured_piece: None,
             previous_record: None,
+            zobrist: initial_zobrist,
             fifty_move_counter: 0,
         }
     }
@@ -46,10 +52,11 @@ impl PositionRecord {
     pub fn from_string(fen: String) -> PositionRecord {
         let tile_indices: Vec<&str> = fen.split(",").collect();
         let en_passant_data = Some(EnPassantData {
-            passed_tile: TileIndex::new(tile_indices[0].parse().unwrap()),
-            occupied_tile: TileIndex::new(tile_indices[1].parse().unwrap())
+            source_tile: TileIndex::new(tile_indices[0].parse().unwrap()),
+            passed_tile: TileIndex::new(tile_indices[1].parse().unwrap()),
+            occupied_tile: TileIndex::new(tile_indices[2].parse().unwrap())
         });
-        PositionRecord { en_passant_data, captured_piece: None, previous_record: None, fifty_move_counter: 0 }
+        PositionRecord { en_passant_data, captured_piece: None, previous_record: None, zobrist: 0, fifty_move_counter: 0 }
     }
    
     pub fn get_previous_record(&self) -> Option<Arc<PositionRecord>> {
@@ -78,16 +85,12 @@ impl Position {
         }
     }
 
-    pub fn to_hash(&self) -> u64 {
+    pub fn get_zobrist(&self) -> u64 {
         let mut output = 0;
         for tile_index in 0..128 {
             if let Some(occupant) = self.get_occupant(&TileIndex::new(tile_index)) {
-                let color_idx_shift = match occupant.color {
-                    Color::White => 0,
-                    Color::Black => 6
-                };
                 let piece_idx = occupant.piece.as_idx();
-                output ^= ZOBRIST_TABLE.pieces[piece_idx + color_idx_shift][tile_index]
+                output ^= ZOBRIST_TABLE.pieces[occupant.color.as_idx()][piece_idx][tile_index]
             }
         }
         if let Some(en_passant_data) = &self.record.en_passant_data {
@@ -101,6 +104,7 @@ impl Position {
 
     pub fn from_string(fen: String) -> Self {
         // fen format: <piece_info> <active_player> <passed_tile_index,occupied_tile_index>
+        let mut zobrist_hash = 0;
         let components: Vec<&str> = fen.split(" ").collect();
         let mut pieces = [
             PieceSet::empty(),
@@ -331,21 +335,28 @@ impl Position {
         let player_idx = self.active_player.as_idx();
         let opponent_idx = self.active_player.opponent().as_idx();
 
+        let mut new_zobrist = self.record.zobrist;
+
         let source_tile = legal_move.source_tile;
         let destination_tile = legal_move.destination_tile;
 
         let mut fifty_move_counter = self.record.fifty_move_counter + 1;
 
         let moving_piece = self.pieces[player_idx].get_piece_at(&source_tile).unwrap();
+        new_zobrist ^= ZOBRIST_TABLE.pieces[player_idx][moving_piece.as_idx()][source_tile.index()];
+        new_zobrist ^= ZOBRIST_TABLE.pieces[player_idx][moving_piece.as_idx()][destination_tile.index()];
         self.pieces[player_idx].move_piece(source_tile, destination_tile);
 
         let mut target_piece = self.pieces[opponent_idx].get_piece_at(&destination_tile);
-        if let Some(_) = target_piece {
+        if let Some(captured_piece) = target_piece {
             fifty_move_counter = 0;
+            new_zobrist ^= ZOBRIST_TABLE.pieces[opponent_idx][captured_piece.as_idx()][destination_tile.index()];
             self.pieces[opponent_idx].capture_piece(destination_tile)
         };
 
         if let Some(promotion_target) =  &legal_move.promotion {
+            new_zobrist ^= ZOBRIST_TABLE.pieces[player_idx][PieceType::Pawn.as_idx()][destination_tile.index()];
+            new_zobrist ^= ZOBRIST_TABLE.pieces[player_idx][promotion_target.as_idx()][destination_tile.index()];
             self.pieces[player_idx].promote_piece(destination_tile, promotion_target)
         }
 
@@ -359,10 +370,19 @@ impl Position {
             }
         }
 
+        if let Some(prev_en_passant_data) = &self.record.en_passant_data {
+            new_zobrist ^= ZOBRIST_TABLE.en_passant[prev_en_passant_data.source_tile.index()]
+        } // TODO: Redesign en passant data entirely
+
+        if legal_move.en_passant_data != None {
+            new_zobrist ^= ZOBRIST_TABLE.en_passant[source_tile.index()];
+        }
+
         self.record = PositionRecord {
             en_passant_data: legal_move.en_passant_data.clone(),
             captured_piece: target_piece,
             previous_record: Some(self.record.clone()),
+            zobrist: new_zobrist,
             fifty_move_counter: fifty_move_counter
         }.into();
 
@@ -471,7 +491,7 @@ mod tests {
         position.make_legal_move(&legal_move);
         assert_eq!(
             *position.record.en_passant_data.as_ref().unwrap(),
-            EnPassantData::new(TileIndex::new(16), destination_tile)
+            EnPassantData::new(TileIndex::new(8), TileIndex::new(16), destination_tile)
         )
     }
 
@@ -529,7 +549,7 @@ mod tests {
         position.make_legal_move(&second_move);
         assert_eq!(
             *position.record.en_passant_data.as_ref().unwrap(),
-            EnPassantData { passed_tile: TileIndex::new(43), occupied_tile: TileIndex::new(35) }
+            EnPassantData { source_tile: TileIndex::new(51), passed_tile: TileIndex::new(43), occupied_tile: TileIndex::new(35) }
         );
         position.make_legal_move(&third_move);
         assert_eq!(
@@ -544,7 +564,7 @@ mod tests {
 
     #[test]
     fn test_unmake_legal_move() {
-        let mut position = Position::from_string("RNBQKBNRPPPPPPP16P16pppppppprnbqkbnr w 23,31".to_string());
+        let mut position = Position::from_string("RNBQKBNRPPPPPPP16P16pppppppprnbqkbnr w 15,23,31".to_string());
         
         let source_tile = TileIndex::new(1);
         let destination_tile = TileIndex::new(18);
@@ -557,7 +577,7 @@ mod tests {
         );
         assert_eq!(
             position.record.en_passant_data,
-            Some(EnPassantData { passed_tile: TileIndex::new(23), occupied_tile: TileIndex::new(31) })
+            Some(EnPassantData { source_tile: TileIndex::new(15), passed_tile: TileIndex::new(23), occupied_tile: TileIndex::new(31) })
         );
 
         let source_tile = TileIndex::new(8);
@@ -659,5 +679,64 @@ mod tests {
             position.is_in_check(&move_tables, &Color::White),
             true
         ); // White in check by unblocked diagonal queen
+    }
+
+    #[test]
+    fn test_zobrist_unmade_moves() {
+        // Testing that prev_record stores the zobrist hash correctly
+        let mut position = Position::new_traditional();
+        let move_tables = TraditionalBoardGraph::new().0.move_tables();
+        let init_hash = position.get_zobrist();
+        for move_1 in move_tables.get_legal_moves(&mut position) {
+            position.make_legal_move(&move_1);
+            for move_2 in move_tables.get_legal_moves(&mut position) {
+                position.make_legal_move(&move_2);
+                for move_3 in move_tables.get_legal_moves(&mut position) {
+                    position.make_legal_move(&move_3);
+                    position.unmake_legal_move(&move_3);
+                }
+                position.unmake_legal_move(&move_2);
+            }
+            position.unmake_legal_move(&move_1);
+        };
+        let first_move = Move::new(
+            TileIndex::new(8),
+            TileIndex::new(16),
+            None, None
+        );
+        position.make_legal_move(&first_move);
+        assert_eq!(init_hash, position.record.zobrist)
+    }
+        
+    #[test]
+    fn test_zobrist_repeat_position() {
+        let mut position = Position::new_traditional();
+        let init_hash = position.get_zobrist();
+
+        let move_1 = Move::new(
+            TileIndex::new(1),
+            TileIndex::new(18),
+            None, None
+        );
+        let move_2 = Move::new(
+            TileIndex::new(62),
+            TileIndex::new(53),
+            None, None
+        );
+        let move_3 = Move::new(
+            TileIndex::new(18),
+            TileIndex::new(1),
+            None, None
+        );
+        let move_4 = Move::new(
+            TileIndex::new(53),
+            TileIndex::new(62),
+            None, None
+        );
+        position.make_legal_move(&move_1);
+        position.make_legal_move(&move_2);
+        position.make_legal_move(&move_3);
+        position.make_legal_move(&move_4);
+        assert_eq!(init_hash, position.get_zobrist())
     }
 }
