@@ -15,10 +15,8 @@ pub struct ZobristTable {
 impl ZobristTable {
     pub fn generate() -> Self {
         let mut rng = StdRng::seed_from_u64(5435651169991665628);
-        // TODO: Better syntax? Single for loop across all three things; it's doing permutations
-        // Add a way to iterate over piece type variants, tiles, and players
         let mut pieces = [[[0; MAX_NUM_TILES]; NUM_PIECE_TYPES]; NUM_PLAYERS];
-        let mut en_passant = [0; MAX_NUM_TILES]; // TODO: Can use less tiles, but would need to convert b/t them
+        let mut en_passant = [0; MAX_NUM_TILES];
         let black_to_move = rng.gen::<u64>();
 
         for tile_idx in 0..MAX_NUM_TILES {

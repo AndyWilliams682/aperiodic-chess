@@ -139,7 +139,4 @@ mod tests {
         assert_eq!(table.retrieve(1, 8, 50, 150), None);
         assert_eq!(table.retrieve(1000001, 9, 50, 150), Some(300))
     }
-
-    // TODO: Integration test (compare search with/without transposition_table to ensure result is the same (but faster))
-
 }

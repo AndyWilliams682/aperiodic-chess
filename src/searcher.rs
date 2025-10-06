@@ -40,7 +40,7 @@ impl Searcher {
         if legal_moves.is_empty() {
             return if position.is_in_check(&self.movegen, &position.active_player) {
                 // Return a mate score adjusted by depth (shallower mate is better)
-                -CHECKMATED_SCORE as i32 + depth as i32 // TODO: What should this value be for checkmated?
+                -CHECKMATED_SCORE as i32 + depth as i32
             } else {
                 // Stalemate
                 0 

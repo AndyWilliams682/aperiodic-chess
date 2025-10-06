@@ -372,7 +372,7 @@ impl Position {
 
         if let Some(prev_en_passant_data) = &self.record.en_passant_data {
             new_zobrist ^= ZOBRIST_TABLE.en_passant[prev_en_passant_data.source_tile.index()]
-        } // TODO: Redesign en passant data entirely
+        }
 
         if legal_move.en_passant_data != None {
             new_zobrist ^= ZOBRIST_TABLE.en_passant[source_tile.index()];
