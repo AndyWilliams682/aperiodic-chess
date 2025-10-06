@@ -8,9 +8,10 @@ mod piece_set;
 mod movement_tables;
 mod evaluator;
 mod game;
-mod engine;
 mod bit_board;
 mod zobrist;
+mod transposition_table;
+mod searcher;
 
 use bevy::prelude::*;
 use bevy_egui::{egui, EguiContexts, EguiPlugin};
@@ -21,7 +22,7 @@ use graph_boards::hexagonal_board::HexagonalBoardGraph;
 use position::Position;
 use graph_boards::graph_board::TileIndex;
 
-use crate::{bit_board::BitBoardTiles, engine::Engine, game::Game, graph_boards::graph_board::Tile, limited_int::LimitedInt, zobrist::ZobristTable};
+use crate::{bit_board::BitBoardTiles, game::Game, graph_boards::graph_board::Tile, limited_int::LimitedInt, searcher::Searcher, zobrist::ZobristTable};
 
 #[derive(Component, Debug, Clone, Copy)]
 pub struct GraphEdge {
@@ -56,8 +57,8 @@ fn main() {
         ))
         .insert_resource(GraphState::default())
         .insert_resource(Game {
-            engine: Engine::new(TraditionalBoardGraph::new().0.move_tables()),
-            are_players_cpu: [false, true],
+            engine: Searcher::new(TraditionalBoardGraph::new().0.move_tables()),
+            are_players_cpu: [true, true],
             current_position: Position::new_traditional(),
             board: TraditionalBoardGraph::new(),
             game_over_state: None

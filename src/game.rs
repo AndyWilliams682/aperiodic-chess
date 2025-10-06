@@ -1,11 +1,11 @@
 use bevy::prelude::Resource;
 
-use crate::{bit_board::{BitBoard, BitBoardMoves, BitBoardTiles}, chess_move::Move, engine::Engine, graph_boards::{graph_board::TileIndex, traditional_board::TraditionalBoardGraph}, piece_set::{Color, PieceType}, position::{GameOver, Position}};
+use crate::{bit_board::{BitBoard, BitBoardMoves, BitBoardTiles}, chess_move::Move, graph_boards::{graph_board::TileIndex, traditional_board::TraditionalBoardGraph}, piece_set::{Color, PieceType}, position::{GameOver, Position}, searcher::Searcher};
 
 
 #[derive(Resource)]
 pub struct Game {
-    pub engine: Engine,
+    pub engine: Searcher,
     pub are_players_cpu: [bool; 2],
     pub current_position: Position,
     pub board: TraditionalBoardGraph,
@@ -14,9 +14,9 @@ pub struct Game {
 
 impl Game {
     pub fn check_if_over(&mut self) -> () {
-        if self.current_position.is_checkmate(&self.engine.move_tables) {
+        if self.current_position.is_checkmate(&self.engine.movegen) {
             self.game_over_state = Some(GameOver::Checkmate)
-        } else if self.current_position.is_stalemate(&self.engine.move_tables) || self.current_position.fifty_move_draw() {
+        } else if self.current_position.is_stalemate(&self.engine.movegen) || self.current_position.fifty_move_draw() {
             self.game_over_state = Some(GameOver::Draw)
         } else {
             self.game_over_state = None
@@ -24,7 +24,7 @@ impl Game {
     }
 
     pub fn make_cpu_move(&mut self) {
-        let cpu_move = self.engine.search_for_move(&mut self.current_position);
+        let cpu_move = self.engine.get_best_move(&mut self.current_position, 4).best_move.unwrap();
         self.current_position.make_legal_move(&cpu_move);
     }
 
@@ -38,17 +38,17 @@ impl Game {
         let selected_piece = selected_white.or(selected_black);
         
         let (selected_color, allied_occupied, enemy_occupied, pawn_tables) = match black_pieces.get_piece_at(tile_index) {
-            Some(_t) => (Color::Black, black_pieces.occupied, white_pieces.occupied, &self.engine.move_tables.black_pawn_tables),
-            _ => (Color::White, white_pieces.occupied, black_pieces.occupied, &self.engine.move_tables.white_pawn_tables)
+            Some(_t) => (Color::Black, black_pieces.occupied, white_pieces.occupied, &self.engine.movegen.black_pawn_tables),
+            _ => (Color::White, white_pieces.occupied, black_pieces.occupied, &self.engine.movegen.white_pawn_tables)
         };
 
         let mut pseudo_moves =  match selected_piece {
             Some(PieceType::Pawn) => {
-                self.engine.move_tables.query_pawn(&selected_color, *tile_index, &enemy_occupied, occupied, &self.current_position.record.en_passant_data)
+                self.engine.movegen.query_pawn(&selected_color, *tile_index, &enemy_occupied, occupied, &self.current_position.record.en_passant_data)
             },
             None => BitBoard::empty(),
             _ => { // All non-Pawn PieceTypes
-                self.engine.move_tables.query_piece(&selected_piece.unwrap(), *tile_index, occupied) & !allied_occupied
+                self.engine.movegen.query_piece(&selected_piece.unwrap(), *tile_index, occupied) & !allied_occupied
             }
         };
 
@@ -58,7 +58,7 @@ impl Game {
                 promotion = Some(PieceType::Queen);
             }
             let chess_move = Move::new(*tile_index, destination_tile, promotion, None);
-            if !self.current_position.is_playable_move(&chess_move, &self.engine.move_tables) {
+            if !self.current_position.is_playable_move(&chess_move, &self.engine.movegen) {
                 pseudo_moves.flip_bit_at_tile_index(destination_tile);
             }
         }
@@ -68,7 +68,7 @@ impl Game {
 
     pub fn attempt_move_input(&mut self, source_tile: &TileIndex, destination_tile: &TileIndex) -> Result<(), ChessError> {
         let chess_move = self.parse_move_input(source_tile, destination_tile)?;
-        match self.current_position.is_playable_move(&chess_move, &self.engine.move_tables) {
+        match self.current_position.is_playable_move(&chess_move, &self.engine.movegen) {
             true => {
                 self.current_position.make_legal_move(&chess_move);
                 return Ok(())
@@ -83,8 +83,8 @@ impl Game {
 
         let en_passant_data = match active_pieces.get_piece_at(source_tile) {
             Some(PieceType::Pawn) => {
-                self.engine.move_tables.white_pawn_tables.en_passant_table[source_tile.index()].clone().or(
-                    self.engine.move_tables.black_pawn_tables.en_passant_table[source_tile.index()].clone()
+                self.engine.movegen.white_pawn_tables.en_passant_table[source_tile.index()].clone().or(
+                    self.engine.movegen.black_pawn_tables.en_passant_table[source_tile.index()].clone()
                 )
             },
             None => return Err(ChessError::InvalidMoveError), // Source could be enemy pieces
@@ -105,8 +105,8 @@ impl Game {
         let mut promotion = None;
         if active_pieces.get_piece_at(source_tile) == Some(PieceType::Pawn) {
             let promotion_board = match self.current_position.active_player.as_idx() {
-                0 => self.engine.move_tables.white_pawn_tables.promotion_board,
-                _ => self.engine.move_tables.black_pawn_tables.promotion_board
+                0 => self.engine.movegen.white_pawn_tables.promotion_board,
+                _ => self.engine.movegen.black_pawn_tables.promotion_board
             };
             if promotion_board.get_bit_at_tile(destination_tile) {
                 promotion = Some(PieceType::Queen)

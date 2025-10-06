@@ -15,7 +15,7 @@ const PIECE_SCORES: [isize; NUM_PIECE_TYPES] = [
     350,  // Knight
     100   // Pawn
 ];
-const CHECKMATED_SCORE: isize = -99999;
+pub const CHECKMATED_SCORE: isize = -30000;
 const POSITIONAL_MULTIPLIER: isize = 5;
 
 // Primitive evaluator will use # of possible moves from each square on an empty board
@@ -125,7 +125,32 @@ impl Evaluator {
         score
     }
    
-    fn evaluate(&self, position: Position) -> isize {
+    pub fn evaluate(&self, position: Position) -> isize {
+        let mut score = 0;
+        let player_idx = position.active_player.as_idx();
+        let player_pieceset = &position.pieces[player_idx];
+        let opponent_idx = position.active_player.opponent().as_idx();
+        let opponent_pieceset = &position.pieces[opponent_idx];
+        let mut total_material_score = 0;
+       
+        let player_material = self.pieceset_material_score(player_pieceset);
+        score += player_material;
+        total_material_score += player_material;
+       
+        let opponent_material = self.pieceset_material_score(opponent_pieceset);
+        score -= opponent_material;
+        total_material_score += opponent_material;
+       
+        let is_endgame = total_material_score < 2 * PIECE_SCORES[PieceType::King.as_idx()]
+                                                    + 2 * PIECE_SCORES[PieceType::Queen.as_idx()]
+                                                    + 2 * PIECE_SCORES[PieceType::Rook.as_idx()];
+       
+        score += self.pieceset_positional_score(player_pieceset, is_endgame, &position.active_player);
+        score -= self.pieceset_positional_score(opponent_pieceset, is_endgame, &position.active_player.opponent());
+        score
+    }
+
+    pub fn static_evaluate(&self, position: &mut Position) -> isize {
         let mut score = 0;
         let player_idx = position.active_player.as_idx();
         let player_pieceset = &position.pieces[player_idx];
