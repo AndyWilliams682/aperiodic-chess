@@ -16,13 +16,15 @@ mod searcher;
 use bevy::prelude::*;
 use bevy_egui::{egui, EguiContexts, EguiPlugin};
 use bevy_mod_picking::prelude::*;
+use bevy::sprite::{MaterialMesh2dBundle, Mesh2dHandle};
 
 use graph_boards::traditional_board::TraditionalBoardGraph;
 use graph_boards::hexagonal_board::HexagonalBoardGraph;
+use graph_boards::uniform_triangle_board::UniformTriangleBoardGraph;
 use position::Position;
 use graph_boards::graph_board::TileIndex;
 
-use crate::{bit_board::BitBoardTiles, game::Game, graph_boards::graph_board::Tile, limited_int::LimitedInt, searcher::Searcher, zobrist::ZobristTable};
+use crate::{game::Game, graph_boards::graph_board::Tile, limited_int::LimitedInt, searcher::Searcher};
 
 #[derive(Component, Debug, Clone, Copy)]
 pub struct GraphEdge {
@@ -57,10 +59,13 @@ fn main() {
         ))
         .insert_resource(GraphState::default())
         .insert_resource(Game {
-            engine: Searcher::new(TraditionalBoardGraph::new().0.move_tables()),
-            are_players_cpu: [true, true],
-            current_position: Position::new_traditional(),
-            board: TraditionalBoardGraph::new(),
+            // engine: Searcher::new(TraditionalBoardGraph::new().0.move_tables()), // TODO: Generalize UI
+            engine: Searcher::new(UniformTriangleBoardGraph::new().0.move_tables()),
+            are_players_cpu: [false, true],
+            // current_position: Position::new_traditional(),
+            current_position: Position::new_triangular(), // TODO: Generalize UI
+            // board: TraditionalBoardGraph::new(),
+            board: UniformTriangleBoardGraph::new(),
             game_over_state: None
         })
         .insert_resource(SelectedTile::default())
@@ -76,7 +81,15 @@ fn main() {
         .run();
 }
 
-fn setup(mut commands: Commands, mut graph_state: ResMut<GraphState>, tile_query: Query<Entity, With<Tile<1>>>, edge_query: Query<Entity, With<GraphEdge>>, game: Res<Game>) {
+fn setup(
+    mut commands: Commands,
+    mut graph_state: ResMut<GraphState>,
+    tile_query: Query<Entity, With<Tile<1>>>,
+    edge_query: Query<Entity, With<GraphEdge>>,
+    game: Res<Game>,
+    mut meshes: ResMut<Assets<Mesh>>,
+    mut materials: ResMut<Assets<ColorMaterial>>
+) {
     commands.spawn(Camera2dBundle::default());
 
     despawn_all_graph_entities(&mut commands, tile_query, edge_query);
@@ -100,7 +113,8 @@ fn setup(mut commands: Commands, mut graph_state: ResMut<GraphState>, tile_query
     }).id();
     commands.insert_resource(CurrentTurnLabel(turn_text));
 
-    spawn_traditional_graph(&mut commands, &mut graph_state, game);
+    // spawn_traditional_graph(&mut commands, &mut graph_state, game);
+    spawn_triangular_graph(&mut commands, &mut graph_state, game, meshes, materials);
 }
 
 fn despawn_all_graph_entities(
@@ -261,6 +275,78 @@ fn update_turn_indicator(
             }
         }
     }
+}
+
+fn spawn_triangular_graph(
+    commands: &mut Commands,
+    graph_state: &mut ResMut<GraphState>,
+    game: Res<Game>,
+    mut meshes: ResMut<Assets<Mesh>>,
+    mut materials: ResMut<Assets<ColorMaterial>>,
+) {
+    const TRIANGLE_RADIUS: f32 = 55.0;
+    let triangle_mesh_handle: Mesh2dHandle = meshes.add(
+        RegularPolygon {
+            sides: 3,
+            circumcircle: Circle::new(TRIANGLE_RADIUS),
+        }
+    ).into();
+
+    // let tile_color = materials.add(Color::rgb(0.92, 0.92, 0.81));
+    let tile_color = materials.add(Color::rgb(0.46, 0.58, 0.33));
+
+    let num_tiles = game.board.0.node_count() as u32;
+    let num_edges = game.board.0.edge_count() as u32;
+    let mut tiles: Vec<(Entity, Tile<1>)> = Vec::with_capacity(num_tiles as usize);
+
+    for i in 0..num_tiles {
+        let x = game.board.get_x(TileIndex::new(i as usize)) * ((600 / 7) as f32);
+        let y = game.board.get_y(TileIndex::new(i as usize)) * ((600 / 7) as f32);
+        let pos = Vec2::new(x - 300.0, y - 300.0);
+        let tile_index = TileIndex::new(i as usize);
+        let occupant = game.current_position.get_occupant(&tile_index);
+        let mut occupant_char = ' ';
+        if let Some(occ) = occupant {
+            occupant_char = occ.display();
+        }
+
+        let graph_tile_component = Tile { id: TileIndex::new(i as usize), occupant, orientation: LimitedInt::<1>::new(1), pawn_start: None };
+
+        let material_handle = tile_color.clone();
+        let rotation = Quat::from_rotation_z(std::f32::consts::PI);
+        let text_rotation = Quat::from_rotation_z(2.0 * std::f32::consts::PI / 2.0);
+
+        let tile_entity = commands.spawn((
+            graph_tile_component,
+            MaterialMesh2dBundle {
+                mesh: triangle_mesh_handle.clone(),
+                material: material_handle,
+                transform: Transform::from_xyz(pos.x, pos.y, 0.0)
+                    .with_rotation(rotation),
+                ..default()
+            },
+            PickableBundle::default(),
+        )).with_children(|parent| {
+            parent.spawn(Text2dBundle {
+                text: Text::from_section(
+                    occupant_char.to_string(),
+                    TextStyle {
+                        font_size: 50.0,
+                        color: Color::BLACK,
+                        ..default()
+                    }
+                ),
+                transform: Transform::from_translation(Vec3::new(0.0, 0.0, 0.5))
+                    .with_rotation(text_rotation),
+                ..default()
+            });
+        })
+        .id();
+        tiles.push((tile_entity, graph_tile_component));
+    }
+
+    graph_state.tile_count = num_tiles;
+    graph_state.edge_count = num_edges;
 }
 
 fn spawn_traditional_graph(commands: &mut Commands, graph_state: &mut ResMut<GraphState>, game: Res<Game>) {
