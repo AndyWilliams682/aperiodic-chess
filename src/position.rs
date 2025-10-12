@@ -218,7 +218,7 @@ impl Position {
     }
 
     pub fn new_triangular() -> Self {
-        return Position::from_string("RKNP2pnkrQBP3pbqNP4pnP5p21 w -".to_string())
+        return Position::from_string("RKNP6QBP6NP6P17ppppnbnqkr w -".to_string())
     }
 
     pub fn is_in_check(&self, move_tables: &MoveTables, color: &Color) -> bool {

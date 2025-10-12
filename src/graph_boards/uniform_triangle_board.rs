@@ -48,8 +48,8 @@ impl UniformTriangleBoardGraph {
 
     fn new_tile(source_tile: TileIndex) -> Tile<1> {
         let pawn_start = match source_tile.index() {
-            3 | 12 | 20 | 27 => Some(Color::White),
-            6 | 16 | 25 | 33 => Some(Color::Black),
+            03 | 12 | 20 | 27 => Some(Color::White),
+            45 | 46 | 47 | 48 => Some(Color::Black),
             _ => None
         };
         return Tile { id: source_tile, occupant: None, orientation: UniformTileOrientation::new(0), pawn_start }
@@ -61,22 +61,22 @@ impl UniformTriangleBoardGraph {
        
         match source_tile.index() {
             0..=9 => {
+                invalid.insert(3);
                 invalid.insert(4);
-                invalid.insert(5);
             },
             _ => {}
         };
         match source_tile.index() {
             0 | 10 | 19 | 27 | 34 | 40 | 45 | 49 | 52 | 54 => {
+                invalid.insert(1);
                 invalid.insert(2);
-                invalid.insert(3);
             },
             _ => {}
         };
         match source_tile.index() {
             9 | 18 | 26 | 33 | 39 | 44 | 48 | 51 | 53 | 54 => {
                 invalid.insert(0);
-                invalid.insert(1);
+                invalid.insert(5);
             },
             _ => {}
         };
@@ -89,12 +89,22 @@ impl UniformTriangleBoardGraph {
     fn get_tile_index_shift(source_tile: TileIndex, direction: &TriangularDirection) -> i32 {
         let row = Self::row_length(source_tile);
         return match direction.0 {
-            0 => 1,
-            1 => row,
-            2 => row - 1,
-            3 => -1,
-            4 => -row - 1,
-            _ => -row, // Last possible option is 5
+            0 => row,
+            1 => row - 1,
+            2 => -1,
+            3 => -row - 1,
+            4 => -row,
+            _ => 1, // Last possible option is 5
         }
+    }
+
+    pub fn get_y(&self, source_tile: TileIndex) -> f32 {
+        let row_factor = (10 - Self::row_length(source_tile)) as f32;
+        (row_factor.powi(2) / 2.0 - 8.5 * row_factor + (source_tile.index() as f32)) / 2.0
+    }
+
+    pub fn get_x(&self, source_tile: TileIndex) -> f32 {
+        let row_factor = (10 - Self::row_length(source_tile)) as f32;
+        3.0_f32.sqrt() * (row_factor.powi(2) / 2.0 - 10.5 * row_factor + (source_tile.index() as f32)) / 2.0
     }
 }
