@@ -38,7 +38,7 @@ impl Searcher {
         // --- BASE CASE 2: Check for Game Over (Mate/Stalemate) ---
         let legal_moves = self.movegen.get_legal_moves(position);
         if legal_moves.is_empty() {
-            return if position.is_in_check(&self.movegen, &position.active_player) {
+            return if position.is_checkmate(&self.movegen) {
                 // Return a mate score adjusted by depth (shallower mate is better)
                 -CHECKMATED_SCORE as i32 + depth as i32
             } else {
