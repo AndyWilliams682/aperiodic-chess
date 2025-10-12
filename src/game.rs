@@ -1,6 +1,6 @@
 use bevy::prelude::Resource;
 
-use crate::{bit_board::{BitBoardW, BitBoardTiles}, chess_move::Move, graph_boards::{graph_board::TileIndex, traditional_board::TraditionalBoardGraph, uniform_triangle_board::UniformTriangleBoardGraph}, piece_set::{Color, PieceType}, position::{GameOver, Position}, searcher::Searcher};
+use crate::{bit_board::{BitBoard, BitBoardTiles}, chess_move::Move, graph_boards::{graph_board::TileIndex, traditional_board::TraditionalBoardGraph, uniform_triangle_board::UniformTriangleBoardGraph}, piece_set::{Color, PieceType}, position::{GameOver, Position}, searcher::Searcher};
 
 
 #[derive(Resource)]
